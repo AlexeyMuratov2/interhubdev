@@ -1,7 +1,6 @@
 package com.example.interhubdev.user.internal;
 
 import com.example.interhubdev.user.Role;
-import com.example.interhubdev.user.User;
 import com.example.interhubdev.user.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

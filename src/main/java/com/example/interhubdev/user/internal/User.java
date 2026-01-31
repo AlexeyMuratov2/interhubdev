@@ -1,5 +1,7 @@
-package com.example.interhubdev.user;
+package com.example.interhubdev.user.internal;
 
+import com.example.interhubdev.user.Role;
+import com.example.interhubdev.user.UserStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,6 +22,10 @@ import java.util.UUID;
 /**
  * Core user entity for authentication and authorization.
  * Role-specific data (student info, staff info) is stored in separate profile entities.
+ * 
+ * <p>Package-private: only accessible within the user module.
+ * Other modules should use {@link com.example.interhubdev.user.UserApi} and
+ * {@link com.example.interhubdev.user.UserDto}.</p>
  */
 @Entity
 @Table(name = "users")
@@ -28,7 +34,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -4,7 +4,7 @@
  * <h2>Public API</h2>
  * <ul>
  *   <li>{@link com.example.interhubdev.user.UserApi} - main interface for user operations</li>
- *   <li>{@link com.example.interhubdev.user.User} - user entity</li>
+ *   <li>{@link com.example.interhubdev.user.UserDto} - user data transfer object</li>
  *   <li>{@link com.example.interhubdev.user.Role} - user roles enum</li>
  *   <li>{@link com.example.interhubdev.user.UserStatus} - account status enum</li>
  * </ul>
@@ -18,7 +18,7 @@
  *     private final UserApi userApi;
  *     
  *     public void doSomething() {
- *         User user = userApi.findByEmail("test@example.com").orElseThrow();
+ *         UserDto user = userApi.findByEmail("test@example.com").orElseThrow();
  *     }
  * }
  * }</pre>

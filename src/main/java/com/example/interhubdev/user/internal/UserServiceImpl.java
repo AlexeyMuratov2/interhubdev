@@ -1,16 +1,18 @@
 package com.example.interhubdev.user.internal;
 
 import com.example.interhubdev.user.Role;
-import com.example.interhubdev.user.User;
 import com.example.interhubdev.user.UserApi;
+import com.example.interhubdev.user.UserDto;
 import com.example.interhubdev.user.UserStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,15 +20,16 @@ import java.util.UUID;
 class UserServiceImpl implements UserApi {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
-    public Optional<User> findById(UUID id) {
-        return userRepository.findById(id);
+    public Optional<UserDto> findById(UUID id) {
+        return userRepository.findById(id).map(this::toDto);
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+    public Optional<UserDto> findByEmail(String email) {
+        return userRepository.findByEmail(email).map(this::toDto);
     }
 
     @Override
@@ -35,23 +38,29 @@ class UserServiceImpl implements UserApi {
     }
 
     @Override
-    public List<User> findAll() {
-        return userRepository.findAll();
+    public List<UserDto> findAll() {
+        return userRepository.findAll().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<User> findByRole(Role role) {
-        return userRepository.findByRole(role);
+    public List<UserDto> findByRole(Role role) {
+        return userRepository.findByRole(role).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<User> findByStatus(UserStatus status) {
-        return userRepository.findByStatus(status);
+    public List<UserDto> findByStatus(UserStatus status) {
+        return userRepository.findByStatus(status).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public User createUser(String email, Role role, String firstName, String lastName) {
+    public UserDto createUser(String email, Role role, String firstName, String lastName) {
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("User with email " + email + " already exists");
         }
@@ -64,7 +73,7 @@ class UserServiceImpl implements UserApi {
                 .status(UserStatus.PENDING)
                 .build();
 
-        return userRepository.save(user);
+        return toDto(userRepository.save(user));
     }
 
     @Override
@@ -106,8 +115,23 @@ class UserServiceImpl implements UserApi {
     }
 
     @Override
-    @Transactional
-    public User save(User user) {
-        return userRepository.save(user);
+    public boolean verifyPassword(String email, String rawPassword) {
+        return userRepository.findByEmail(email)
+                .filter(User::canLogin)
+                .map(user -> passwordEncoder.matches(rawPassword, user.getPasswordHash()))
+                .orElse(false);
+    }
+
+    private UserDto toDto(User user) {
+        return new UserDto(
+                user.getId(),
+                user.getEmail(),
+                user.getRole(),
+                user.getStatus(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getCreatedAt(),
+                user.getActivatedAt()
+        );
     }
 }

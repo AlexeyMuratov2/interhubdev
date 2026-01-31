@@ -13,12 +13,12 @@ public interface UserApi {
     /**
      * Find user by ID.
      */
-    Optional<User> findById(UUID id);
+    Optional<UserDto> findById(UUID id);
 
     /**
      * Find user by email.
      */
-    Optional<User> findByEmail(String email);
+    Optional<UserDto> findByEmail(String email);
 
     /**
      * Check if user with given email exists.
@@ -28,17 +28,17 @@ public interface UserApi {
     /**
      * Get all users.
      */
-    List<User> findAll();
+    List<UserDto> findAll();
 
     /**
      * Get users by role.
      */
-    List<User> findByRole(Role role);
+    List<UserDto> findByRole(Role role);
 
     /**
      * Get users by status.
      */
-    List<User> findByStatus(UserStatus status);
+    List<UserDto> findByStatus(UserStatus status);
 
     /**
      * Create a new user with PENDING status.
@@ -51,7 +51,7 @@ public interface UserApi {
      * @return created user
      * @throws IllegalArgumentException if email already exists
      */
-    User createUser(String email, Role role, String firstName, String lastName);
+    UserDto createUser(String email, Role role, String firstName, String lastName);
 
     /**
      * Activate user account by setting password.
@@ -82,7 +82,13 @@ public interface UserApi {
     void enableUser(UUID userId);
 
     /**
-     * Save user entity.
+     * Verify user password for authentication.
+     * This method encapsulates password verification within the user module,
+     * preventing password hash from leaking to other modules.
+     *
+     * @param email       user email
+     * @param rawPassword plain text password to verify
+     * @return true if password matches and user can login, false otherwise
      */
-    User save(User user);
+    boolean verifyPassword(String email, String rawPassword);
 }
