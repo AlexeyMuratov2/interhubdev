@@ -1,1 +1,20 @@
-services: {}
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: interhubdev-postgres
+    environment:
+      POSTGRES_DB: interhubdev
+      POSTGRES_USER: interhubdev
+      POSTGRES_PASSWORD: interhubdev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U interhubdev -d interhubdev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
