@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -78,7 +79,7 @@ class UserServiceImpl implements UserApi {
 
     @Override
     @Transactional
-    public void activateUser(UUID userId, String encodedPassword) {
+    public void activateUser(UUID userId, String rawPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
@@ -86,7 +87,7 @@ class UserServiceImpl implements UserApi {
             throw new IllegalStateException("User is not in PENDING status");
         }
 
-        user.activate(encodedPassword);
+        user.activate(passwordEncoder.encode(rawPassword));
         userRepository.save(user);
     }
 
@@ -122,6 +123,15 @@ class UserServiceImpl implements UserApi {
                 .orElse(false);
     }
 
+    @Override
+    @Transactional
+    public void updateLastLoginAt(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
     private UserDto toDto(User user) {
         return new UserDto(
                 user.getId(),
@@ -130,8 +140,11 @@ class UserServiceImpl implements UserApi {
                 user.getStatus(),
                 user.getFirstName(),
                 user.getLastName(),
+                user.getPhone(),
+                user.getBirthDate(),
                 user.getCreatedAt(),
-                user.getActivatedAt()
+                user.getActivatedAt(),
+                user.getLastLoginAt()
         );
     }
 }

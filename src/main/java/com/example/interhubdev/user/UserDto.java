@@ -1,5 +1,6 @@
 package com.example.interhubdev.user;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -14,8 +15,11 @@ public record UserDto(
     UserStatus status,
     String firstName,
     String lastName,
+    String phone,
+    LocalDate birthDate,
     LocalDateTime createdAt,
-    LocalDateTime activatedAt
+    LocalDateTime activatedAt,
+    LocalDateTime lastLoginAt
 ) {
     /**
      * Check if user can log in.

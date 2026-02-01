@@ -12,7 +12,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,7 +39,7 @@ class BootstrapApiTest {
         // given - mock that admin doesn't exist
         when(userApi.existsByEmail(any())).thenReturn(false);
         when(userApi.createUser(anyString(), any(), any(), any())).thenReturn(
-            new UserDto(UUID.randomUUID(), "admin@test.com", Role.SUPER_ADMIN, UserStatus.PENDING, null, null, LocalDateTime.now(), null)
+            new UserDto(UUID.randomUUID(), "admin@test.com", Role.SUPER_ADMIN, UserStatus.PENDING, null, null, null, null, LocalDateTime.now(), null, null)
         );
 
         // then - bootstrap should have completed (triggered by ApplicationReadyEvent)

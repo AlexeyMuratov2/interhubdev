@@ -6,7 +6,6 @@ import com.example.interhubdev.user.UserDto;
 import com.example.interhubdev.user.UserStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.lang.reflect.Constructor;
@@ -43,7 +42,10 @@ class BootstrapServiceTest {
                 UserStatus.PENDING,
                 "Super",
                 "Admin",
+                null,
+                null,
                 LocalDateTime.now(),
+                null,
                 null
         );
 
@@ -104,7 +106,10 @@ class BootstrapServiceTest {
                 UserStatus.PENDING,
                 null,
                 null,
+                null,
+                null,
                 LocalDateTime.now(),
+                null,
                 null
         );
 

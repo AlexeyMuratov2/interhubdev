@@ -56,13 +56,14 @@ public interface UserApi {
     /**
      * Activate user account by setting password.
      * Changes status from PENDING to ACTIVE.
+     * Password encoding is handled internally.
      *
-     * @param userId          user ID
-     * @param encodedPassword BCrypt encoded password
+     * @param userId      user ID
+     * @param rawPassword plain text password (will be BCrypt encoded)
      * @throws IllegalArgumentException if user not found
      * @throws IllegalStateException    if user is not in PENDING status
      */
-    void activateUser(UUID userId, String encodedPassword);
+    void activateUser(UUID userId, String rawPassword);
 
     /**
      * Disable user account.
@@ -91,4 +92,13 @@ public interface UserApi {
      * @return true if password matches and user can login, false otherwise
      */
     boolean verifyPassword(String email, String rawPassword);
+
+    /**
+     * Update user's last login timestamp.
+     * Called by auth module after successful authentication.
+     *
+     * @param userId user ID
+     * @throws IllegalArgumentException if user not found
+     */
+    void updateLastLoginAt(UUID userId);
 }

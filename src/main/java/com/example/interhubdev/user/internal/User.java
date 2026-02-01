@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -64,12 +65,21 @@ class User {
     @Column(name = "last_name")
     private String lastName;
 
+    @Column(name = "phone", length = 20)
+    private String phone;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "activated_at")
     private LocalDateTime activatedAt;
+
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
 
     /**
      * Check if user can log in.

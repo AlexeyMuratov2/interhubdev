@@ -2,11 +2,12 @@ package com.example.interhubdev.bootstrap.internal;
 
 import com.example.interhubdev.bootstrap.BootstrapApi;
 import com.example.interhubdev.bootstrap.BootstrapStatus;
-import com.example.interhubdev.user.*;
+import com.example.interhubdev.user.Role;
+import com.example.interhubdev.user.UserApi;
+import com.example.interhubdev.user.UserDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +24,6 @@ import java.util.concurrent.atomic.AtomicReference;
 class BootstrapServiceImpl implements BootstrapApi {
 
     private final UserApi userApi;
-    private final PasswordEncoder passwordEncoder;
     private final AdminBootstrapProperties properties;
 
     private final AtomicReference<BootstrapStatus> status = new AtomicReference<>(BootstrapStatus.NOT_STARTED);
@@ -88,6 +88,7 @@ class BootstrapServiceImpl implements BootstrapApi {
                 properties.getLastName()
         );
 
-        userApi.activateUser(user.id(), passwordEncoder.encode(properties.getPassword()));
+        // activateUser handles password encoding internally
+        userApi.activateUser(user.id(), properties.getPassword());
     }
 }
