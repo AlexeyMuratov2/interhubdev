@@ -1,8 +1,12 @@
 package com.example.interhubdev.invitation.internal;
 
+import com.example.interhubdev.auth.AuthApi;
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.invitation.*;
+import com.example.interhubdev.user.UserDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,6 +26,7 @@ import java.util.UUID;
 class InvitationController {
 
     private final InvitationApi invitationApi;
+    private final AuthApi authApi;
 
     // ==================== Admin endpoints ====================
 
@@ -49,9 +54,11 @@ class InvitationController {
     @Operation(summary = "Create new invitation", description = "Creates user and sends invitation email")
     public ResponseEntity<InvitationDto> create(
             @Valid @RequestBody CreateInvitationRequest request,
-            @RequestHeader("X-User-Id") UUID invitedBy  // TODO: Replace with authenticated user
+            HttpServletRequest httpRequest
     ) {
-        InvitationDto invitation = invitationApi.create(request, invitedBy);
+        UserDto currentUser = authApi.getCurrentUser(httpRequest)
+                .orElseThrow(() -> Errors.unauthorized("Authentication required to create invitation"));
+        InvitationDto invitation = invitationApi.create(request, currentUser.id());
         return ResponseEntity.status(HttpStatus.CREATED).body(invitation);
     }
 
@@ -92,19 +99,4 @@ class InvitationController {
         return ResponseEntity.ok().build();
     }
 
-    // ==================== Exception handlers ====================
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e) {
-        return ResponseEntity.badRequest()
-                .body(new ErrorResponse("BAD_REQUEST", e.getMessage()));
-    }
-
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse("CONFLICT", e.getMessage()));
-    }
-
-    record ErrorResponse(String code, String message) {}
 }

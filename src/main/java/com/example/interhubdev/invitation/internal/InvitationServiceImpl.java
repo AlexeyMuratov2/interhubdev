@@ -4,9 +4,7 @@ import com.example.interhubdev.email.EmailApi;
 import com.example.interhubdev.email.EmailMessage;
 import com.example.interhubdev.email.EmailResult;
 import com.example.interhubdev.invitation.*;
-import com.example.interhubdev.student.CreateStudentRequest;
 import com.example.interhubdev.student.StudentApi;
-import com.example.interhubdev.teacher.CreateTeacherRequest;
 import com.example.interhubdev.teacher.TeacherApi;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
@@ -17,11 +15,16 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of InvitationApi.
@@ -56,23 +59,20 @@ class InvitationServiceImpl implements InvitationApi {
 
     @Override
     public List<InvitationDto> findAll() {
-        return invitationRepository.findAll().stream()
-                .map(this::toDto)
-                .toList();
+        List<Invitation> invitations = invitationRepository.findAll();
+        return toDtoList(invitations);
     }
 
     @Override
     public List<InvitationDto> findByStatus(InvitationStatus status) {
-        return invitationRepository.findByStatus(status).stream()
-                .map(this::toDto)
-                .toList();
+        List<Invitation> invitations = invitationRepository.findByStatus(status);
+        return toDtoList(invitations);
     }
 
     @Override
     public List<InvitationDto> findByInvitedBy(UUID adminId) {
-        return invitationRepository.findByInvitedById(adminId).stream()
-                .map(this::toDto)
-                .toList();
+        List<Invitation> invitations = invitationRepository.findByInvitedById(adminId);
+        return toDtoList(invitations);
     }
 
     // ==================== Command methods ====================
@@ -105,7 +105,7 @@ class InvitationServiceImpl implements InvitationApi {
         invitation = invitationRepository.save(invitation);
 
         // 5. Create token and send email
-        InvitationToken token = createToken(invitation.getId());
+        createToken(invitation.getId());
         sendInvitationEmailAsync(invitation.getId(), 1);
 
         log.info("Created invitation {} for user {} (role: {})", 
@@ -280,16 +280,32 @@ class InvitationServiceImpl implements InvitationApi {
         return tokenRepository.save(token);
     }
 
+    /**
+     * Schedules invitation email to be sent after the current transaction commits.
+     * Avoids race where the scheduled task runs before invitation/token are visible in DB.
+     */
     private void sendInvitationEmailAsync(UUID invitationId, int attempt) {
-        // Schedule async email sending
-        taskScheduler.schedule(
-                () -> sendInvitationEmailWithRetry(invitationId, attempt),
-                Instant.now()
-        );
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            taskScheduler.schedule(
+                                    () -> sendInvitationEmailWithRetry(invitationId, attempt),
+                                    Instant.now()
+                            );
+                        }
+                    });
+        } else {
+            taskScheduler.schedule(
+                    () -> sendInvitationEmailWithRetry(invitationId, attempt),
+                    Instant.now()
+            );
+        }
     }
 
     @Transactional
-    public void sendInvitationEmailWithRetry(UUID invitationId, int attempt) {
+    void sendInvitationEmailWithRetry(UUID invitationId, int attempt) {
         Invitation invitation = invitationRepository.findById(invitationId).orElse(null);
         if (invitation == null) {
             log.warn("Invitation {} not found for email sending", invitationId);
@@ -376,8 +392,26 @@ class InvitationServiceImpl implements InvitationApi {
                 .orElseThrow(() -> new IllegalArgumentException("Invitation not found: " + id));
     }
 
+    private List<InvitationDto> toDtoList(List<Invitation> invitations) {
+        if (invitations.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> userIds = invitations.stream()
+                .map(Invitation::getUserId)
+                .collect(Collectors.toSet());
+        Map<UUID, UserDto> userMap = userApi.findByIds(userIds).stream()
+                .collect(Collectors.toMap(UserDto::id, u -> u));
+        return invitations.stream()
+                .map(inv -> toDto(inv, userMap.get(inv.getUserId())))
+                .toList();
+    }
+
     private InvitationDto toDto(Invitation inv) {
         UserDto user = userApi.findById(inv.getUserId()).orElse(null);
+        return toDto(inv, user);
+    }
+
+    private InvitationDto toDto(Invitation inv, UserDto user) {
         return new InvitationDto(
                 inv.getId(),
                 inv.getUserId(),

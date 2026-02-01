@@ -27,6 +27,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Invitation",
-    allowedDependencies = {"user", "student", "teacher", "email"}
+    allowedDependencies = {"auth", "user", "student", "teacher", "email"}
 )
 package com.example.interhubdev.invitation;

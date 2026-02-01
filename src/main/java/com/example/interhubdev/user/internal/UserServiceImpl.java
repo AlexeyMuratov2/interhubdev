@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +27,16 @@ class UserServiceImpl implements UserApi {
     @Override
     public Optional<UserDto> findById(UUID id) {
         return userRepository.findById(id).map(this::toDto);
+    }
+
+    @Override
+    public List<UserDto> findByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return userRepository.findAllById(ids).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override

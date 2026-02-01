@@ -1,5 +1,6 @@
 package com.example.interhubdev.user;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +15,12 @@ public interface UserApi {
      * Find user by ID.
      */
     Optional<UserDto> findById(UUID id);
+
+    /**
+     * Find users by IDs.
+     * Returns users in arbitrary order; missing IDs are skipped.
+     */
+    List<UserDto> findByIds(Collection<UUID> ids);
 
     /**
      * Find user by email.
