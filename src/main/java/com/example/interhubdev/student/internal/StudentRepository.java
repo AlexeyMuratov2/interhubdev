@@ -23,4 +23,6 @@ interface StudentRepository extends JpaRepository<Student, UUID> {
     List<Student> findByFaculty(String faculty);
 
     List<Student> findByGroupName(String groupName);
+
+    List<Student> findByGroupId(UUID groupId);
 }

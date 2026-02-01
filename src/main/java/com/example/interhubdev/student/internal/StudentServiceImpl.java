@@ -28,6 +28,11 @@ class StudentServiceImpl implements StudentApi {
     private final UserApi userApi;
 
     @Override
+    public Optional<StudentDto> findById(UUID id) {
+        return studentRepository.findById(id).map(this::toDto);
+    }
+
+    @Override
     public Optional<StudentDto> findByUserId(UUID userId) {
         return studentRepository.findByUserId(userId).map(this::toDto);
     }
@@ -66,6 +71,23 @@ class StudentServiceImpl implements StudentApi {
         return studentRepository.findByGroupName(groupName).stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Override
+    public List<StudentDto> findByGroupId(UUID groupId) {
+        return studentRepository.findByGroupId(groupId).stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public StudentDto updateGroupId(UUID userId, UUID groupId) {
+        Student student = studentRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Student profile not found for user: " + userId));
+        student.setGroupId(groupId);
+        student.setUpdatedAt(LocalDateTime.now());
+        return toDto(studentRepository.save(student));
     }
 
     @Override
@@ -156,6 +178,7 @@ class StudentServiceImpl implements StudentApi {
                 student.getCourse(),
                 student.getEnrollmentYear(),
                 student.getGroupName(),
+                student.getGroupId(),
                 student.getCreatedAt(),
                 student.getUpdatedAt()
         );

@@ -15,6 +15,7 @@ public record StudentDto(
     String course,
     Integer enrollmentYear,
     String groupName,
+    UUID groupId,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {

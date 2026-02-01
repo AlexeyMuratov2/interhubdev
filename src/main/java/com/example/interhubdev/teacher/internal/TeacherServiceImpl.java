@@ -48,6 +48,11 @@ class TeacherServiceImpl implements TeacherApi {
     }
 
     @Override
+    public Optional<TeacherDto> findById(UUID id) {
+        return teacherRepository.findById(id).map(this::toDto);
+    }
+
+    @Override
     public List<TeacherDto> findAll() {
         return teacherRepository.findAll().stream()
                 .map(this::toDto)

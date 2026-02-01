@@ -43,6 +43,14 @@ public interface TeacherApi {
     boolean existsByUserId(UUID userId);
 
     /**
+     * Find teacher profile by ID.
+     *
+     * @param id the teacher entity ID
+     * @return teacher profile if exists
+     */
+    Optional<TeacherDto> findById(UUID id);
+
+    /**
      * Get all teachers.
      *
      * @return list of all teacher profiles

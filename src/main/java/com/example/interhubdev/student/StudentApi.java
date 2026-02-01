@@ -11,6 +11,14 @@ import java.util.UUID;
 public interface StudentApi {
 
     /**
+     * Find student profile by ID.
+     *
+     * @param id the student entity ID
+     * @return student profile if exists
+     */
+    Optional<StudentDto> findById(UUID id);
+
+    /**
      * Find student profile by user ID.
      *
      * @param userId the user ID
@@ -64,6 +72,24 @@ public interface StudentApi {
      * @return list of students in the group
      */
     List<StudentDto> findByGroupName(String groupName);
+
+    /**
+     * Find students by group ID (student_group.id).
+     *
+     * @param groupId student group UUID
+     * @return list of students in the group
+     */
+    List<StudentDto> findByGroupId(UUID groupId);
+
+    /**
+     * Update student's group assignment.
+     *
+     * @param userId  the user ID
+     * @param groupId new group ID (null to unassign)
+     * @return updated student profile
+     * @throws IllegalArgumentException if profile not found
+     */
+    StudentDto updateGroupId(UUID userId, UUID groupId);
 
     /**
      * Create a student profile for a user.
