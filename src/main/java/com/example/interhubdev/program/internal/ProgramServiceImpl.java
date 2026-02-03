@@ -19,6 +19,9 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 class ProgramServiceImpl implements ProgramApi {
 
+    private static final int MIN_YEAR = 1900;
+    private static final int MAX_YEAR = 2100;
+
     private final ProgramRepository programRepository;
     private final CurriculumRepository curriculumRepository;
     private final CurriculumSubjectRepository curriculumSubjectRepository;
@@ -45,17 +48,21 @@ class ProgramServiceImpl implements ProgramApi {
     @Override
     @Transactional
     public ProgramDto createProgram(String code, String name, String description, String degreeLevel, UUID departmentId) {
-        if (programRepository.existsByCode(code)) {
-            throw Errors.conflict("Program with code '" + code + "' already exists");
+        if (code == null || code.isBlank()) {
+            throw Errors.badRequest("Program code is required");
+        }
+        String trimmedCode = code.trim();
+        if (programRepository.existsByCode(trimmedCode)) {
+            throw Errors.conflict("Program with code '" + trimmedCode + "' already exists");
         }
         if (departmentId != null && departmentApi.findById(departmentId).isEmpty()) {
             throw Errors.notFound("Department not found: " + departmentId);
         }
         Program entity = Program.builder()
-                .code(code)
-                .name(name != null ? name : "")
-                .description(description)
-                .degreeLevel(degreeLevel)
+                .code(trimmedCode)
+                .name(name != null ? name.trim() : "")
+                .description(description != null ? description.trim() : null)
+                .degreeLevel(degreeLevel != null ? degreeLevel.trim() : null)
                 .departmentId(departmentId)
                 .build();
         return toProgramDto(programRepository.save(entity));
@@ -69,9 +76,9 @@ class ProgramServiceImpl implements ProgramApi {
         if (departmentId != null && departmentApi.findById(departmentId).isEmpty()) {
             throw Errors.notFound("Department not found: " + departmentId);
         }
-        if (name != null) entity.setName(name);
-        if (description != null) entity.setDescription(description);
-        if (degreeLevel != null) entity.setDegreeLevel(degreeLevel);
+        if (name != null) entity.setName(name.trim());
+        if (description != null) entity.setDescription(description.trim());
+        if (degreeLevel != null) entity.setDegreeLevel(degreeLevel.trim());
         entity.setDepartmentId(departmentId);
         entity.setUpdatedAt(LocalDateTime.now());
         return toProgramDto(programRepository.save(entity));
@@ -104,15 +111,22 @@ class ProgramServiceImpl implements ProgramApi {
         if (programRepository.findById(programId).isEmpty()) {
             throw Errors.notFound("Program not found: " + programId);
         }
-        if (curriculumRepository.existsByProgramIdAndVersion(programId, version)) {
-            throw Errors.conflict("Curriculum with version '" + version + "' already exists for program");
+        if (version == null || version.isBlank()) {
+            throw Errors.badRequest("Curriculum version is required");
+        }
+        if (startYear < MIN_YEAR || startYear > MAX_YEAR) {
+            throw Errors.badRequest("startYear must be between " + MIN_YEAR + " and " + MAX_YEAR);
+        }
+        String trimmedVersion = version.trim();
+        if (curriculumRepository.existsByProgramIdAndVersion(programId, trimmedVersion)) {
+            throw Errors.conflict("Curriculum with version '" + trimmedVersion + "' already exists for program");
         }
         Curriculum entity = Curriculum.builder()
                 .programId(programId)
-                .version(version)
+                .version(trimmedVersion)
                 .startYear(startYear)
                 .isActive(isActive)
-                .notes(notes)
+                .notes(notes != null ? notes.trim() : null)
                 .build();
         return toCurriculumDto(curriculumRepository.save(entity));
     }
@@ -122,10 +136,13 @@ class ProgramServiceImpl implements ProgramApi {
     public CurriculumDto updateCurriculum(UUID id, String version, int startYear, boolean isActive, String notes) {
         Curriculum entity = curriculumRepository.findById(id)
                 .orElseThrow(() -> Errors.notFound("Curriculum not found: " + id));
-        if (version != null) entity.setVersion(version);
+        if (version != null) entity.setVersion(version.trim());
+        if (startYear < MIN_YEAR || startYear > MAX_YEAR) {
+            throw Errors.badRequest("startYear must be between " + MIN_YEAR + " and " + MAX_YEAR);
+        }
         entity.setStartYear(startYear);
         entity.setActive(isActive);
-        if (notes != null) entity.setNotes(notes);
+        if (notes != null) entity.setNotes(notes.trim());
         entity.setUpdatedAt(LocalDateTime.now());
         return toCurriculumDto(curriculumRepository.save(entity));
     }
@@ -167,6 +184,15 @@ class ProgramServiceImpl implements ProgramApi {
             boolean isElective,
             BigDecimal credits
     ) {
+        if (curriculumId == null) {
+            throw Errors.badRequest("Curriculum id is required");
+        }
+        if (subjectId == null) {
+            throw Errors.badRequest("Subject id is required");
+        }
+        if (assessmentTypeId == null) {
+            throw Errors.badRequest("Assessment type id is required");
+        }
         if (curriculumRepository.findById(curriculumId).isEmpty()) {
             throw Errors.notFound("Curriculum not found: " + curriculumId);
         }

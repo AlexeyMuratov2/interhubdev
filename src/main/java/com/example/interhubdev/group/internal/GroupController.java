@@ -3,9 +3,15 @@ package com.example.interhubdev.group.internal;
 import com.example.interhubdev.group.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -49,8 +55,9 @@ class GroupController {
     }
 
     @PostMapping
-    @Operation(summary = "Create group")
-    public ResponseEntity<StudentGroupDto> createGroup(@RequestBody CreateGroupRequest request) {
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create group", description = "Only STAFF, ADMIN, SUPER_ADMIN can create groups")
+    public ResponseEntity<StudentGroupDto> createGroup(@Valid @RequestBody CreateGroupRequest request) {
         StudentGroupDto dto = groupApi.createGroup(
                 request.programId(),
                 request.curriculumId(),
@@ -65,10 +72,11 @@ class GroupController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update group")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update group", description = "Only STAFF, ADMIN, SUPER_ADMIN can update groups")
     public ResponseEntity<StudentGroupDto> updateGroup(
             @PathVariable UUID id,
-            @RequestBody UpdateGroupRequest request
+            @Valid @RequestBody UpdateGroupRequest request
     ) {
         StudentGroupDto dto = groupApi.updateGroup(
                 id,
@@ -81,7 +89,8 @@ class GroupController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete group")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete group", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete groups")
     public ResponseEntity<Void> deleteGroup(@PathVariable UUID id) {
         groupApi.deleteGroup(id);
         return ResponseEntity.noContent().build();
@@ -94,10 +103,11 @@ class GroupController {
     }
 
     @PostMapping("/{groupId}/leaders")
-    @Operation(summary = "Add group leader")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Add group leader", description = "Only STAFF, ADMIN, SUPER_ADMIN can add group leaders")
     public ResponseEntity<GroupLeaderDto> addGroupLeader(
             @PathVariable UUID groupId,
-            @RequestBody AddGroupLeaderRequest request
+            @Valid @RequestBody AddGroupLeaderRequest request
     ) {
         GroupLeaderDto dto = groupApi.addGroupLeader(
                 groupId,
@@ -110,7 +120,8 @@ class GroupController {
     }
 
     @DeleteMapping("/leaders/{id}")
-    @Operation(summary = "Remove group leader")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Remove group leader", description = "Only STAFF, ADMIN, SUPER_ADMIN can remove group leaders")
     public ResponseEntity<Void> removeGroupLeader(@PathVariable UUID id) {
         groupApi.removeGroupLeader(id);
         return ResponseEntity.noContent().build();
@@ -123,10 +134,11 @@ class GroupController {
     }
 
     @PostMapping("/{groupId}/overrides")
-    @Operation(summary = "Create curriculum override")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create curriculum override", description = "Only STAFF, ADMIN, SUPER_ADMIN can create overrides")
     public ResponseEntity<GroupCurriculumOverrideDto> createOverride(
             @PathVariable UUID groupId,
-            @RequestBody CreateOverrideRequest request
+            @Valid @RequestBody CreateOverrideRequest request
     ) {
         GroupCurriculumOverrideDto dto = groupApi.createOverride(
                 groupId,
@@ -141,16 +153,31 @@ class GroupController {
     }
 
     @DeleteMapping("/overrides/{id}")
-    @Operation(summary = "Delete curriculum override")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete curriculum override", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete overrides")
     public ResponseEntity<Void> deleteOverride(@PathVariable UUID id) {
         groupApi.deleteOverride(id);
         return ResponseEntity.noContent().build();
     }
 
-    record CreateGroupRequest(UUID programId, UUID curriculumId, String code, String name, String description,
-                             int startYear, Integer graduationYear, UUID curatorTeacherId) {}
+    record CreateGroupRequest(
+            @NotNull(message = "Program id is required") UUID programId,
+            @NotNull(message = "Curriculum id is required") UUID curriculumId,
+            @NotBlank(message = "Code is required") String code,
+            String name,
+            String description,
+            @Min(value = 1900, message = "startYear must be at least 1900") @Max(value = 2100, message = "startYear must be at most 2100") int startYear,
+            Integer graduationYear,
+            UUID curatorTeacherId
+    ) {}
     record UpdateGroupRequest(String name, String description, Integer graduationYear, UUID curatorTeacherId) {}
-    record AddGroupLeaderRequest(UUID studentId, String role, LocalDate fromDate, LocalDate toDate) {}
-    record CreateOverrideRequest(UUID curriculumSubjectId, UUID subjectId, String action,
+    record AddGroupLeaderRequest(
+            @NotNull(message = "Student id is required") UUID studentId,
+            @NotBlank(message = "Role is required") String role,
+            LocalDate fromDate,
+            LocalDate toDate
+    ) {}
+    record CreateOverrideRequest(UUID curriculumSubjectId, UUID subjectId,
+                                @NotBlank(message = "Action is required") String action,
                                 UUID newAssessmentTypeId, Integer newDurationWeeks, String reason) {}
 }

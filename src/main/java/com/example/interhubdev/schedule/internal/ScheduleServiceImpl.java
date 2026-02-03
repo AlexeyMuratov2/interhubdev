@@ -1,5 +1,6 @@
 package com.example.interhubdev.schedule.internal;
 
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.ScheduleApi;
@@ -38,11 +39,20 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Override
     @Transactional
     public RoomDto createRoom(String building, String number, Integer capacity, String type) {
+        if (building == null || building.isBlank()) {
+            throw Errors.badRequest("Room building is required");
+        }
+        if (number == null || number.isBlank()) {
+            throw Errors.badRequest("Room number is required");
+        }
+        if (capacity != null && capacity < 0) {
+            throw Errors.badRequest("Room capacity must be >= 0");
+        }
         Room entity = Room.builder()
-                .building(building != null ? building : "")
-                .number(number != null ? number : "")
+                .building(building.trim())
+                .number(number.trim())
                 .capacity(capacity)
-                .type(type)
+                .type(type != null ? type.trim() : null)
                 .build();
         return toRoomDto(roomRepository.save(entity));
     }
@@ -51,11 +61,14 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Transactional
     public RoomDto updateRoom(UUID id, String building, String number, Integer capacity, String type) {
         Room entity = roomRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Room not found: " + id));
-        if (building != null) entity.setBuilding(building);
-        if (number != null) entity.setNumber(number);
-        if (capacity != null) entity.setCapacity(capacity);
-        if (type != null) entity.setType(type);
+                .orElseThrow(() -> Errors.notFound("Room not found: " + id));
+        if (building != null) entity.setBuilding(building.trim());
+        if (number != null) entity.setNumber(number.trim());
+        if (capacity != null) {
+            if (capacity < 0) throw Errors.badRequest("Room capacity must be >= 0");
+            entity.setCapacity(capacity);
+        }
+        if (type != null) entity.setType(type.trim());
         entity.setUpdatedAt(LocalDateTime.now());
         return toRoomDto(roomRepository.save(entity));
     }
@@ -64,7 +77,7 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Transactional
     public void deleteRoom(UUID id) {
         if (!roomRepository.existsById(id)) {
-            throw new IllegalArgumentException("Room not found: " + id);
+            throw Errors.notFound("Room not found: " + id);
         }
         roomRepository.deleteById(id);
     }
@@ -85,13 +98,13 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Transactional
     public TimeslotDto createTimeslot(int dayOfWeek, java.time.LocalTime startTime, java.time.LocalTime endTime) {
         if (dayOfWeek < 1 || dayOfWeek > 7) {
-            throw new IllegalArgumentException("dayOfWeek must be 1..7");
+            throw Errors.badRequest("dayOfWeek must be 1..7");
         }
         if (startTime == null || endTime == null) {
-            throw new IllegalArgumentException("startTime and endTime are required");
+            throw Errors.badRequest("startTime and endTime are required");
         }
         if (!endTime.isAfter(startTime)) {
-            throw new IllegalArgumentException("endTime must be after startTime");
+            throw Errors.badRequest("endTime must be after startTime");
         }
         Timeslot entity = Timeslot.builder()
                 .dayOfWeek(dayOfWeek)
@@ -105,7 +118,7 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Transactional
     public void deleteTimeslot(UUID id) {
         if (!timeslotRepository.existsById(id)) {
-            throw new IllegalArgumentException("Timeslot not found: " + id);
+            throw Errors.notFound("Timeslot not found: " + id);
         }
         timeslotRepository.deleteById(id);
     }
@@ -129,28 +142,36 @@ class ScheduleServiceImpl implements ScheduleApi {
                 .toList();
     }
 
+    private static final List<String> VALID_LESSON_STATUSES = List.of("planned", "cancelled", "done");
+
     @Override
     @Transactional
     public LessonDto createLesson(UUID offeringId, LocalDate date, UUID timeslotId, UUID roomId, String topic, String status) {
+        if (offeringId == null) {
+            throw Errors.badRequest("Offering id is required");
+        }
         if (date == null) {
-            throw new IllegalArgumentException("date is required");
+            throw Errors.badRequest("Date is required");
+        }
+        if (timeslotId == null) {
+            throw Errors.badRequest("Timeslot id is required");
         }
         if (timeslotRepository.findById(timeslotId).isEmpty()) {
-            throw new IllegalArgumentException("Timeslot not found: " + timeslotId);
+            throw Errors.notFound("Timeslot not found: " + timeslotId);
         }
         if (roomId != null && roomRepository.findById(roomId).isEmpty()) {
-            throw new IllegalArgumentException("Room not found: " + roomId);
+            throw Errors.notFound("Room not found: " + roomId);
         }
-        String s = status != null ? status : "planned";
-        if (!List.of("planned", "cancelled", "done").contains(s)) {
-            throw new IllegalArgumentException("Status must be planned, cancelled, or done");
+        String s = status != null ? status.trim().toLowerCase() : "planned";
+        if (!VALID_LESSON_STATUSES.contains(s)) {
+            throw Errors.badRequest("Status must be planned, cancelled, or done");
         }
         Lesson entity = Lesson.builder()
                 .offeringId(offeringId)
                 .date(date)
                 .timeslotId(timeslotId)
                 .roomId(roomId)
-                .topic(topic)
+                .topic(topic != null ? topic.trim() : null)
                 .status(s)
                 .build();
         return toLessonDto(lessonRepository.save(entity));
@@ -160,17 +181,18 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Transactional
     public LessonDto updateLesson(UUID id, UUID roomId, String topic, String status) {
         Lesson entity = lessonRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id));
+                .orElseThrow(() -> Errors.notFound("Lesson not found: " + id));
         if (roomId != null && roomRepository.findById(roomId).isEmpty()) {
-            throw new IllegalArgumentException("Room not found: " + roomId);
+            throw Errors.notFound("Room not found: " + roomId);
         }
-        if (topic != null) entity.setTopic(topic);
+        if (topic != null) entity.setTopic(topic.trim());
         entity.setRoomId(roomId);
         if (status != null) {
-            if (!List.of("planned", "cancelled", "done").contains(status)) {
-                throw new IllegalArgumentException("Status must be planned, cancelled, or done");
+            String s = status.trim().toLowerCase();
+            if (!VALID_LESSON_STATUSES.contains(s)) {
+                throw Errors.badRequest("Status must be planned, cancelled, or done");
             }
-            entity.setStatus(status);
+            entity.setStatus(s);
         }
         entity.setUpdatedAt(LocalDateTime.now());
         return toLessonDto(lessonRepository.save(entity));
@@ -180,7 +202,7 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Transactional
     public void deleteLesson(UUID id) {
         if (!lessonRepository.existsById(id)) {
-            throw new IllegalArgumentException("Lesson not found: " + id);
+            throw Errors.notFound("Lesson not found: " + id);
         }
         lessonRepository.deleteById(id);
     }

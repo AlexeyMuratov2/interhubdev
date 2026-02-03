@@ -1,5 +1,6 @@
 package com.example.interhubdev.group.internal;
 
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.group.*;
 import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.student.StudentApi;
@@ -18,6 +19,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 class GroupServiceImpl implements GroupApi {
+
+    private static final int MIN_YEAR = 1900;
+    private static final int MAX_YEAR = 2100;
 
     private final StudentGroupRepository studentGroupRepository;
     private final GroupLeaderRepository groupLeaderRepository;
@@ -62,24 +66,37 @@ class GroupServiceImpl implements GroupApi {
             Integer graduationYear,
             UUID curatorTeacherId
     ) {
+        if (programId == null) {
+            throw Errors.badRequest("Program id is required");
+        }
+        if (curriculumId == null) {
+            throw Errors.badRequest("Curriculum id is required");
+        }
+        if (code == null || code.isBlank()) {
+            throw Errors.badRequest("Group code is required");
+        }
+        if (startYear < MIN_YEAR || startYear > MAX_YEAR) {
+            throw Errors.badRequest("startYear must be between " + MIN_YEAR + " and " + MAX_YEAR);
+        }
         if (programApi.findProgramById(programId).isEmpty()) {
-            throw new IllegalArgumentException("Program not found: " + programId);
+            throw Errors.notFound("Program not found: " + programId);
         }
         if (programApi.findCurriculumById(curriculumId).isEmpty()) {
-            throw new IllegalArgumentException("Curriculum not found: " + curriculumId);
+            throw Errors.notFound("Curriculum not found: " + curriculumId);
         }
         if (curatorTeacherId != null && teacherApi.findById(curatorTeacherId).isEmpty()) {
-            throw new IllegalArgumentException("Teacher not found: " + curatorTeacherId);
+            throw Errors.notFound("Teacher not found: " + curatorTeacherId);
         }
-        if (studentGroupRepository.existsByCode(code)) {
-            throw new IllegalArgumentException("Group with code " + code + " already exists");
+        String trimmedCode = code.trim();
+        if (studentGroupRepository.existsByCode(trimmedCode)) {
+            throw Errors.conflict("Group with code '" + trimmedCode + "' already exists");
         }
         StudentGroup entity = StudentGroup.builder()
                 .programId(programId)
                 .curriculumId(curriculumId)
-                .code(code)
-                .name(name)
-                .description(description)
+                .code(trimmedCode)
+                .name(name != null ? name.trim() : null)
+                .description(description != null ? description.trim() : null)
                 .startYear(startYear)
                 .graduationYear(graduationYear)
                 .curatorTeacherId(curatorTeacherId)
@@ -97,12 +114,12 @@ class GroupServiceImpl implements GroupApi {
             UUID curatorTeacherId
     ) {
         StudentGroup entity = studentGroupRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Group not found: " + id));
+                .orElseThrow(() -> Errors.notFound("Group not found: " + id));
         if (curatorTeacherId != null && teacherApi.findById(curatorTeacherId).isEmpty()) {
-            throw new IllegalArgumentException("Teacher not found: " + curatorTeacherId);
+            throw Errors.notFound("Teacher not found: " + curatorTeacherId);
         }
-        if (name != null) entity.setName(name);
-        if (description != null) entity.setDescription(description);
+        if (name != null) entity.setName(name.trim());
+        if (description != null) entity.setDescription(description.trim());
         if (graduationYear != null) entity.setGraduationYear(graduationYear);
         entity.setCuratorTeacherId(curatorTeacherId);
         entity.setUpdatedAt(LocalDateTime.now());
@@ -113,7 +130,7 @@ class GroupServiceImpl implements GroupApi {
     @Transactional
     public void deleteGroup(UUID id) {
         if (!studentGroupRepository.existsById(id)) {
-            throw new IllegalArgumentException("Group not found: " + id);
+            throw Errors.notFound("Group not found: " + id);
         }
         studentGroupRepository.deleteById(id);
     }
@@ -128,22 +145,29 @@ class GroupServiceImpl implements GroupApi {
     @Override
     @Transactional
     public GroupLeaderDto addGroupLeader(UUID groupId, UUID studentId, String role, LocalDate fromDate, LocalDate toDate) {
+        if (studentId == null) {
+            throw Errors.badRequest("Student id is required");
+        }
+        if (role == null || role.isBlank()) {
+            throw Errors.badRequest("Role is required");
+        }
         if (studentGroupRepository.findById(groupId).isEmpty()) {
-            throw new IllegalArgumentException("Group not found: " + groupId);
+            throw Errors.notFound("Group not found: " + groupId);
         }
         if (studentApi.findById(studentId).isEmpty()) {
-            throw new IllegalArgumentException("Student not found: " + studentId);
+            throw Errors.notFound("Student not found: " + studentId);
         }
-        if (!"headman".equals(role) && !"deputy".equals(role)) {
-            throw new IllegalArgumentException("Role must be headman or deputy");
+        String normalizedRole = role.trim().toLowerCase();
+        if (!"headman".equals(normalizedRole) && !"deputy".equals(normalizedRole)) {
+            throw Errors.badRequest("Role must be headman or deputy");
         }
-        if (groupLeaderRepository.existsByGroupIdAndStudentIdAndRole(groupId, studentId, role)) {
-            throw new IllegalArgumentException("Leader with this role already exists for group/student");
+        if (groupLeaderRepository.existsByGroupIdAndStudentIdAndRole(groupId, studentId, normalizedRole)) {
+            throw Errors.conflict("Leader with this role already exists for group/student");
         }
         GroupLeader entity = GroupLeader.builder()
                 .groupId(groupId)
                 .studentId(studentId)
-                .role(role)
+                .role(normalizedRole)
                 .fromDate(fromDate)
                 .toDate(toDate)
                 .build();
@@ -154,7 +178,7 @@ class GroupServiceImpl implements GroupApi {
     @Transactional
     public void removeGroupLeader(UUID id) {
         if (!groupLeaderRepository.existsById(id)) {
-            throw new IllegalArgumentException("Group leader not found: " + id);
+            throw Errors.notFound("Group leader not found: " + id);
         }
         groupLeaderRepository.deleteById(id);
     }
@@ -177,29 +201,33 @@ class GroupServiceImpl implements GroupApi {
             Integer newDurationWeeks,
             String reason
     ) {
+        if (action == null || action.isBlank()) {
+            throw Errors.badRequest("Action is required");
+        }
+        String normalizedAction = action.trim().toUpperCase();
+        if (!"ADD".equals(normalizedAction) && !"REMOVE".equals(normalizedAction) && !"REPLACE".equals(normalizedAction)) {
+            throw Errors.badRequest("Action must be ADD, REMOVE, or REPLACE");
+        }
         if (studentGroupRepository.findById(groupId).isEmpty()) {
-            throw new IllegalArgumentException("Group not found: " + groupId);
+            throw Errors.notFound("Group not found: " + groupId);
         }
-        if (!"ADD".equals(action) && !"REMOVE".equals(action) && !"REPLACE".equals(action)) {
-            throw new IllegalArgumentException("Action must be ADD, REMOVE, or REPLACE");
+        if ("REMOVE".equals(normalizedAction) && curriculumSubjectId == null) {
+            throw Errors.badRequest("curriculumSubjectId is required for REMOVE");
         }
-        if ("REMOVE".equals(action) && curriculumSubjectId == null) {
-            throw new IllegalArgumentException("curriculumSubjectId required for REMOVE");
+        if ("ADD".equals(normalizedAction) && subjectId == null) {
+            throw Errors.badRequest("subjectId is required for ADD");
         }
-        if ("ADD".equals(action) && subjectId == null) {
-            throw new IllegalArgumentException("subjectId required for ADD");
-        }
-        if ("REPLACE".equals(action) && curriculumSubjectId == null) {
-            throw new IllegalArgumentException("curriculumSubjectId required for REPLACE");
+        if ("REPLACE".equals(normalizedAction) && curriculumSubjectId == null) {
+            throw Errors.badRequest("curriculumSubjectId is required for REPLACE");
         }
         GroupCurriculumOverride entity = GroupCurriculumOverride.builder()
                 .groupId(groupId)
                 .curriculumSubjectId(curriculumSubjectId)
                 .subjectId(subjectId)
-                .action(action)
+                .action(normalizedAction)
                 .newAssessmentTypeId(newAssessmentTypeId)
                 .newDurationWeeks(newDurationWeeks)
-                .reason(reason)
+                .reason(reason != null ? reason.trim() : null)
                 .build();
         return toOverrideDto(overrideRepository.save(entity));
     }
@@ -208,7 +236,7 @@ class GroupServiceImpl implements GroupApi {
     @Transactional
     public void deleteOverride(UUID id) {
         if (!overrideRepository.existsById(id)) {
-            throw new IllegalArgumentException("Override not found: " + id);
+            throw Errors.notFound("Override not found: " + id);
         }
         overrideRepository.deleteById(id);
     }

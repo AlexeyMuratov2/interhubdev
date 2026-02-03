@@ -10,6 +10,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.core.Ordered;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -25,7 +26,9 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-class JwtAuthenticationFilter extends OncePerRequestFilter {
+class JwtAuthenticationFilter extends OncePerRequestFilter implements Ordered {
+
+    private static final int ORDER = 0;
 
     private final JwtService jwtService;
     private final CookieHelper cookieHelper;
@@ -78,5 +81,10 @@ class JwtAuthenticationFilter extends OncePerRequestFilter {
                path.startsWith("/swagger-ui") ||
                path.startsWith("/actuator/health") ||
                path.startsWith("/actuator/info");
+    }
+
+    @Override
+    public int getOrder() {
+        return ORDER;
     }
 }

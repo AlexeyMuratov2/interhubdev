@@ -49,7 +49,7 @@ public record TokenValidationResult(
     public static TokenValidationResult tokenRegeneratedAndSent(String email) {
         return new TokenValidationResult(
             false, null, null, email, null, null, null,
-            "Token expired. A new invitation email has been sent.",
+            "Ссылка истекла. На вашу почту отправлено новое приглашение.",
             true
         );
     }

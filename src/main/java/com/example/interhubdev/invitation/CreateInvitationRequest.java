@@ -111,22 +111,22 @@ public record CreateInvitationRequest(
 
         public CreateInvitationRequest build() {
             if (email == null || email.isBlank()) {
-                throw new IllegalArgumentException("email is required");
+                throw new IllegalArgumentException("Укажите email приглашаемого.");
             }
             Set<Role> effective = (roles != null && !roles.isEmpty())
                 ? Set.copyOf(roles)
                 : (role != null ? Set.of(role) : Set.of());
             if (effective.isEmpty()) {
-                throw new IllegalArgumentException("role or roles is required");
+                throw new IllegalArgumentException("Укажите роль приглашаемого пользователя.");
             }
             Role.validateAtMostOneStaffType(effective);
 
             // Validate role-specific data
             if (effective.contains(Role.STUDENT) && studentData == null) {
-                throw new IllegalArgumentException("studentData is required when inviting as STUDENT");
+                throw new IllegalArgumentException("Укажите данные студента для роли STUDENT.");
             }
             if (effective.contains(Role.TEACHER) && teacherData == null) {
-                throw new IllegalArgumentException("teacherData is required when inviting as TEACHER");
+                throw new IllegalArgumentException("Укажите данные преподавателя для роли TEACHER.");
             }
 
             return new CreateInvitationRequest(

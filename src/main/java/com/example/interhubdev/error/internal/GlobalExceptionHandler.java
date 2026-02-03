@@ -56,18 +56,18 @@ class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
-                .collect(Collectors.toMap(FieldError::getField, e -> e.getDefaultMessage() != null ? e.getDefaultMessage() : "invalid", (a, b) -> a + "; " + b));
+                .collect(Collectors.toMap(FieldError::getField, e -> e.getDefaultMessage() != null ? e.getDefaultMessage() : "Неверное значение", (a, b) -> a + "; " + b));
         log.debug("Validation failed: {}", fieldErrors);
         return ResponseEntity
                 .badRequest()
-                .body(ErrorResponse.of("VALIDATION_FAILED", "Validation failed", fieldErrors));
+                .body(ErrorResponse.of("VALIDATION_FAILED", "Ошибка проверки данных. Проверьте заполненные поля.", fieldErrors));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleMessageNotReadable(HttpMessageNotReadableException ex) {
-        String message = "Invalid request body";
+        String message = "Неверный формат данных запроса.";
         Throwable cause = ex.getCause();
-        if (cause instanceof IllegalArgumentException iae) {
+        if (cause instanceof IllegalArgumentException iae && iae.getMessage() != null && !iae.getMessage().isBlank()) {
             message = iae.getMessage();
         } else {
             String msg = ex.getMessage();
@@ -111,7 +111,7 @@ class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         String message = ex.getMessage();
         if (message == null || message.isBlank()) {
-            message = "Access denied. You do not have permission to perform this action.";
+            message = "Недостаточно прав для выполнения этого действия.";
         }
         log.debug("Access denied: {}", message);
         return ResponseEntity
@@ -123,7 +123,7 @@ class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
         String message = ex.getMessage();
         if (message == null || message.isBlank()) {
-            message = "Authentication required. Please sign in.";
+            message = "Требуется вход в систему.";
         }
         log.debug("Authentication failed: {}", message);
         return ResponseEntity
@@ -133,33 +133,26 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoHandlerFound(NoHandlerFoundException ex) {
-        String message = "Endpoint not found: " + ex.getHttpMethod() + " " + ex.getRequestURL();
-        log.debug("{}", message);
+        log.debug("Endpoint not found: {} {}", ex.getHttpMethod(), ex.getRequestURL());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(ErrorResponse.of("NOT_FOUND", message));
+                .body(ErrorResponse.of("NOT_FOUND", "Метод или адрес не найдены."));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex) {
-        String message = "Method " + ex.getMethod() + " is not allowed for this endpoint. Supported: "
-                + (ex.getSupportedHttpMethods() != null ? ex.getSupportedHttpMethods().stream().map(HttpMethod::name).collect(Collectors.joining(", ")) : "none");
-        log.debug("Method not allowed: {}", message);
+        log.debug("Method not allowed: {}", ex.getMethod());
         return ResponseEntity
                 .status(HttpStatus.METHOD_NOT_ALLOWED)
-                .body(ErrorResponse.of("METHOD_NOT_ALLOWED", message));
+                .body(ErrorResponse.of("METHOD_NOT_ALLOWED", "Для этого адреса не поддерживается указанный метод запроса."));
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
-        String message = "Unsupported media type: " + ex.getContentType()
-                + (ex.getSupportedMediaTypes() != null && !ex.getSupportedMediaTypes().isEmpty()
-                ? ". Supported: " + ex.getSupportedMediaTypes()
-                : "");
-        log.debug("Unsupported media type: {}", message);
+        log.debug("Unsupported media type: {}", ex.getContentType());
         return ResponseEntity
                 .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                .body(ErrorResponse.of("UNSUPPORTED_MEDIA_TYPE", message));
+                .body(ErrorResponse.of("UNSUPPORTED_MEDIA_TYPE", "Неподдерживаемый тип содержимого запроса."));
     }
 
     @ExceptionHandler(Exception.class)
@@ -167,7 +160,7 @@ class GlobalExceptionHandler {
         log.error("Unhandled error", ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ErrorResponse.of("INTERNAL_ERROR", "An unexpected error occurred. Please try again later."));
+                .body(ErrorResponse.of("INTERNAL_ERROR", "Произошла ошибка. Попробуйте позже."));
     }
 
     private static String statusToCode(HttpStatus status) {
@@ -187,15 +180,15 @@ class GlobalExceptionHandler {
 
     private static String statusToDefaultMessage(HttpStatus status) {
         return switch (status.value()) {
-            case 400 -> "Invalid request.";
-            case 401 -> "Authentication required. Please sign in.";
-            case 403 -> "Access denied. You do not have permission to perform this action.";
-            case 404 -> "Resource not found.";
-            case 405 -> "HTTP method not allowed for this endpoint.";
-            case 409 -> "Conflict. The request could not be completed due to a conflict with the current state.";
-            case 415 -> "Unsupported media type.";
-            case 422 -> "Request could not be processed.";
-            case 500 -> "An unexpected error occurred. Please try again later.";
+            case 400 -> "Неверный запрос.";
+            case 401 -> "Требуется вход в систему.";
+            case 403 -> "Недостаточно прав для выполнения этого действия.";
+            case 404 -> "Ресурс не найден.";
+            case 405 -> "Для этого адреса не поддерживается указанный метод.";
+            case 409 -> "Действие невозможно из-за текущего состояния данных.";
+            case 415 -> "Неподдерживаемый тип содержимого.";
+            case 422 -> "Запрос не может быть обработан.";
+            case 500 -> "Произошла ошибка. Попробуйте позже.";
             default -> status.getReasonPhrase();
         };
     }

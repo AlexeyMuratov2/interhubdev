@@ -3,6 +3,11 @@ package com.example.interhubdev.program.internal;
 import com.example.interhubdev.program.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,7 +43,7 @@ class ProgramController {
     @PostMapping
     @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Create program", description = "Only STAFF, ADMIN, SUPER_ADMIN can create programs")
-    public ResponseEntity<ProgramDto> createProgram(@RequestBody CreateProgramRequest request) {
+    public ResponseEntity<ProgramDto> createProgram(@Valid @RequestBody CreateProgramRequest request) {
         ProgramDto dto = programApi.createProgram(
                 request.code(),
                 request.name(),
@@ -54,7 +59,7 @@ class ProgramController {
     @Operation(summary = "Update program", description = "Only STAFF, ADMIN, SUPER_ADMIN can update programs")
     public ResponseEntity<ProgramDto> updateProgram(
             @PathVariable UUID id,
-            @RequestBody UpdateProgramRequest request
+            @Valid @RequestBody UpdateProgramRequest request
     ) {
         ProgramDto dto = programApi.updateProgram(
                 id,
@@ -94,7 +99,7 @@ class ProgramController {
     @Operation(summary = "Create curriculum", description = "Only STAFF, ADMIN, SUPER_ADMIN can create curricula")
     public ResponseEntity<CurriculumDto> createCurriculum(
             @PathVariable UUID programId,
-            @RequestBody CreateCurriculumRequest request
+            @Valid @RequestBody CreateCurriculumRequest request
     ) {
         CurriculumDto dto = programApi.createCurriculum(
                 programId,
@@ -111,7 +116,7 @@ class ProgramController {
     @Operation(summary = "Update curriculum", description = "Only STAFF, ADMIN, SUPER_ADMIN can update curricula")
     public ResponseEntity<CurriculumDto> updateCurriculum(
             @PathVariable UUID id,
-            @RequestBody UpdateCurriculumRequest request
+            @Valid @RequestBody UpdateCurriculumRequest request
     ) {
         CurriculumDto dto = programApi.updateCurriculum(
                 id,
@@ -151,7 +156,7 @@ class ProgramController {
     @Operation(summary = "Create curriculum subject", description = "Only STAFF, ADMIN, SUPER_ADMIN can create curriculum subjects")
     public ResponseEntity<CurriculumSubjectDto> createCurriculumSubject(
             @PathVariable UUID curriculumId,
-            @RequestBody CreateCurriculumSubjectRequest request
+            @Valid @RequestBody CreateCurriculumSubjectRequest request
     ) {
         CurriculumSubjectDto dto = programApi.createCurriculumSubject(
                 curriculumId,
@@ -175,7 +180,7 @@ class ProgramController {
     @Operation(summary = "Update curriculum subject", description = "Only STAFF, ADMIN, SUPER_ADMIN can update curriculum subjects")
     public ResponseEntity<CurriculumSubjectDto> updateCurriculumSubject(
             @PathVariable UUID id,
-            @RequestBody UpdateCurriculumSubjectRequest request
+            @Valid @RequestBody UpdateCurriculumSubjectRequest request
     ) {
         CurriculumSubjectDto dto = programApi.updateCurriculumSubject(
                 id,
@@ -199,17 +204,47 @@ class ProgramController {
         return ResponseEntity.noContent().build();
     }
 
-    record CreateProgramRequest(String code, String name, String description, String degreeLevel, UUID departmentId) {}
+    record CreateProgramRequest(
+            @NotBlank(message = "Code is required") String code,
+            @NotBlank(message = "Name is required") String name,
+            String description,
+            String degreeLevel,
+            UUID departmentId
+    ) {}
     record UpdateProgramRequest(String name, String description, String degreeLevel, UUID departmentId) {}
-    record CreateCurriculumRequest(String version, int startYear, Boolean isActive, String notes) {}
-    record UpdateCurriculumRequest(String version, int startYear, boolean isActive, String notes) {}
+    record CreateCurriculumRequest(
+            @NotBlank(message = "Version is required") String version,
+            @Min(value = 1900, message = "startYear must be at least 1900") @Max(value = 2100, message = "startYear must be at most 2100") int startYear,
+            Boolean isActive,
+            String notes
+    ) {}
+    record UpdateCurriculumRequest(
+            String version,
+            @Min(value = 1900, message = "startYear must be at least 1900") @Max(value = 2100, message = "startYear must be at most 2100") int startYear,
+            boolean isActive,
+            String notes
+    ) {}
     record CreateCurriculumSubjectRequest(
-            UUID subjectId, int semesterNo, Integer courseYear, int durationWeeks,
-            Integer hoursTotal, Integer hoursLecture, Integer hoursPractice, Integer hoursLab,
-            UUID assessmentTypeId, Boolean isElective, BigDecimal credits
+            @NotNull(message = "Subject id is required") UUID subjectId,
+            @Min(value = 1, message = "semesterNo must be at least 1") int semesterNo,
+            Integer courseYear,
+            @Min(value = 1, message = "durationWeeks must be at least 1") int durationWeeks,
+            Integer hoursTotal,
+            Integer hoursLecture,
+            Integer hoursPractice,
+            Integer hoursLab,
+            @NotNull(message = "Assessment type id is required") UUID assessmentTypeId,
+            Boolean isElective,
+            BigDecimal credits
     ) {}
     record UpdateCurriculumSubjectRequest(
-            Integer courseYear, Integer hoursTotal, Integer hoursLecture, Integer hoursPractice, Integer hoursLab,
-            UUID assessmentTypeId, Boolean isElective, BigDecimal credits
+            Integer courseYear,
+            Integer hoursTotal,
+            Integer hoursLecture,
+            Integer hoursPractice,
+            Integer hoursLab,
+            UUID assessmentTypeId,
+            Boolean isElective,
+            BigDecimal credits
     ) {}
 }

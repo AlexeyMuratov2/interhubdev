@@ -26,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     /**
      * Password encoder using BCrypt algorithm.
@@ -50,8 +51,9 @@ class SecurityConfig {
             .sessionManagement(session -> 
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
-            // Add JWT filter before UsernamePasswordAuthenticationFilter
+            // Rate limit first, then JWT (both before UsernamePasswordAuthenticationFilter which has registered order)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             
             // Authorization rules
             .authorizeHttpRequests(auth -> auth

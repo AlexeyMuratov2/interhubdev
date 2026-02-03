@@ -3,6 +3,7 @@ package com.example.interhubdev.invitation.internal;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.invitation.*;
+import com.example.interhubdev.invitation.internal.InvitationErrors;
 import com.example.interhubdev.user.UserDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,7 +41,7 @@ class InvitationController {
     @Operation(summary = "Get invitation by ID")
     public ResponseEntity<InvitationDto> findById(@PathVariable UUID id) {
         InvitationDto dto = invitationApi.findById(id)
-                .orElseThrow(() -> Errors.notFound("Invitation not found: " + id));
+                .orElseThrow(() -> InvitationErrors.invitationNotFound(id));
         return ResponseEntity.ok(dto);
     }
 
@@ -57,7 +58,7 @@ class InvitationController {
             HttpServletRequest httpRequest
     ) {
         UserDto currentUser = authApi.getCurrentUser(httpRequest)
-                .orElseThrow(() -> Errors.unauthorized("Authentication required to create invitation"));
+                .orElseThrow(() -> Errors.unauthorized("Для создания приглашения необходимо войти в систему."));
         InvitationDto invitation = invitationApi.create(request, currentUser.id());
         return ResponseEntity.status(HttpStatus.CREATED).body(invitation);
     }

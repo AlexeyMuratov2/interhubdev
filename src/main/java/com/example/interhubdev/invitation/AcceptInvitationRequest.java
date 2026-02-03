@@ -9,10 +9,10 @@ public record AcceptInvitationRequest(
 ) {
     public AcceptInvitationRequest {
         if (token == null || token.isBlank()) {
-            throw new IllegalArgumentException("token is required");
+            throw new IllegalArgumentException("Укажите ссылку приглашения (токен).");
         }
         if (password == null || password.length() < 8) {
-            throw new IllegalArgumentException("password must be at least 8 characters");
+            throw new IllegalArgumentException("Пароль должен быть не менее 8 символов.");
         }
     }
 }
