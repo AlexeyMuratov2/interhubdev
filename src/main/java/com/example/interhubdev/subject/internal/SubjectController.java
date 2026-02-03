@@ -5,9 +5,12 @@ import com.example.interhubdev.subject.SubjectApi;
 import com.example.interhubdev.subject.SubjectDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,17 +47,19 @@ class SubjectController {
     }
 
     @PostMapping
-    @Operation(summary = "Create subject")
-    public ResponseEntity<SubjectDto> createSubject(@RequestBody CreateSubjectRequest request) {
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create subject", description = "Only STAFF, ADMIN, SUPER_ADMIN can create subjects")
+    public ResponseEntity<SubjectDto> createSubject(@Valid @RequestBody CreateSubjectRequest request) {
         SubjectDto dto = subjectApi.createSubject(request.code(), request.name(), request.description());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update subject")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update subject", description = "Only STAFF, ADMIN, SUPER_ADMIN can update subjects")
     public ResponseEntity<SubjectDto> updateSubject(
             @PathVariable UUID id,
-            @RequestBody UpdateSubjectRequest request
+            @Valid @RequestBody UpdateSubjectRequest request
     ) {
         SubjectDto dto = subjectApi.updateSubject(id, request.name(), request.description());
         return ResponseEntity.ok(dto);
@@ -83,8 +88,9 @@ class SubjectController {
     }
 
     @PostMapping("/assessment-types")
-    @Operation(summary = "Create assessment type")
-    public ResponseEntity<AssessmentTypeDto> createAssessmentType(@RequestBody CreateAssessmentTypeRequest request) {
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create assessment type", description = "Only STAFF, ADMIN, SUPER_ADMIN can create assessment types")
+    public ResponseEntity<AssessmentTypeDto> createAssessmentType(@Valid @RequestBody CreateAssessmentTypeRequest request) {
         AssessmentTypeDto dto = subjectApi.createAssessmentType(request.code(), request.name());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
@@ -96,7 +102,14 @@ class SubjectController {
         return ResponseEntity.noContent().build();
     }
 
-    record CreateSubjectRequest(String code, String name, String description) {}
+    record CreateSubjectRequest(
+            @NotBlank(message = "Code is required") String code,
+            @NotBlank(message = "Name is required") String name,
+            String description
+    ) {}
     record UpdateSubjectRequest(String name, String description) {}
-    record CreateAssessmentTypeRequest(String code, String name) {}
+    record CreateAssessmentTypeRequest(
+            @NotBlank(message = "Code is required") String code,
+            @NotBlank(message = "Name is required") String name
+    ) {}
 }

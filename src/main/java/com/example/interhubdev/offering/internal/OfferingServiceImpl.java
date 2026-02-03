@@ -1,5 +1,6 @@
 package com.example.interhubdev.offering.internal;
 
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.group.GroupApi;
 import com.example.interhubdev.offering.*;
 import com.example.interhubdev.program.ProgramApi;
@@ -18,6 +19,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 class OfferingServiceImpl implements OfferingApi {
+
+    private static final List<String> VALID_FORMATS = List.of("offline", "online", "mixed");
+    private static final List<String> VALID_TEACHER_ROLES = List.of("LECTURE", "PRACTICE", "LAB");
 
     private final GroupSubjectOfferingRepository offeringRepository;
     private final OfferingTeacherRepository offeringTeacherRepository;
@@ -48,31 +52,38 @@ class OfferingServiceImpl implements OfferingApi {
             String format,
             String notes
     ) {
+        if (groupId == null) {
+            throw Errors.badRequest("Group id is required");
+        }
+        if (curriculumSubjectId == null) {
+            throw Errors.badRequest("Curriculum subject id is required");
+        }
         if (groupApi.findGroupById(groupId).isEmpty()) {
-            throw new IllegalArgumentException("Group not found: " + groupId);
+            throw Errors.notFound("Group not found: " + groupId);
         }
         if (programApi.findCurriculumSubjectById(curriculumSubjectId).isEmpty()) {
-            throw new IllegalArgumentException("Curriculum subject not found: " + curriculumSubjectId);
+            throw Errors.notFound("Curriculum subject not found: " + curriculumSubjectId);
         }
         if (teacherId != null && teacherApi.findById(teacherId).isEmpty()) {
-            throw new IllegalArgumentException("Teacher not found: " + teacherId);
+            throw Errors.notFound("Teacher not found: " + teacherId);
         }
         if (roomId != null && scheduleApi.findRoomById(roomId).isEmpty()) {
-            throw new IllegalArgumentException("Room not found: " + roomId);
+            throw Errors.notFound("Room not found: " + roomId);
         }
-        if (format != null && !List.of("offline", "online", "mixed").contains(format)) {
-            throw new IllegalArgumentException("Format must be offline, online, or mixed");
+        String normalizedFormat = format != null ? format.trim().toLowerCase() : null;
+        if (normalizedFormat != null && !VALID_FORMATS.contains(normalizedFormat)) {
+            throw Errors.badRequest("Format must be offline, online, or mixed");
         }
         if (offeringRepository.existsByGroupIdAndCurriculumSubjectId(groupId, curriculumSubjectId)) {
-            throw new IllegalArgumentException("Offering already exists for group and curriculum subject");
+            throw Errors.conflict("Offering already exists for group and curriculum subject");
         }
         GroupSubjectOffering entity = GroupSubjectOffering.builder()
                 .groupId(groupId)
                 .curriculumSubjectId(curriculumSubjectId)
                 .teacherId(teacherId)
                 .roomId(roomId)
-                .format(format)
-                .notes(notes)
+                .format(normalizedFormat)
+                .notes(notes != null ? notes.trim() : null)
                 .build();
         return toOfferingDto(offeringRepository.save(entity));
     }
@@ -87,20 +98,21 @@ class OfferingServiceImpl implements OfferingApi {
             String notes
     ) {
         GroupSubjectOffering entity = offeringRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Offering not found: " + id));
+                .orElseThrow(() -> Errors.notFound("Offering not found: " + id));
         if (teacherId != null && teacherApi.findById(teacherId).isEmpty()) {
-            throw new IllegalArgumentException("Teacher not found: " + teacherId);
+            throw Errors.notFound("Teacher not found: " + teacherId);
         }
         if (roomId != null && scheduleApi.findRoomById(roomId).isEmpty()) {
-            throw new IllegalArgumentException("Room not found: " + roomId);
+            throw Errors.notFound("Room not found: " + roomId);
         }
-        if (format != null && !List.of("offline", "online", "mixed").contains(format)) {
-            throw new IllegalArgumentException("Format must be offline, online, or mixed");
+        String normalizedFormat = format != null ? format.trim().toLowerCase() : null;
+        if (normalizedFormat != null && !VALID_FORMATS.contains(normalizedFormat)) {
+            throw Errors.badRequest("Format must be offline, online, or mixed");
         }
         entity.setTeacherId(teacherId);
         entity.setRoomId(roomId);
-        entity.setFormat(format);
-        if (notes != null) entity.setNotes(notes);
+        entity.setFormat(normalizedFormat);
+        if (notes != null) entity.setNotes(notes.trim());
         entity.setUpdatedAt(LocalDateTime.now());
         return toOfferingDto(offeringRepository.save(entity));
     }
@@ -124,22 +136,29 @@ class OfferingServiceImpl implements OfferingApi {
     @Override
     @Transactional
     public OfferingTeacherDto addOfferingTeacher(UUID offeringId, UUID teacherId, String role) {
+        if (teacherId == null) {
+            throw Errors.badRequest("Teacher id is required");
+        }
+        if (role == null || role.isBlank()) {
+            throw Errors.badRequest("Role is required");
+        }
         if (offeringRepository.findById(offeringId).isEmpty()) {
-            throw new IllegalArgumentException("Offering not found: " + offeringId);
+            throw Errors.notFound("Offering not found: " + offeringId);
         }
         if (teacherApi.findById(teacherId).isEmpty()) {
-            throw new IllegalArgumentException("Teacher not found: " + teacherId);
+            throw Errors.notFound("Teacher not found: " + teacherId);
         }
-        if (!List.of("LECTURE", "PRACTICE", "LAB").contains(role)) {
-            throw new IllegalArgumentException("Role must be LECTURE, PRACTICE, or LAB");
+        String normalizedRole = role.trim().toUpperCase();
+        if (!VALID_TEACHER_ROLES.contains(normalizedRole)) {
+            throw Errors.badRequest("Role must be LECTURE, PRACTICE, or LAB");
         }
-        if (offeringTeacherRepository.existsByOfferingIdAndTeacherIdAndRole(offeringId, teacherId, role)) {
-            throw new IllegalArgumentException("Offering teacher with this role already exists");
+        if (offeringTeacherRepository.existsByOfferingIdAndTeacherIdAndRole(offeringId, teacherId, normalizedRole)) {
+            throw Errors.conflict("Offering teacher with this role already exists");
         }
         OfferingTeacher entity = OfferingTeacher.builder()
                 .offeringId(offeringId)
                 .teacherId(teacherId)
-                .role(role)
+                .role(normalizedRole)
                 .build();
         return toTeacherDto(offeringTeacherRepository.save(entity));
     }
@@ -148,7 +167,7 @@ class OfferingServiceImpl implements OfferingApi {
     @Transactional
     public void removeOfferingTeacher(UUID id) {
         if (!offeringTeacherRepository.existsById(id)) {
-            throw new IllegalArgumentException("Offering teacher not found: " + id);
+            throw Errors.notFound("Offering teacher not found: " + id);
         }
         offeringTeacherRepository.deleteById(id);
     }

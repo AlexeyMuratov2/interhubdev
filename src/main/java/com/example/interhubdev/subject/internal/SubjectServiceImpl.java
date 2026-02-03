@@ -1,5 +1,6 @@
 package com.example.interhubdev.subject.internal;
 
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.subject.AssessmentTypeDto;
 import com.example.interhubdev.subject.SubjectApi;
 import com.example.interhubdev.subject.SubjectDto;
@@ -40,13 +41,17 @@ class SubjectServiceImpl implements SubjectApi {
     @Override
     @Transactional
     public SubjectDto createSubject(String code, String name, String description) {
-        if (subjectRepository.existsByCode(code)) {
-            throw new IllegalArgumentException("Subject with code " + code + " already exists");
+        if (code == null || code.isBlank()) {
+            throw Errors.badRequest("Subject code is required");
+        }
+        String trimmedCode = code.trim();
+        if (subjectRepository.existsByCode(trimmedCode)) {
+            throw Errors.conflict("Subject with code '" + trimmedCode + "' already exists");
         }
         Subject entity = Subject.builder()
-                .code(code)
-                .name(name != null ? name : "")
-                .description(description)
+                .code(trimmedCode)
+                .name(name != null ? name.trim() : "")
+                .description(description != null ? description.trim() : null)
                 .build();
         return toSubjectDto(subjectRepository.save(entity));
     }
@@ -66,7 +71,7 @@ class SubjectServiceImpl implements SubjectApi {
     @Transactional
     public void deleteSubject(UUID id) {
         if (!subjectRepository.existsById(id)) {
-            throw new IllegalArgumentException("Subject not found: " + id);
+            throw Errors.notFound("Subject not found: " + id);
         }
         subjectRepository.deleteById(id);
     }
@@ -105,7 +110,7 @@ class SubjectServiceImpl implements SubjectApi {
     @Transactional
     public void deleteAssessmentType(UUID id) {
         if (!assessmentTypeRepository.existsById(id)) {
-            throw new IllegalArgumentException("Assessment type not found: " + id);
+            throw Errors.notFound("Assessment type not found: " + id);
         }
         assessmentTypeRepository.deleteById(id);
     }

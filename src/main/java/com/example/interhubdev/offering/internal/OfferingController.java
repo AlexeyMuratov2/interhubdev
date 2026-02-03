@@ -3,9 +3,13 @@ package com.example.interhubdev.offering.internal;
 import com.example.interhubdev.offering.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -48,10 +52,11 @@ class OfferingController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update offering")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update offering", description = "Only STAFF, ADMIN, SUPER_ADMIN can update offerings")
     public ResponseEntity<GroupSubjectOfferingDto> updateOffering(
             @PathVariable UUID id,
-            @RequestBody UpdateOfferingRequest request
+            @Valid @RequestBody UpdateOfferingRequest request
     ) {
         GroupSubjectOfferingDto dto = offeringApi.updateOffering(
                 id,
@@ -64,7 +69,8 @@ class OfferingController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete offering")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete offering", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete offerings")
     public ResponseEntity<Void> deleteOffering(@PathVariable UUID id) {
         offeringApi.deleteOffering(id);
         return ResponseEntity.noContent().build();
@@ -91,14 +97,24 @@ class OfferingController {
     }
 
     @DeleteMapping("/teachers/{id}")
-    @Operation(summary = "Remove teacher from offering")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Remove teacher from offering", description = "Only STAFF, ADMIN, SUPER_ADMIN can remove offering teachers")
     public ResponseEntity<Void> removeOfferingTeacher(@PathVariable UUID id) {
         offeringApi.removeOfferingTeacher(id);
         return ResponseEntity.noContent().build();
     }
 
-    record CreateOfferingRequest(UUID groupId, UUID curriculumSubjectId, UUID teacherId, UUID roomId,
-                                String format, String notes) {}
+    record CreateOfferingRequest(
+            @NotNull(message = "Group id is required") UUID groupId,
+            @NotNull(message = "Curriculum subject id is required") UUID curriculumSubjectId,
+            UUID teacherId,
+            UUID roomId,
+            String format,
+            String notes
+    ) {}
     record UpdateOfferingRequest(UUID teacherId, UUID roomId, String format, String notes) {}
-    record AddOfferingTeacherRequest(UUID teacherId, String role) {}
+    record AddOfferingTeacherRequest(
+            @NotNull(message = "Teacher id is required") UUID teacherId,
+            @NotBlank(message = "Role is required") String role
+    ) {}
 }

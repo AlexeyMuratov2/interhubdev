@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 class RateLimitFilter extends OncePerRequestFilter implements Ordered {
 
     private static final int ORDER = -100;
-    private static final int MAX_REQUESTS_PER_SECOND = 5;
+    private static final int MAX_REQUESTS_PER_SECOND = 10;
     private static final long WINDOW_MS = 1000L;
 
     private final ConcurrentHashMap<String, Deque<Long>> clientTimestamps = new ConcurrentHashMap<>();
