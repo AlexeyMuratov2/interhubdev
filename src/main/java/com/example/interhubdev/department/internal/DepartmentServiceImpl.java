@@ -2,6 +2,7 @@ package com.example.interhubdev.department.internal;
 
 import com.example.interhubdev.department.DepartmentApi;
 import com.example.interhubdev.department.DepartmentDto;
+import com.example.interhubdev.error.Errors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,13 +38,16 @@ class DepartmentServiceImpl implements DepartmentApi {
     @Override
     @Transactional
     public DepartmentDto create(String code, String name, String description) {
-        if (departmentRepository.existsByCode(code)) {
-            throw new IllegalArgumentException("Department with code " + code + " already exists");
+        if (code == null || code.isBlank()) {
+            throw Errors.badRequest("Department code is required");
+        }
+        if (departmentRepository.existsByCode(code.trim())) {
+            throw Errors.conflict("Department with code '" + code + "' already exists");
         }
         Department entity = Department.builder()
-                .code(code)
-                .name(name != null ? name : "")
-                .description(description)
+                .code(code.trim())
+                .name(name != null ? name.trim() : "")
+                .description(description != null ? description.trim() : null)
                 .build();
         return toDto(departmentRepository.save(entity));
     }
@@ -52,12 +56,12 @@ class DepartmentServiceImpl implements DepartmentApi {
     @Transactional
     public DepartmentDto update(UUID id, String name, String description) {
         Department entity = departmentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Department not found: " + id));
+                .orElseThrow(() -> Errors.notFound("Department not found: " + id));
         if (name != null) {
-            entity.setName(name);
+            entity.setName(name.trim());
         }
         if (description != null) {
-            entity.setDescription(description);
+            entity.setDescription(description.trim());
         }
         return toDto(departmentRepository.save(entity));
     }
@@ -66,7 +70,7 @@ class DepartmentServiceImpl implements DepartmentApi {
     @Transactional
     public void delete(UUID id) {
         if (!departmentRepository.existsById(id)) {
-            throw new IllegalArgumentException("Department not found: " + id);
+            throw Errors.notFound("Department not found: " + id);
         }
         departmentRepository.deleteById(id);
     }

@@ -9,6 +9,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Program",
-    allowedDependencies = {"department", "subject"}
+    allowedDependencies = {"department", "subject", "error"}
 )
 package com.example.interhubdev.program;

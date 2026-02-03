@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -58,7 +59,7 @@ class UserServiceImpl implements UserApi {
 
     @Override
     public List<UserDto> findByRole(Role role) {
-        return userRepository.findByRole(role).stream()
+        return userRepository.findByRolesContaining(role).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
@@ -72,14 +73,19 @@ class UserServiceImpl implements UserApi {
 
     @Override
     @Transactional
-    public UserDto createUser(String email, Role role, String firstName, String lastName) {
+    public UserDto createUser(String email, Collection<Role> roles, String firstName, String lastName) {
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("User with email " + email + " already exists");
         }
+        Set<Role> roleSet = roles == null ? Set.of() : Set.copyOf(roles);
+        if (roleSet.isEmpty()) {
+            throw new IllegalArgumentException("At least one role is required");
+        }
+        Role.validateAtMostOneStaffType(roleSet);
 
         User user = User.builder()
                 .email(email)
-                .role(role)
+                .roles(new java.util.HashSet<>(roleSet))
                 .firstName(firstName)
                 .lastName(lastName)
                 .status(UserStatus.PENDING)
@@ -127,6 +133,23 @@ class UserServiceImpl implements UserApi {
     }
 
     @Override
+    @Transactional
+    public void reactivateForReinvite(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        if (user.getStatus() != UserStatus.DISABLED) {
+            throw new IllegalStateException("User must be DISABLED to reactivate for re-invite");
+        }
+        if (user.getPasswordHash() != null) {
+            throw new IllegalStateException("User already activated; cannot reactivate for re-invite");
+        }
+
+        user.setStatus(UserStatus.PENDING);
+        userRepository.save(user);
+    }
+
+    @Override
     public boolean verifyPassword(String email, String rawPassword) {
         return userRepository.findByEmail(email)
                 .filter(User::canLogin)
@@ -147,7 +170,7 @@ class UserServiceImpl implements UserApi {
         return new UserDto(
                 user.getId(),
                 user.getEmail(),
-                user.getRole(),
+                user.getRoles() != null ? Set.copyOf(user.getRoles()) : Set.of(),
                 user.getStatus(),
                 user.getFirstName(),
                 user.getLastName(),

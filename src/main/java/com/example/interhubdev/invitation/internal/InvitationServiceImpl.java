@@ -3,12 +3,14 @@ package com.example.interhubdev.invitation.internal;
 import com.example.interhubdev.email.EmailApi;
 import com.example.interhubdev.email.EmailMessage;
 import com.example.interhubdev.email.EmailResult;
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.invitation.*;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.teacher.TeacherApi;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
+import com.example.interhubdev.user.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -80,19 +82,32 @@ class InvitationServiceImpl implements InvitationApi {
     @Override
     @Transactional
     public InvitationDto create(CreateInvitationRequest request, UUID invitedBy) {
-        // 1. Validate inviter can invite this role
-        validateInviterPermission(invitedBy, request.role());
+        Set<Role> effectiveRoles = request.getEffectiveRoles();
+        if (effectiveRoles.isEmpty()) {
+            throw Errors.badRequest("role or roles is required");
+        }
+        Role.validateAtMostOneStaffType(effectiveRoles);
 
-        // 2. Create user with PENDING status
+        // 1. Validate inviter can invite each role
+        for (Role targetRole : effectiveRoles) {
+            validateInviterPermission(invitedBy, targetRole);
+        }
+
+        Optional<UserDto> existingUser = userApi.findByEmail(request.email());
+        if (existingUser.isPresent()) {
+            return reinviteExistingUser(existingUser.get(), request, invitedBy);
+        }
+
+        // 2. Create user with PENDING status (roles from invitation)
         UserDto user = userApi.createUser(
                 request.email(),
-                request.role(),
+                effectiveRoles,
                 request.firstName(),
                 request.lastName()
         );
 
-        // 3. Create role-specific profile if needed
-        createRoleProfile(user.id(), request);
+        // 3. Create role-specific profiles if needed
+        createRoleProfiles(user.id(), request);
 
         // 4. Create invitation
         Invitation invitation = Invitation.builder()
@@ -108,9 +123,42 @@ class InvitationServiceImpl implements InvitationApi {
         createToken(invitation.getId());
         sendInvitationEmailAsync(invitation.getId(), 1);
 
-        log.info("Created invitation {} for user {} (role: {})", 
-                invitation.getId(), user.email(), request.role());
+        log.info("Created invitation {} for user {} (roles: {})",
+                invitation.getId(), user.email(), effectiveRoles);
 
+        return toDto(invitation);
+    }
+
+    /**
+     * Re-invite when user already exists and their invitation is EXPIRED or CANCELLED.
+     */
+    private InvitationDto reinviteExistingUser(UserDto user, CreateInvitationRequest request, UUID invitedBy) {
+        Invitation invitation = invitationRepository.findByUserId(user.id())
+                .orElseThrow(() -> Errors.conflict("User with email " + request.email() + " already exists"));
+
+        if (invitation.getStatus() != InvitationStatus.EXPIRED && invitation.getStatus() != InvitationStatus.CANCELLED) {
+            throw Errors.conflict("User with email " + request.email() + " already exists");
+        }
+
+        // If user was disabled (cancelled case), set back to PENDING so they can accept
+        if (user.status() == UserStatus.DISABLED) {
+            userApi.reactivateForReinvite(user.id());
+        }
+
+        tokenRepository.deleteByInvitationId(invitation.getId());
+        invitation.setStatus(InvitationStatus.PENDING);
+        invitation.setExpiresAt(Instant.now().plus(properties.getExpiryDuration()));
+        invitation.setInvitedById(invitedBy);
+        invitation.setEmailAttempts(0);
+        invitation.setEmailSentAt(null);
+        invitation.setEmailMessageId(null);
+        invitation.setUpdatedAt(Instant.now());
+        invitationRepository.save(invitation);
+
+        createToken(invitation.getId());
+        sendInvitationEmailAsync(invitation.getId(), 1);
+
+        log.info("Re-invited user {} (invitation {})", user.email(), invitation.getId());
         return toDto(invitation);
     }
 
@@ -120,7 +168,7 @@ class InvitationServiceImpl implements InvitationApi {
         Invitation invitation = findInvitationOrThrow(invitationId);
 
         if (!invitation.canBeAccepted()) {
-            throw new IllegalStateException("Cannot resend invitation in status: " + invitation.getStatus());
+            throw Errors.conflict("Cannot resend invitation in status: " + invitation.getStatus());
         }
 
         // Delete old tokens
@@ -144,7 +192,7 @@ class InvitationServiceImpl implements InvitationApi {
         Invitation invitation = findInvitationOrThrow(invitationId);
 
         if (invitation.getStatus() == InvitationStatus.ACCEPTED) {
-            throw new IllegalStateException("Cannot cancel already accepted invitation");
+            throw Errors.conflict("Cannot cancel already accepted invitation");
         }
 
         invitation.setStatus(InvitationStatus.CANCELLED);
@@ -170,7 +218,8 @@ class InvitationServiceImpl implements InvitationApi {
 
         InvitationToken invToken = tokenOpt.get();
         Invitation invitation = findInvitationOrThrow(invToken.getInvitationId());
-        UserDto user = userApi.findById(invitation.getUserId()).orElseThrow();
+        UserDto user = userApi.findById(invitation.getUserId())
+                .orElseThrow(() -> Errors.notFound("User not found: " + invitation.getUserId()));
 
         // Check if invitation expired
         if (invitation.isExpired()) {
@@ -198,7 +247,7 @@ class InvitationServiceImpl implements InvitationApi {
                 invitation.getId(),
                 user.id(),
                 user.email(),
-                user.role(),
+                user.roles() != null ? List.copyOf(user.roles()) : List.of(),
                 user.firstName(),
                 user.lastName(),
                 false
@@ -211,19 +260,19 @@ class InvitationServiceImpl implements InvitationApi {
         Optional<InvitationToken> tokenOpt = tokenRepository.findByToken(request.token());
 
         if (tokenOpt.isEmpty()) {
-            throw new IllegalArgumentException("Invalid token");
+            throw Errors.badRequest("Invalid token");
         }
 
         InvitationToken invToken = tokenOpt.get();
 
         if (invToken.isExpired()) {
-            throw new IllegalArgumentException("Token has expired");
+            throw Errors.badRequest("Token has expired");
         }
 
         Invitation invitation = findInvitationOrThrow(invToken.getInvitationId());
 
         if (!invitation.canBeAccepted()) {
-            throw new IllegalStateException("Invitation cannot be accepted (status: " + invitation.getStatus() + ")");
+            throw Errors.conflict("Invitation cannot be accepted (status: " + invitation.getStatus() + ")");
         }
 
         // Activate user account
@@ -243,30 +292,24 @@ class InvitationServiceImpl implements InvitationApi {
 
     private void validateInviterPermission(UUID inviterId, Role targetRole) {
         UserDto inviter = userApi.findById(inviterId)
-                .orElseThrow(() -> new IllegalArgumentException("Inviter not found: " + inviterId));
+                .orElseThrow(() -> Errors.notFound("Inviter not found: " + inviterId));
 
-        if (!inviter.role().canInvite(targetRole)) {
-            throw new IllegalArgumentException(
-                    String.format("User with role %s cannot invite users with role %s", 
-                            inviter.role(), targetRole));
+        boolean canInvite = inviter.roles() != null && inviter.roles().stream()
+                .anyMatch(r -> r.canInvite(targetRole));
+        if (!canInvite) {
+            throw Errors.forbidden(
+                    String.format("User with roles %s cannot invite users with role %s",
+                            inviter.roles(), targetRole));
         }
     }
 
-    private void createRoleProfile(UUID userId, CreateInvitationRequest request) {
-        switch (request.role()) {
-            case STUDENT -> {
-                if (request.studentData() != null) {
-                    studentApi.create(userId, request.studentData());
-                }
-            }
-            case TEACHER -> {
-                if (request.teacherData() != null) {
-                    teacherApi.create(userId, request.teacherData());
-                }
-            }
-            default -> {
-                // ADMIN, SUPER_ADMIN, STAFF don't need additional profiles
-            }
+    private void createRoleProfiles(UUID userId, CreateInvitationRequest request) {
+        Set<Role> roles = request.getEffectiveRoles();
+        if (roles.contains(Role.STUDENT) && request.studentData() != null) {
+            studentApi.create(userId, request.studentData());
+        }
+        if (roles.contains(Role.TEACHER) && request.teacherData() != null) {
+            teacherApi.create(userId, request.teacherData());
         }
     }
 
@@ -327,9 +370,10 @@ class InvitationServiceImpl implements InvitationApi {
 
         try {
             InvitationToken token = tokenRepository.findByInvitationId(invitationId)
-                    .orElseThrow(() -> new IllegalStateException("Token not found for invitation"));
+                    .orElseThrow(() -> Errors.conflict("Token not found for invitation"));
 
-            UserDto user = userApi.findById(invitation.getUserId()).orElseThrow();
+            UserDto user = userApi.findById(invitation.getUserId())
+                    .orElseThrow(() -> Errors.notFound("User not found: " + invitation.getUserId()));
 
             EmailMessage email = buildInvitationEmail(user, token.getToken());
             EmailResult result = emailApi.send(email);
@@ -389,7 +433,7 @@ class InvitationServiceImpl implements InvitationApi {
 
     private Invitation findInvitationOrThrow(UUID id) {
         return invitationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Invitation not found: " + id));
+                .orElseThrow(() -> Errors.notFound("Invitation not found: " + id));
     }
 
     private List<InvitationDto> toDtoList(List<Invitation> invitations) {
@@ -416,7 +460,7 @@ class InvitationServiceImpl implements InvitationApi {
                 inv.getId(),
                 inv.getUserId(),
                 user != null ? user.email() : null,
-                user != null ? user.role() : null,
+                user != null && user.roles() != null ? List.copyOf(user.roles()) : List.of(),
                 user != null ? user.firstName() : null,
                 user != null ? user.lastName() : null,
                 inv.getStatus(),

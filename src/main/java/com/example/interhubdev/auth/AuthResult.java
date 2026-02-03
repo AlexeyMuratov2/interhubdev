@@ -2,6 +2,7 @@ package com.example.interhubdev.auth;
 
 import com.example.interhubdev.user.Role;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -11,14 +12,14 @@ import java.util.UUID;
 public record AuthResult(
         UUID userId,
         String email,
-        Role role,
+        List<Role> roles,
         String fullName,
         String message
 ) {
     /**
      * Create success result.
      */
-    public static AuthResult success(UUID userId, String email, Role role, String fullName) {
-        return new AuthResult(userId, email, role, fullName, "Login successful");
+    public static AuthResult success(UUID userId, String email, List<Role> roles, String fullName) {
+        return new AuthResult(userId, email, roles != null ? List.copyOf(roles) : List.of(), fullName, "Login successful");
     }
 }

@@ -39,9 +39,9 @@ class InvitationController {
     @GetMapping("/{id}")
     @Operation(summary = "Get invitation by ID")
     public ResponseEntity<InvitationDto> findById(@PathVariable UUID id) {
-        return invitationApi.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        InvitationDto dto = invitationApi.findById(id)
+                .orElseThrow(() -> Errors.notFound("Invitation not found: " + id));
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/status/{status}")

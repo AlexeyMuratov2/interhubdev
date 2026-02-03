@@ -97,8 +97,8 @@ class StudentServiceImpl implements StudentApi {
         UserDto user = userApi.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-        if (user.role() != Role.STUDENT) {
-            throw new IllegalArgumentException("User must have STUDENT role, but has: " + user.role());
+        if (!user.hasRole(Role.STUDENT)) {
+            throw new IllegalArgumentException("User must have STUDENT role, but has: " + user.roles());
         }
 
         // Check if profile already exists

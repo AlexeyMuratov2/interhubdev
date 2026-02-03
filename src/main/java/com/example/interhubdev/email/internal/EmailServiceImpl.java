@@ -13,8 +13,11 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Implementation of the Email API.
@@ -164,10 +167,20 @@ class EmailServiceImpl implements EmailApi {
         return sb.toString();
     }
 
+    /** Pattern to extract invitation/access token from link (e.g. ?token=xxx or &token=xxx). */
+    private static final Pattern TOKEN_IN_BODY = Pattern.compile("[?&]token=([^\"&\\s]+)");
+
     /**
      * Log email for development/debugging.
+     * When invitation/access token is present in body, logs it for easy testing.
      */
     private void logEmail(EmailMessage message) {
+        String bodyToSearch = message.textBody();
+        if (bodyToSearch == null || bodyToSearch.isBlank()) {
+            bodyToSearch = message.htmlBody();
+        }
+        Optional<String> tokenOpt = bodyToSearch != null ? extractTokenFromBody(bodyToSearch) : Optional.empty();
+
         log.info("""
             ========== EMAIL (LOG ONLY MODE) ==========
             To: {}
@@ -176,15 +189,21 @@ class EmailServiceImpl implements EmailApi {
             HTML Body: {}
             Template: {}
             Template Vars: {}
-            ===========================================
+            {}===========================================
             """,
             message.to(),
             message.subject(),
             message.textBody(),
             message.htmlBody() != null ? "[HTML content]" : null,
             message.templateName(),
-            message.templateVars()
+            message.templateVars(),
+            tokenOpt.map(t -> ">>> КОД ДОСТУПА (для теста): " + t + "\n            ").orElse("")
         );
+    }
+
+    private Optional<String> extractTokenFromBody(String body) {
+        Matcher m = TOKEN_IN_BODY.matcher(body);
+        return m.find() ? Optional.of(m.group(1)) : Optional.empty();
     }
 
     private String generateMessageId() {

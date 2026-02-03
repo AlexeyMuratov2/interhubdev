@@ -1,6 +1,7 @@
 package com.example.interhubdev.program.internal;
 
 import com.example.interhubdev.department.DepartmentApi;
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.program.*;
 import com.example.interhubdev.subject.SubjectApi;
 import lombok.RequiredArgsConstructor;
@@ -45,10 +46,10 @@ class ProgramServiceImpl implements ProgramApi {
     @Transactional
     public ProgramDto createProgram(String code, String name, String description, String degreeLevel, UUID departmentId) {
         if (programRepository.existsByCode(code)) {
-            throw new IllegalArgumentException("Program with code " + code + " already exists");
+            throw Errors.conflict("Program with code '" + code + "' already exists");
         }
         if (departmentId != null && departmentApi.findById(departmentId).isEmpty()) {
-            throw new IllegalArgumentException("Department not found: " + departmentId);
+            throw Errors.notFound("Department not found: " + departmentId);
         }
         Program entity = Program.builder()
                 .code(code)
@@ -64,9 +65,9 @@ class ProgramServiceImpl implements ProgramApi {
     @Transactional
     public ProgramDto updateProgram(UUID id, String name, String description, String degreeLevel, UUID departmentId) {
         Program entity = programRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Program not found: " + id));
+                .orElseThrow(() -> Errors.notFound("Program not found: " + id));
         if (departmentId != null && departmentApi.findById(departmentId).isEmpty()) {
-            throw new IllegalArgumentException("Department not found: " + departmentId);
+            throw Errors.notFound("Department not found: " + departmentId);
         }
         if (name != null) entity.setName(name);
         if (description != null) entity.setDescription(description);
@@ -80,7 +81,7 @@ class ProgramServiceImpl implements ProgramApi {
     @Transactional
     public void deleteProgram(UUID id) {
         if (!programRepository.existsById(id)) {
-            throw new IllegalArgumentException("Program not found: " + id);
+            throw Errors.notFound("Program not found: " + id);
         }
         programRepository.deleteById(id);
     }
@@ -101,10 +102,10 @@ class ProgramServiceImpl implements ProgramApi {
     @Transactional
     public CurriculumDto createCurriculum(UUID programId, String version, int startYear, boolean isActive, String notes) {
         if (programRepository.findById(programId).isEmpty()) {
-            throw new IllegalArgumentException("Program not found: " + programId);
+            throw Errors.notFound("Program not found: " + programId);
         }
         if (curriculumRepository.existsByProgramIdAndVersion(programId, version)) {
-            throw new IllegalArgumentException("Curriculum with version " + version + " already exists for program");
+            throw Errors.conflict("Curriculum with version '" + version + "' already exists for program");
         }
         Curriculum entity = Curriculum.builder()
                 .programId(programId)
@@ -120,7 +121,7 @@ class ProgramServiceImpl implements ProgramApi {
     @Transactional
     public CurriculumDto updateCurriculum(UUID id, String version, int startYear, boolean isActive, String notes) {
         Curriculum entity = curriculumRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Curriculum not found: " + id));
+                .orElseThrow(() -> Errors.notFound("Curriculum not found: " + id));
         if (version != null) entity.setVersion(version);
         entity.setStartYear(startYear);
         entity.setActive(isActive);
@@ -133,7 +134,7 @@ class ProgramServiceImpl implements ProgramApi {
     @Transactional
     public void deleteCurriculum(UUID id) {
         if (!curriculumRepository.existsById(id)) {
-            throw new IllegalArgumentException("Curriculum not found: " + id);
+            throw Errors.notFound("Curriculum not found: " + id);
         }
         curriculumRepository.deleteById(id);
     }
@@ -167,22 +168,22 @@ class ProgramServiceImpl implements ProgramApi {
             BigDecimal credits
     ) {
         if (curriculumRepository.findById(curriculumId).isEmpty()) {
-            throw new IllegalArgumentException("Curriculum not found: " + curriculumId);
+            throw Errors.notFound("Curriculum not found: " + curriculumId);
         }
         if (subjectApi.findSubjectById(subjectId).isEmpty()) {
-            throw new IllegalArgumentException("Subject not found: " + subjectId);
+            throw Errors.notFound("Subject not found: " + subjectId);
         }
         if (subjectApi.findAssessmentTypeById(assessmentTypeId).isEmpty()) {
-            throw new IllegalArgumentException("Assessment type not found: " + assessmentTypeId);
+            throw Errors.notFound("Assessment type not found: " + assessmentTypeId);
         }
         if (semesterNo < 1) {
-            throw new IllegalArgumentException("semesterNo must be >= 1");
+            throw Errors.badRequest("semesterNo must be >= 1");
         }
         if (durationWeeks < 1) {
-            throw new IllegalArgumentException("durationWeeks must be >= 1");
+            throw Errors.badRequest("durationWeeks must be >= 1");
         }
         if (curriculumSubjectRepository.existsByCurriculumIdAndSubjectIdAndSemesterNo(curriculumId, subjectId, semesterNo)) {
-            throw new IllegalArgumentException("Curriculum subject already exists for curriculum, subject, semester " + semesterNo);
+            throw Errors.conflict("Curriculum subject already exists for curriculum, subject, semester " + semesterNo);
         }
         CurriculumSubject entity = CurriculumSubject.builder()
                 .curriculumId(curriculumId)
@@ -215,7 +216,7 @@ class ProgramServiceImpl implements ProgramApi {
             BigDecimal credits
     ) {
         CurriculumSubject entity = curriculumSubjectRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Curriculum subject not found: " + id));
+                .orElseThrow(() -> Errors.notFound("Curriculum subject not found: " + id));
         if (courseYear != null) entity.setCourseYear(courseYear);
         if (hoursTotal != null) entity.setHoursTotal(hoursTotal);
         if (hoursLecture != null) entity.setHoursLecture(hoursLecture);
@@ -223,7 +224,7 @@ class ProgramServiceImpl implements ProgramApi {
         if (hoursLab != null) entity.setHoursLab(hoursLab);
         if (assessmentTypeId != null) {
             if (subjectApi.findAssessmentTypeById(assessmentTypeId).isEmpty()) {
-                throw new IllegalArgumentException("Assessment type not found: " + assessmentTypeId);
+                throw Errors.notFound("Assessment type not found: " + assessmentTypeId);
             }
             entity.setAssessmentTypeId(assessmentTypeId);
         }
@@ -237,7 +238,7 @@ class ProgramServiceImpl implements ProgramApi {
     @Transactional
     public void deleteCurriculumSubject(UUID id) {
         if (!curriculumSubjectRepository.existsById(id)) {
-            throw new IllegalArgumentException("Curriculum subject not found: " + id);
+            throw Errors.notFound("Curriculum subject not found: " + id);
         }
         curriculumSubjectRepository.deleteById(id);
     }

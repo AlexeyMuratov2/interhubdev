@@ -16,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * JWT authentication filter.
@@ -45,15 +46,14 @@ class JwtAuthenticationFilter extends OncePerRequestFilter {
         cookieHelper.getAccessToken(request)
                 .flatMap(jwtService::validateAccessToken)
                 .ifPresent(claims -> {
-                    // Create authentication token
-                    List<SimpleGrantedAuthority> authorities = List.of(
-                            new SimpleGrantedAuthority("ROLE_" + claims.role().name())
-                    );
+                    List<SimpleGrantedAuthority> authorities = claims.roles().stream()
+                            .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
+                            .collect(Collectors.toList());
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
-                                    claims, // Principal - contains userId, email, role
-                                    null,   // Credentials - not needed after auth
+                                    claims,
+                                    null,
                                     authorities
                             );
 
@@ -62,7 +62,7 @@ class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.debug("Authenticated user {} with role {}", claims.email(), claims.role());
+                    log.debug("Authenticated user {} with roles {}", claims.email(), claims.roles());
                 });
 
         filterChain.doFilter(request, response);

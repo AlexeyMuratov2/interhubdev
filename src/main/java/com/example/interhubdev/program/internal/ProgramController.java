@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -35,7 +36,8 @@ class ProgramController {
     }
 
     @PostMapping
-    @Operation(summary = "Create program")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create program", description = "Only STAFF, ADMIN, SUPER_ADMIN can create programs")
     public ResponseEntity<ProgramDto> createProgram(@RequestBody CreateProgramRequest request) {
         ProgramDto dto = programApi.createProgram(
                 request.code(),
@@ -48,7 +50,8 @@ class ProgramController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update program")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update program", description = "Only STAFF, ADMIN, SUPER_ADMIN can update programs")
     public ResponseEntity<ProgramDto> updateProgram(
             @PathVariable UUID id,
             @RequestBody UpdateProgramRequest request
@@ -64,7 +67,8 @@ class ProgramController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete program")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete program", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete programs")
     public ResponseEntity<Void> deleteProgram(@PathVariable UUID id) {
         programApi.deleteProgram(id);
         return ResponseEntity.noContent().build();
@@ -86,7 +90,8 @@ class ProgramController {
     }
 
     @PostMapping("/{programId}/curricula")
-    @Operation(summary = "Create curriculum")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create curriculum", description = "Only STAFF, ADMIN, SUPER_ADMIN can create curricula")
     public ResponseEntity<CurriculumDto> createCurriculum(
             @PathVariable UUID programId,
             @RequestBody CreateCurriculumRequest request
@@ -102,7 +107,8 @@ class ProgramController {
     }
 
     @PutMapping("/curricula/{id}")
-    @Operation(summary = "Update curriculum")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update curriculum", description = "Only STAFF, ADMIN, SUPER_ADMIN can update curricula")
     public ResponseEntity<CurriculumDto> updateCurriculum(
             @PathVariable UUID id,
             @RequestBody UpdateCurriculumRequest request
@@ -118,7 +124,8 @@ class ProgramController {
     }
 
     @DeleteMapping("/curricula/{id}")
-    @Operation(summary = "Delete curriculum")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete curriculum", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete curricula")
     public ResponseEntity<Void> deleteCurriculum(@PathVariable UUID id) {
         programApi.deleteCurriculum(id);
         return ResponseEntity.noContent().build();
@@ -140,7 +147,8 @@ class ProgramController {
     }
 
     @PostMapping("/curricula/{curriculumId}/subjects")
-    @Operation(summary = "Create curriculum subject")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create curriculum subject", description = "Only STAFF, ADMIN, SUPER_ADMIN can create curriculum subjects")
     public ResponseEntity<CurriculumSubjectDto> createCurriculumSubject(
             @PathVariable UUID curriculumId,
             @RequestBody CreateCurriculumSubjectRequest request
@@ -163,7 +171,8 @@ class ProgramController {
     }
 
     @PutMapping("/curriculum-subjects/{id}")
-    @Operation(summary = "Update curriculum subject")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update curriculum subject", description = "Only STAFF, ADMIN, SUPER_ADMIN can update curriculum subjects")
     public ResponseEntity<CurriculumSubjectDto> updateCurriculumSubject(
             @PathVariable UUID id,
             @RequestBody UpdateCurriculumSubjectRequest request
@@ -183,7 +192,8 @@ class ProgramController {
     }
 
     @DeleteMapping("/curriculum-subjects/{id}")
-    @Operation(summary = "Delete curriculum subject")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete curriculum subject", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete curriculum subjects")
     public ResponseEntity<Void> deleteCurriculumSubject(@PathVariable UUID id) {
         programApi.deleteCurriculumSubject(id);
         return ResponseEntity.noContent().build();

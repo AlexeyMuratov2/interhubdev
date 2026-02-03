@@ -3,6 +3,7 @@ package com.example.interhubdev.invitation;
 import com.example.interhubdev.user.Role;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -12,7 +13,7 @@ public record InvitationDto(
     UUID id,
     UUID userId,
     String email,
-    Role role,
+    List<Role> roles,
     String firstName,
     String lastName,
     InvitationStatus status,

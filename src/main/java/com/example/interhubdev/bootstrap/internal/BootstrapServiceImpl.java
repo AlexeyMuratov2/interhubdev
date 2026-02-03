@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -83,7 +84,7 @@ class BootstrapServiceImpl implements BootstrapApi {
     private void createSuperAdmin(String email) {
         UserDto user = userApi.createUser(
                 email,
-                Role.SUPER_ADMIN,
+                Set.of(Role.SUPER_ADMIN),
                 properties.getFirstName(),
                 properties.getLastName()
         );

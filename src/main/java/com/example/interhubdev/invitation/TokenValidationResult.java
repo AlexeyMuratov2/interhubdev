@@ -2,6 +2,7 @@ package com.example.interhubdev.invitation;
 
 import com.example.interhubdev.user.Role;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -12,7 +13,7 @@ public record TokenValidationResult(
     UUID invitationId,
     UUID userId,
     String email,
-    Role role,
+    List<Role> roles,
     String firstName,
     String lastName,
     String error,
@@ -22,16 +23,16 @@ public record TokenValidationResult(
      * Creates a successful validation result.
      */
     public static TokenValidationResult success(
-            UUID invitationId, 
-            UUID userId, 
-            String email, 
-            Role role,
+            UUID invitationId,
+            UUID userId,
+            String email,
+            List<Role> roles,
             String firstName,
             String lastName,
             boolean tokenRegenerated
     ) {
         return new TokenValidationResult(
-            true, invitationId, userId, email, role, firstName, lastName, null, tokenRegenerated
+            true, invitationId, userId, email, roles != null ? List.copyOf(roles) : List.of(), firstName, lastName, null, tokenRegenerated
         );
     }
 
@@ -47,8 +48,8 @@ public record TokenValidationResult(
      */
     public static TokenValidationResult tokenRegeneratedAndSent(String email) {
         return new TokenValidationResult(
-            false, null, null, email, null, null, null, 
-            "Token expired. A new invitation email has been sent.", 
+            false, null, null, email, null, null, null,
+            "Token expired. A new invitation email has been sent.",
             true
         );
     }

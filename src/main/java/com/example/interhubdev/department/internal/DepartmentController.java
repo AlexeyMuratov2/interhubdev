@@ -4,9 +4,11 @@ import com.example.interhubdev.department.DepartmentApi;
 import com.example.interhubdev.department.DepartmentDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,8 +45,9 @@ class DepartmentController {
     }
 
     @PostMapping
-    @Operation(summary = "Create department")
-    public ResponseEntity<DepartmentDto> create(@RequestBody CreateDepartmentRequest request) {
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create department", description = "Only STAFF, ADMIN, SUPER_ADMIN can create departments")
+    public ResponseEntity<DepartmentDto> create(@Valid @RequestBody CreateDepartmentRequest request) {
         DepartmentDto dto = departmentApi.create(
                 request.code(),
                 request.name(),
@@ -54,7 +57,8 @@ class DepartmentController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update department")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update department", description = "Only STAFF, ADMIN, SUPER_ADMIN can update departments")
     public ResponseEntity<DepartmentDto> update(
             @PathVariable UUID id,
             @RequestBody UpdateDepartmentRequest request
@@ -64,12 +68,19 @@ class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete department")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete department", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete departments")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         departmentApi.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    record CreateDepartmentRequest(String code, String name, String description) {}
+    record CreateDepartmentRequest(
+            @jakarta.validation.constraints.NotBlank(message = "Code is required")
+            String code,
+            @jakarta.validation.constraints.NotBlank(message = "Name is required")
+            String name,
+            String description
+    ) {}
     record UpdateDepartmentRequest(String name, String description) {}
 }

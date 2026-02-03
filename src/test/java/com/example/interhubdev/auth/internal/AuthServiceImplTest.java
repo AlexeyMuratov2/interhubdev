@@ -19,7 +19,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,7 +61,7 @@ class AuthServiceImplTest {
 
     private static UserDto activeUser() {
         return new UserDto(
-                USER_ID, EMAIL, Role.STUDENT, UserStatus.ACTIVE,
+                USER_ID, EMAIL, Set.of(Role.STUDENT), UserStatus.ACTIVE,
                 "John", "Doe", null, null,
                 LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now()
         );
@@ -88,7 +90,7 @@ class AuthServiceImplTest {
 
             assertThat(result.userId()).isEqualTo(USER_ID);
             assertThat(result.email()).isEqualTo(EMAIL);
-            assertThat(result.role()).isEqualTo(Role.STUDENT);
+            assertThat(result.roles()).containsExactly(Role.STUDENT);
             assertThat(result.fullName()).isEqualTo("John Doe");
             assertThat(result.message()).isEqualTo("Login successful");
 
@@ -116,7 +118,7 @@ class AuthServiceImplTest {
         @DisplayName("throws USER_NOT_ACTIVE when user status is PENDING")
         void userPending() {
             UserDto user = new UserDto(
-                    USER_ID, EMAIL, Role.STUDENT, UserStatus.PENDING,
+                    USER_ID, EMAIL, Set.of(Role.STUDENT), UserStatus.PENDING,
                     null, null, null, null,
                     LocalDateTime.now(), null, null
             );
@@ -134,7 +136,7 @@ class AuthServiceImplTest {
         @DisplayName("throws USER_DISABLED when user status is DISABLED")
         void userDisabled() {
             UserDto user = new UserDto(
-                    USER_ID, EMAIL, Role.STUDENT, UserStatus.DISABLED,
+                    USER_ID, EMAIL, Set.of(Role.STUDENT), UserStatus.DISABLED,
                     null, null, null, null,
                     LocalDateTime.now(), null, null
             );
@@ -323,7 +325,7 @@ class AuthServiceImplTest {
         @DisplayName("returns user when valid access token in cookie")
         void validToken() {
             UserDto user = activeUser();
-            JwtService.TokenClaims claims = new JwtService.TokenClaims(USER_ID, EMAIL, Role.STUDENT, "John Doe");
+            JwtService.TokenClaims claims = new JwtService.TokenClaims(USER_ID, EMAIL, List.of(Role.STUDENT), "John Doe");
             when(cookieHelper.getAccessToken(request)).thenReturn(Optional.of(ACCESS_TOKEN));
             when(jwtService.validateAccessToken(ACCESS_TOKEN)).thenReturn(Optional.of(claims));
             when(userApi.findById(USER_ID)).thenReturn(Optional.of(user));

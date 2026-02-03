@@ -21,7 +21,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -57,7 +59,7 @@ class AuthControllerTest {
         @Test
         @DisplayName("returns 200 and AuthResult when login successful")
         void success() throws Exception {
-            AuthResult result = AuthResult.success(USER_ID, EMAIL, Role.STUDENT, "John Doe");
+            AuthResult result = AuthResult.success(USER_ID, EMAIL, List.of(Role.STUDENT), "John Doe");
             when(authApi.login(eq(EMAIL), eq("password123"), any(), any())).thenReturn(result);
 
             mockMvc.perform(post("/api/auth/login")
@@ -66,7 +68,7 @@ class AuthControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.userId").value(USER_ID.toString()))
                     .andExpect(jsonPath("$.email").value(EMAIL))
-                    .andExpect(jsonPath("$.role").value("STUDENT"))
+                    .andExpect(jsonPath("$.roles[0]").value("STUDENT"))
                     .andExpect(jsonPath("$.fullName").value("John Doe"))
                     .andExpect(jsonPath("$.message").value("Login successful"));
 
@@ -83,7 +85,7 @@ class AuthControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(new LoginRequest(EMAIL, "wrong"))))
                     .andExpect(status().isUnauthorized())
-                    .andExpect(jsonPath("$.error").value("INVALID_CREDENTIALS"))
+                    .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
                     .andExpect(jsonPath("$.message").value("Invalid email or password"));
         }
 
@@ -97,7 +99,7 @@ class AuthControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(new LoginRequest(EMAIL, "password123"))))
                     .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.error").value("USER_NOT_ACTIVE"));
+                    .andExpect(jsonPath("$.code").value("USER_NOT_ACTIVE"));
         }
 
         @Test
@@ -119,13 +121,14 @@ class AuthControllerTest {
         @Test
         @DisplayName("returns 200 and AuthResult when refresh successful")
         void success() throws Exception {
-            AuthResult result = AuthResult.success(USER_ID, EMAIL, Role.STUDENT, "John Doe");
+            AuthResult result = AuthResult.success(USER_ID, EMAIL, List.of(Role.STUDENT), "John Doe");
             when(authApi.refresh(any(), any())).thenReturn(result);
 
             mockMvc.perform(post("/api/auth/refresh"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.userId").value(USER_ID.toString()))
-                    .andExpect(jsonPath("$.email").value(EMAIL));
+                    .andExpect(jsonPath("$.email").value(EMAIL))
+                    .andExpect(jsonPath("$.roles[0]").value("STUDENT"));
 
             verify(authApi).refresh(any(), any());
         }
@@ -138,7 +141,7 @@ class AuthControllerTest {
 
             mockMvc.perform(post("/api/auth/refresh"))
                     .andExpect(status().isUnauthorized())
-                    .andExpect(jsonPath("$.error").value("TOKEN_INVALID"));
+                    .andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
         }
     }
 
@@ -164,7 +167,7 @@ class AuthControllerTest {
         @DisplayName("returns 200 and user when authenticated")
         void authenticated() throws Exception {
             UserDto user = new UserDto(
-                    USER_ID, EMAIL, Role.STUDENT, UserStatus.ACTIVE,
+                    USER_ID, EMAIL, Set.of(Role.STUDENT), UserStatus.ACTIVE,
                     "John", "Doe", null, null,
                     LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now()
             );
@@ -174,7 +177,7 @@ class AuthControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(USER_ID.toString()))
                     .andExpect(jsonPath("$.email").value(EMAIL))
-                    .andExpect(jsonPath("$.role").value("STUDENT"))
+                    .andExpect(jsonPath("$.roles[0]").value("STUDENT"))
                     .andExpect(jsonPath("$.firstName").value("John"))
                     .andExpect(jsonPath("$.lastName").value("Doe"));
 

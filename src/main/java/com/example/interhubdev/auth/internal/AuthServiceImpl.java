@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -81,7 +82,9 @@ class AuthServiceImpl implements AuthApi {
         cookieHelper.setRefreshTokenCookie(response, refreshToken, jwtService.getRefreshTokenMaxAge());
 
         log.info("User {} logged in successfully", email);
-        return AuthResult.success(user.id(), user.email(), user.role(), user.getFullName());
+        return AuthResult.success(user.id(), user.email(),
+                user.roles() != null ? List.copyOf(user.roles()) : List.of(),
+                user.getFullName());
     }
 
     @Override
@@ -143,7 +146,9 @@ class AuthServiceImpl implements AuthApi {
         cookieHelper.setRefreshTokenCookie(response, newRefreshToken, jwtService.getRefreshTokenMaxAge());
 
         log.debug("Tokens refreshed for user {}", user.email());
-        return AuthResult.success(user.id(), user.email(), user.role(), user.getFullName());
+        return AuthResult.success(user.id(), user.email(),
+                user.roles() != null ? List.copyOf(user.roles()) : List.of(),
+                user.getFullName());
     }
 
     @Override

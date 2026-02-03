@@ -3,6 +3,7 @@ package com.example.interhubdev.user;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -50,15 +51,16 @@ public interface UserApi {
     /**
      * Create a new user with PENDING status.
      * Password will be set during activation.
+     * At most one of STAFF, ADMIN, SUPER_ADMIN is allowed in roles.
      *
      * @param email     user email (must be unique)
-     * @param role      user role
+     * @param roles     user roles (at least one; at most one of STAFF, ADMIN, SUPER_ADMIN)
      * @param firstName first name (optional)
      * @param lastName  last name (optional)
      * @return created user
-     * @throws IllegalArgumentException if email already exists
+     * @throws IllegalArgumentException if email already exists or roles invalid
      */
-    UserDto createUser(String email, Role role, String firstName, String lastName);
+    UserDto createUser(String email, Collection<Role> roles, String firstName, String lastName);
 
     /**
      * Activate user account by setting password.
@@ -88,6 +90,16 @@ public interface UserApi {
      * @throws IllegalStateException    if user has no password set
      */
     void enableUser(UUID userId);
+
+    /**
+     * Set user back to PENDING for re-invitation (e.g. after cancelled invitation).
+     * Only allowed when user is DISABLED and has no password set.
+     *
+     * @param userId user ID
+     * @throws IllegalArgumentException if user not found
+     * @throws IllegalStateException    if user is not DISABLED or already has password
+     */
+    void reactivateForReinvite(UUID userId);
 
     /**
      * Verify user password for authentication.

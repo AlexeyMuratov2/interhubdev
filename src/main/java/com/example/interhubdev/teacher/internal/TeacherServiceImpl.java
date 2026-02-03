@@ -73,8 +73,8 @@ class TeacherServiceImpl implements TeacherApi {
         UserDto user = userApi.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-        if (user.role() != Role.TEACHER) {
-            throw new IllegalArgumentException("User must have TEACHER role, but has: " + user.role());
+        if (!user.hasRole(Role.TEACHER)) {
+            throw new IllegalArgumentException("User must have TEACHER role, but has: " + user.roles());
         }
 
         // Check if profile already exists

@@ -23,8 +23,10 @@ import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service for JWT token generation and validation.
@@ -50,16 +52,17 @@ class JwtService {
 
     /**
      * Generate access token for user.
-     * Contains user ID, email, and role.
+     * Contains user ID, email, and roles.
      */
     public String generateAccessToken(UserDto user) {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(authProperties.getAccess().getExpiration());
+        List<String> roleNames = user.roles().stream().map(Role::name).collect(Collectors.toList());
 
         return Jwts.builder()
                 .subject(user.id().toString())
                 .claim("email", user.email())
-                .claim("role", user.role().name())
+                .claim("roles", roleNames)
                 .claim("name", user.getFullName())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
@@ -101,6 +104,7 @@ class JwtService {
     /**
      * Validate access token and extract claims.
      * Returns empty if token is invalid or expired.
+     * Supports both legacy "role" (single) and "roles" (list) claims for backward compatibility.
      */
     public Optional<TokenClaims> validateAccessToken(String token) {
         try {
@@ -110,10 +114,20 @@ class JwtService {
                     .parseSignedClaims(token)
                     .getPayload();
 
+            List<Role> roles;
+            @SuppressWarnings("unchecked")
+            List<String> roleNames = claims.get("roles", List.class);
+            if (roleNames != null && !roleNames.isEmpty()) {
+                roles = roleNames.stream().map(Role::valueOf).toList();
+            } else {
+                String singleRole = claims.get("role", String.class);
+                roles = singleRole != null ? List.of(Role.valueOf(singleRole)) : List.of();
+            }
+
             return Optional.of(new TokenClaims(
                     UUID.fromString(claims.getSubject()),
                     claims.get("email", String.class),
-                    Role.valueOf(claims.get("role", String.class)),
+                    roles,
                     claims.get("name", String.class)
             ));
         } catch (ExpiredJwtException e) {
@@ -165,7 +179,7 @@ class JwtService {
     public record TokenClaims(
             UUID userId,
             String email,
-            Role role,
+            List<Role> roles,
             String name
     ) {}
 }

@@ -45,5 +45,5 @@ class InvitationProperties {
      * Base URL for invitation links.
      * Used to construct the activation link in emails.
      */
-    private String baseUrl = "http://localhost:3000";
+    private String baseUrl = "http://localhost:5173";
 }

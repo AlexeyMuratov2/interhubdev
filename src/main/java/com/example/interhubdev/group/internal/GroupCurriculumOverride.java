@@ -37,7 +37,7 @@ class GroupCurriculumOverride {
     @Column(name = "subject_id")
     private UUID subjectId;
 
-    @Column(name = "action", nullable = false, length = 50)
+    @Column(name = "action", nullable = false, columnDefinition = "group_curriculum_override_action")
     private String action;
 
     @Column(name = "new_assessment_type_id")
