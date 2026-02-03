@@ -9,7 +9,7 @@
  *
  * <h2>Access control</h2>
  * Create, update and delete operations for offerings and offering teachers are allowed
- * only for roles: STAFF, ADMIN, SUPER_ADMIN. Teachers and students can only read.
+ * Write operations only for roles: MODERATOR, ADMIN, SUPER_ADMIN. STAFF can only read. Teachers and students can only read.
  *
  * <h2>Dependencies</h2>
  * <ul>
@@ -26,7 +26,7 @@
  *   <li>CONFLICT (409) - offering already exists for group and curriculum subject; offering teacher with this role already exists</li>
  *   <li>BAD_REQUEST (400) - group/curriculum subject id required; format must be offline/online/mixed; teacher id/role required; role must be LECTURE/PRACTICE/LAB</li>
  *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create)</li>
- *   <li>FORBIDDEN (403) - user has no STAFF/ADMIN/SUPER_ADMIN role for write operations</li>
+ *   <li>FORBIDDEN (403) - user has no MODERATOR/ADMIN/SUPER_ADMIN role for write operations</li>
  * </ul>
  */
 @org.springframework.modulith.ApplicationModule(

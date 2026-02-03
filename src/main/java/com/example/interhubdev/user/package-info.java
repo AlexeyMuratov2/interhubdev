@@ -26,9 +26,10 @@
  * <h2>Roles hierarchy</h2>
  * <ul>
  *   <li>SUPER_ADMIN - full access, can invite admins</li>
- *   <li>ADMIN - manage users (except admins)</li>
+ *   <li>ADMIN - manage users (except admins), can invite new users</li>
+ *   <li>MODERATOR - create/update/delete all content except invitations (read-only for invitations)</li>
  *   <li>TEACHER - professors and lecturers</li>
- *   <li>STAFF - university employees</li>
+ *   <li>STAFF - read-only access to catalog data; cannot create, update or delete</li>
  *   <li>STUDENT - international students</li>
  * </ul>
  * 

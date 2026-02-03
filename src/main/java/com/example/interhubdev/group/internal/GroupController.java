@@ -55,8 +55,8 @@ class GroupController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Create group", description = "Only STAFF, ADMIN, SUPER_ADMIN can create groups")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create group", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create groups")
     public ResponseEntity<StudentGroupDto> createGroup(@Valid @RequestBody CreateGroupRequest request) {
         StudentGroupDto dto = groupApi.createGroup(
                 request.programId(),
@@ -72,8 +72,8 @@ class GroupController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Update group", description = "Only STAFF, ADMIN, SUPER_ADMIN can update groups")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update group", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update groups")
     public ResponseEntity<StudentGroupDto> updateGroup(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateGroupRequest request
@@ -89,8 +89,8 @@ class GroupController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Delete group", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete groups")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete group", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete groups")
     public ResponseEntity<Void> deleteGroup(@PathVariable UUID id) {
         groupApi.deleteGroup(id);
         return ResponseEntity.noContent().build();
@@ -103,8 +103,8 @@ class GroupController {
     }
 
     @PostMapping("/{groupId}/leaders")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Add group leader", description = "Only STAFF, ADMIN, SUPER_ADMIN can add group leaders")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Add group leader", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can add group leaders")
     public ResponseEntity<GroupLeaderDto> addGroupLeader(
             @PathVariable UUID groupId,
             @Valid @RequestBody AddGroupLeaderRequest request
@@ -120,8 +120,8 @@ class GroupController {
     }
 
     @DeleteMapping("/leaders/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Remove group leader", description = "Only STAFF, ADMIN, SUPER_ADMIN can remove group leaders")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Remove group leader", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can remove group leaders")
     public ResponseEntity<Void> removeGroupLeader(@PathVariable UUID id) {
         groupApi.removeGroupLeader(id);
         return ResponseEntity.noContent().build();
@@ -134,8 +134,8 @@ class GroupController {
     }
 
     @PostMapping("/{groupId}/overrides")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Create curriculum override", description = "Only STAFF, ADMIN, SUPER_ADMIN can create overrides")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create curriculum override", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create overrides")
     public ResponseEntity<GroupCurriculumOverrideDto> createOverride(
             @PathVariable UUID groupId,
             @Valid @RequestBody CreateOverrideRequest request
@@ -153,8 +153,8 @@ class GroupController {
     }
 
     @DeleteMapping("/overrides/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Delete curriculum override", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete overrides")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete curriculum override", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete overrides")
     public ResponseEntity<Void> deleteOverride(@PathVariable UUID id) {
         groupApi.deleteOverride(id);
         return ResponseEntity.noContent().build();

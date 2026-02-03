@@ -9,7 +9,7 @@
  *
  * <h2>Access control</h2>
  * Create, update and delete operations for groups, group leaders and curriculum overrides are allowed
- * only for roles: STAFF, ADMIN, SUPER_ADMIN. Teachers and students can only read.
+ * Write operations only for roles: MODERATOR, ADMIN, SUPER_ADMIN. STAFF can only read. Teachers and students can only read.
  *
  * <h2>Dependencies</h2>
  * <ul>
@@ -25,7 +25,7 @@
  *   <li>CONFLICT (409) - group code already exists; leader role already exists for group/student</li>
  *   <li>BAD_REQUEST (400) - code/ids/action/role required; startYear out of range; action must be ADD/REMOVE/REPLACE; role must be headman/deputy</li>
  *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create)</li>
- *   <li>FORBIDDEN (403) - user has no STAFF/ADMIN/SUPER_ADMIN role for write operations</li>
+ *   <li>FORBIDDEN (403) - user has no MODERATOR/ADMIN/SUPER_ADMIN role for write operations</li>
  * </ul>
  */
 @org.springframework.modulith.ApplicationModule(

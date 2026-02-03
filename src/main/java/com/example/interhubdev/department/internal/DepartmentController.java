@@ -45,8 +45,8 @@ class DepartmentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Create department", description = "Only STAFF, ADMIN, SUPER_ADMIN can create departments")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create department", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create departments")
     public ResponseEntity<DepartmentDto> create(@Valid @RequestBody CreateDepartmentRequest request) {
         DepartmentDto dto = departmentApi.create(
                 request.code(),
@@ -57,8 +57,8 @@ class DepartmentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Update department", description = "Only STAFF, ADMIN, SUPER_ADMIN can update departments")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update department", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update departments")
     public ResponseEntity<DepartmentDto> update(
             @PathVariable UUID id,
             @RequestBody UpdateDepartmentRequest request
@@ -68,8 +68,8 @@ class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Delete department", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete departments")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete department", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete departments")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         departmentApi.delete(id);
         return ResponseEntity.noContent().build();

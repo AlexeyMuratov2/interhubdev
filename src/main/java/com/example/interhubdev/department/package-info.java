@@ -8,7 +8,7 @@
  * </ul>
  *
  * <h2>Access control</h2>
- * Create, update and delete operations are allowed only for roles: STAFF, ADMIN, SUPER_ADMIN.
+ * Create, update and delete operations are allowed only for roles: MODERATOR, ADMIN, SUPER_ADMIN.
  * Teachers and students can only read departments.
  *
  * <h2>Error codes (via {@link com.example.interhubdev.error.Errors})</h2>
@@ -17,7 +17,7 @@
  *   <li>CONFLICT (409) - department with given code already exists</li>
  *   <li>BAD_REQUEST (400) - code is blank or invalid input</li>
  *   <li>VALIDATION_FAILED (400) - request validation failed (e.g. @Valid on create)</li>
- *   <li>FORBIDDEN (403) - user has no STAFF/ADMIN/SUPER_ADMIN role for write operations</li>
+ *   <li>FORBIDDEN (403) - user has no MODERATOR/ADMIN/SUPER_ADMIN role for write operations</li>
  * </ul>
  */
 @org.springframework.modulith.ApplicationModule(

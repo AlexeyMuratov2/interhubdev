@@ -51,10 +51,10 @@ public interface UserApi {
     /**
      * Create a new user with PENDING status.
      * Password will be set during activation.
-     * At most one of STAFF, ADMIN, SUPER_ADMIN is allowed in roles.
+     * At most one of STAFF, MODERATOR, ADMIN, SUPER_ADMIN is allowed in roles.
      *
      * @param email     user email (must be unique)
-     * @param roles     user roles (at least one; at most one of STAFF, ADMIN, SUPER_ADMIN)
+     * @param roles     user roles (at least one; at most one of STAFF, MODERATOR, ADMIN, SUPER_ADMIN)
      * @param firstName first name (optional)
      * @param lastName  last name (optional)
      * @return created user

@@ -10,7 +10,7 @@
  *
  * <h2>Access control</h2>
  * Create, update and delete operations for rooms, timeslots and lessons are allowed
- * only for roles: STAFF, ADMIN, SUPER_ADMIN. Teachers and students can only read.
+ * Write operations only for roles: MODERATOR, ADMIN, SUPER_ADMIN. STAFF can only read. Teachers and students can only read.
  *
  * <h2>Dependencies</h2>
  * <ul>
@@ -22,7 +22,7 @@
  *   <li>NOT_FOUND (404) - room, timeslot or lesson not found</li>
  *   <li>BAD_REQUEST (400) - building/number required; capacity &lt; 0; dayOfWeek not 1..7; startTime/endTime required or invalid; endTime not after startTime; offering/date/timeslot required; invalid date/time format; status not planned/cancelled/done</li>
  *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create/update)</li>
- *   <li>FORBIDDEN (403) - user has no STAFF/ADMIN/SUPER_ADMIN role for write operations</li>
+ *   <li>FORBIDDEN (403) - user has no MODERATOR/ADMIN/SUPER_ADMIN role for write operations</li>
  * </ul>
  */
 @org.springframework.modulith.ApplicationModule(

@@ -48,8 +48,8 @@ class ScheduleController {
     }
 
     @PostMapping("/rooms")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Create room", description = "Only STAFF, ADMIN, SUPER_ADMIN can create rooms")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create room", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create rooms")
     public ResponseEntity<RoomDto> createRoom(@Valid @RequestBody CreateRoomRequest request) {
         RoomDto dto = scheduleApi.createRoom(
                 request.building(),
@@ -61,8 +61,8 @@ class ScheduleController {
     }
 
     @PutMapping("/rooms/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Update room", description = "Only STAFF, ADMIN, SUPER_ADMIN can update rooms")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update room", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update rooms")
     public ResponseEntity<RoomDto> updateRoom(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateRoomRequest request
@@ -78,8 +78,8 @@ class ScheduleController {
     }
 
     @DeleteMapping("/rooms/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Delete room", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete rooms")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete room", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete rooms")
     public ResponseEntity<Void> deleteRoom(@PathVariable UUID id) {
         scheduleApi.deleteRoom(id);
         return ResponseEntity.noContent().build();
@@ -100,8 +100,8 @@ class ScheduleController {
     }
 
     @PostMapping("/timeslots")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Create timeslot", description = "Only STAFF, ADMIN, SUPER_ADMIN can create timeslots")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create timeslot", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create timeslots")
     public ResponseEntity<TimeslotDto> createTimeslot(@Valid @RequestBody CreateTimeslotRequest request) {
         LocalTime startTime = parseTime(request.startTime(), "startTime");
         LocalTime endTime = parseTime(request.endTime(), "endTime");
@@ -110,8 +110,8 @@ class ScheduleController {
     }
 
     @DeleteMapping("/timeslots/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Delete timeslot", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete timeslots")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete timeslot", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete timeslots")
     public ResponseEntity<Void> deleteTimeslot(@PathVariable UUID id) {
         scheduleApi.deleteTimeslot(id);
         return ResponseEntity.noContent().build();
@@ -139,8 +139,8 @@ class ScheduleController {
     }
 
     @PostMapping("/lessons")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Create lesson", description = "Only STAFF, ADMIN, SUPER_ADMIN can create lessons")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create lesson", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create lessons")
     public ResponseEntity<LessonDto> createLesson(@Valid @RequestBody CreateLessonRequest request) {
         if (request.date() == null || request.date().isBlank()) {
             throw Errors.badRequest("Date is required");
@@ -163,8 +163,8 @@ class ScheduleController {
     }
 
     @PutMapping("/lessons/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Update lesson", description = "Only STAFF, ADMIN, SUPER_ADMIN can update lessons")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update lesson", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update lessons")
     public ResponseEntity<LessonDto> updateLesson(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateLessonRequest request
@@ -174,8 +174,8 @@ class ScheduleController {
     }
 
     @DeleteMapping("/lessons/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Delete lesson", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete lessons")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete lesson", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete lessons")
     public ResponseEntity<Void> deleteLesson(@PathVariable UUID id) {
         scheduleApi.deleteLesson(id);
         return ResponseEntity.noContent().build();

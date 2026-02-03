@@ -38,7 +38,8 @@ class OfferingController {
     }
 
     @PostMapping
-    @Operation(summary = "Create offering")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create offering", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create offerings")
     public ResponseEntity<GroupSubjectOfferingDto> createOffering(@RequestBody CreateOfferingRequest request) {
         GroupSubjectOfferingDto dto = offeringApi.createOffering(
                 request.groupId(),
@@ -52,8 +53,8 @@ class OfferingController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Update offering", description = "Only STAFF, ADMIN, SUPER_ADMIN can update offerings")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update offering", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update offerings")
     public ResponseEntity<GroupSubjectOfferingDto> updateOffering(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateOfferingRequest request
@@ -69,8 +70,8 @@ class OfferingController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Delete offering", description = "Only STAFF, ADMIN, SUPER_ADMIN can delete offerings")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete offering", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete offerings")
     public ResponseEntity<Void> deleteOffering(@PathVariable UUID id) {
         offeringApi.deleteOffering(id);
         return ResponseEntity.noContent().build();
@@ -83,7 +84,8 @@ class OfferingController {
     }
 
     @PostMapping("/{offeringId}/teachers")
-    @Operation(summary = "Add teacher to offering")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Add teacher to offering", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can add offering teachers")
     public ResponseEntity<OfferingTeacherDto> addOfferingTeacher(
             @PathVariable UUID offeringId,
             @RequestBody AddOfferingTeacherRequest request
@@ -97,8 +99,8 @@ class OfferingController {
     }
 
     @DeleteMapping("/teachers/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Remove teacher from offering", description = "Only STAFF, ADMIN, SUPER_ADMIN can remove offering teachers")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Remove teacher from offering", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can remove offering teachers")
     public ResponseEntity<Void> removeOfferingTeacher(@PathVariable UUID id) {
         offeringApi.removeOfferingTeacher(id);
         return ResponseEntity.noContent().build();

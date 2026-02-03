@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * Data Transfer Object for User.
  * Used to expose user data to other modules without exposing the entity.
- * A user may have multiple roles; at most one of STAFF, ADMIN, SUPER_ADMIN.
+ * A user may have multiple roles; at most one of STAFF, MODERATOR, ADMIN, SUPER_ADMIN.
  */
 public record UserDto(
     UUID id,

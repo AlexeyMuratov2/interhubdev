@@ -47,16 +47,16 @@ class SubjectController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Create subject", description = "Only STAFF, ADMIN, SUPER_ADMIN can create subjects")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create subject", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create subjects")
     public ResponseEntity<SubjectDto> createSubject(@Valid @RequestBody CreateSubjectRequest request) {
         SubjectDto dto = subjectApi.createSubject(request.code(), request.name(), request.description());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Update subject", description = "Only STAFF, ADMIN, SUPER_ADMIN can update subjects")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update subject", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update subjects")
     public ResponseEntity<SubjectDto> updateSubject(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateSubjectRequest request
@@ -66,7 +66,8 @@ class SubjectController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete subject")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete subject", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete subjects")
     public ResponseEntity<Void> deleteSubject(@PathVariable UUID id) {
         subjectApi.deleteSubject(id);
         return ResponseEntity.noContent().build();
@@ -88,15 +89,16 @@ class SubjectController {
     }
 
     @PostMapping("/assessment-types")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Create assessment type", description = "Only STAFF, ADMIN, SUPER_ADMIN can create assessment types")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create assessment type", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create assessment types")
     public ResponseEntity<AssessmentTypeDto> createAssessmentType(@Valid @RequestBody CreateAssessmentTypeRequest request) {
         AssessmentTypeDto dto = subjectApi.createAssessmentType(request.code(), request.name());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
     @DeleteMapping("/assessment-types/{id}")
-    @Operation(summary = "Delete assessment type")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete assessment type", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete assessment types")
     public ResponseEntity<Void> deleteAssessmentType(@PathVariable UUID id) {
         subjectApi.deleteAssessmentType(id);
         return ResponseEntity.noContent().build();

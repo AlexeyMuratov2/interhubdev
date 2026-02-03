@@ -11,7 +11,7 @@ import java.util.Set;
 /**
  * Request object for creating an invitation.
  * Contains user data and role-specific profile data.
- * Accepts either single {@code role} or multiple {@code roles}; at most one of STAFF, ADMIN, SUPER_ADMIN.
+ * Accepts either single {@code role} or multiple {@code roles}; at most one of STAFF, MODERATOR, ADMIN, SUPER_ADMIN.
  */
 public record CreateInvitationRequest(
     String email,

@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,15 +30,17 @@ class InvitationController {
     private final InvitationApi invitationApi;
     private final AuthApi authApi;
 
-    // ==================== Admin endpoints ====================
+    // ==================== Staff/Moderator/Admin endpoints ====================
 
     @GetMapping
-    @Operation(summary = "Get all invitations", description = "Returns list of all invitations (admin only)")
+    @PreAuthorize("hasAnyRole('STAFF', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Get all invitations", description = "STAFF, MODERATOR, ADMIN, SUPER_ADMIN can view invitations")
     public ResponseEntity<List<InvitationDto>> findAll() {
         return ResponseEntity.ok(invitationApi.findAll());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('STAFF', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Get invitation by ID")
     public ResponseEntity<InvitationDto> findById(@PathVariable UUID id) {
         InvitationDto dto = invitationApi.findById(id)
@@ -46,13 +49,15 @@ class InvitationController {
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('STAFF', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Get invitations by status")
     public ResponseEntity<List<InvitationDto>> findByStatus(@PathVariable InvitationStatus status) {
         return ResponseEntity.ok(invitationApi.findByStatus(status));
     }
 
     @PostMapping
-    @Operation(summary = "Create new invitation", description = "Creates user and sends invitation email")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create new invitation", description = "Only ADMIN and SUPER_ADMIN can create invitations")
     public ResponseEntity<InvitationDto> create(
             @Valid @RequestBody CreateInvitationRequest request,
             HttpServletRequest httpRequest
@@ -64,14 +69,16 @@ class InvitationController {
     }
 
     @PostMapping("/{id}/resend")
-    @Operation(summary = "Resend invitation email")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Resend invitation email", description = "Only ADMIN and SUPER_ADMIN can resend invitations")
     public ResponseEntity<Void> resend(@PathVariable UUID id) {
         invitationApi.resend(id);
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Cancel invitation")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Cancel invitation", description = "Only ADMIN and SUPER_ADMIN can cancel invitations")
     public ResponseEntity<Void> cancel(@PathVariable UUID id) {
         invitationApi.cancel(id);
         return ResponseEntity.noContent().build();
