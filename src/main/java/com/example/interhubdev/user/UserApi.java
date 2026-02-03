@@ -1,5 +1,6 @@
 package com.example.interhubdev.user;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -120,4 +121,44 @@ public interface UserApi {
      * @throws IllegalArgumentException if user not found
      */
     void updateLastLoginAt(UUID userId);
+
+    /**
+     * Update profile fields (email is never changed).
+     *
+     * @param userId    user ID
+     * @param firstName first name (optional)
+     * @param lastName  last name (optional)
+     * @param phone     phone (optional)
+     * @param birthDate birth date (optional)
+     * @return updated user
+     * @throws IllegalArgumentException if user not found
+     */
+    UserDto updateProfile(UUID userId, String firstName, String lastName, String phone, LocalDate birthDate);
+
+    /**
+     * Update user roles. At most one of STAFF, MODERATOR, ADMIN, SUPER_ADMIN is allowed.
+     *
+     * @param userId user ID
+     * @param roles  new roles (at least one)
+     * @return updated user
+     * @throws IllegalArgumentException if user not found or roles invalid
+     */
+    UserDto updateRoles(UUID userId, Set<Role> roles);
+
+    /**
+     * Delete user from the database. Caller must ensure related data (tokens, profiles, invitations) is cleaned up first.
+     *
+     * @param userId user ID
+     * @throws IllegalArgumentException if user not found
+     */
+    void deleteUser(UUID userId);
+
+    /**
+     * List users with cursor-based pagination. Ordered by id ascending.
+     *
+     * @param cursor optional cursor (last user id from previous page); null for first page
+     * @param limit  max items per page (will be capped at 30)
+     * @return page with items and optional next cursor
+     */
+    UserPage listUsers(UUID cursor, int limit);
 }

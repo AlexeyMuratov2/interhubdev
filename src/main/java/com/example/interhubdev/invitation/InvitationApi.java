@@ -70,6 +70,14 @@ public interface InvitationApi {
      */
     void cancel(UUID invitationId);
 
+    /**
+     * Delete invitation linked to the given user (e.g. when user account is deleted).
+     * No-op if no invitation exists for the user.
+     *
+     * @param userId user ID
+     */
+    void deleteByUserId(UUID userId);
+
     // ==================== Token validation ====================
 
     /**

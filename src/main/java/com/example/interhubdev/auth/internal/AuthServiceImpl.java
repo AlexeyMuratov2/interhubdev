@@ -178,6 +178,13 @@ class AuthServiceImpl implements AuthApi {
     }
 
     @Override
+    @Transactional
+    public void revokeAllTokensForUser(UUID userId) {
+        int revokedCount = refreshTokenRepository.revokeAllByUserId(userId, LocalDateTime.now());
+        log.info("Revoked {} refresh tokens for user {}", revokedCount, userId);
+    }
+
+    @Override
     public Optional<UserDto> getCurrentUser(HttpServletRequest request) {
         return cookieHelper.getAccessToken(request)
                 .flatMap(jwtService::validateAccessToken)

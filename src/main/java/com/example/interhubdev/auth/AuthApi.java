@@ -53,6 +53,13 @@ public interface AuthApi {
     void logoutAll(UUID userId, HttpServletResponse response);
 
     /**
+     * Revoke all refresh tokens for a user (e.g. before account deletion). Does not clear cookies.
+     *
+     * @param userId user ID
+     */
+    void revokeAllTokensForUser(UUID userId);
+
+    /**
      * Get current authenticated user from request.
      * Validates access token from cookie.
      *

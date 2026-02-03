@@ -3,7 +3,6 @@ package com.example.interhubdev.invitation.internal;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.invitation.*;
-import com.example.interhubdev.invitation.internal.InvitationErrors;
 import com.example.interhubdev.user.UserDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -87,7 +86,18 @@ class InvitationController {
     // ==================== Public endpoints ====================
 
     @GetMapping("/validate")
-    @Operation(summary = "Validate invitation token", description = "Public endpoint for token validation")
+    @Operation(
+            summary = "Validate invitation token",
+            description = """
+                    Public endpoint. Returns validation result with field `code` for frontend branching.
+                    - 200, valid=true: token valid, show activation form.
+                    - 200, code=INVITATION_TOKEN_EXPIRED_EMAIL_RESENT: token expired, new email sent; show 'check your email'.
+                    - 400, code=INVITATION_TOKEN_INVALID: token not found or already used.
+                    - 400, code=INVITATION_EXPIRED: invitation period (90 days) expired.
+                    - 400, code=INVITATION_NOT_ACCEPTABLE: invitation already accepted/cancelled.
+                    See docs/invitation-api-responses.md for full response structure.
+                    """
+    )
     public ResponseEntity<TokenValidationResult> validateToken(@RequestParam String token) {
         TokenValidationResult result = invitationApi.validateToken(token);
         if (result.valid()) {

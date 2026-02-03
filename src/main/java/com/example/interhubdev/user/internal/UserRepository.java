@@ -21,4 +21,8 @@ interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByStatus(UserStatus status);
 
     List<User> findByRolesContainingAndStatus(Role role, UserStatus status);
+
+    List<User> findFirst31ByOrderByIdAsc();
+
+    List<User> findFirst31ByIdGreaterThanOrderByIdAsc(UUID after);
 }

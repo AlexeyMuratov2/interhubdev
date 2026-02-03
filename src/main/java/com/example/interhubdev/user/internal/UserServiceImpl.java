@@ -3,12 +3,14 @@ package com.example.interhubdev.user.internal;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
+import com.example.interhubdev.user.UserPage;
 import com.example.interhubdev.user.UserStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -164,6 +166,55 @@ class UserServiceImpl implements UserApi {
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public UserDto updateProfile(UUID userId, String firstName, String lastName, String phone, LocalDate birthDate) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        if (firstName != null) user.setFirstName(firstName);
+        if (lastName != null) user.setLastName(lastName);
+        if (phone != null) user.setPhone(phone);
+        if (birthDate != null) user.setBirthDate(birthDate);
+        return toDto(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserDto updateRoles(UUID userId, Set<Role> roles) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        Set<Role> roleSet = roles == null ? Set.of() : Set.copyOf(roles);
+        if (roleSet.isEmpty()) {
+            throw new IllegalArgumentException("At least one role is required");
+        }
+        Role.validateAtMostOneStaffType(roleSet);
+        user.setRoles(new java.util.HashSet<>(roleSet));
+        return toDto(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        userRepository.delete(user);
+    }
+
+    @Override
+    public UserPage listUsers(UUID cursor, int limit) {
+        int capped = Math.min(Math.max(1, limit), 30);
+        List<User> slice = cursor == null
+                ? userRepository.findFirst31ByOrderByIdAsc()
+                : userRepository.findFirst31ByIdGreaterThanOrderByIdAsc(cursor);
+        boolean hasMore = slice.size() > capped;
+        List<User> pageUsers = hasMore ? slice.subList(0, capped) : slice;
+        UUID nextCursor = hasMore ? pageUsers.get(pageUsers.size() - 1).getId() : null;
+        return new UserPage(
+                pageUsers.stream().map(this::toDto).collect(Collectors.toList()),
+                nextCursor
+        );
     }
 
     private UserDto toDto(User user) {

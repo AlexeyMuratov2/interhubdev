@@ -5,7 +5,6 @@ import com.example.interhubdev.email.EmailMessage;
 import com.example.interhubdev.email.EmailResult;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.invitation.*;
-import com.example.interhubdev.invitation.internal.InvitationErrors;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.teacher.TeacherApi;
 import com.example.interhubdev.user.Role;
@@ -132,6 +131,7 @@ class InvitationServiceImpl implements InvitationApi {
 
     /**
      * Re-invite when user already exists and their invitation is EXPIRED or CANCELLED.
+     * Updates user's roles and profile to match the new request so the response reflects the re-invitation data.
      */
     private InvitationDto reinviteExistingUser(UserDto user, CreateInvitationRequest request, UUID invitedBy) {
         Invitation invitation = invitationRepository.findByUserId(user.id())
@@ -141,10 +141,16 @@ class InvitationServiceImpl implements InvitationApi {
             throw InvitationErrors.userAlreadyExists(request.email());
         }
 
+        Set<Role> effectiveRoles = request.getEffectiveRoles();
+
         // If user was disabled (cancelled case), set back to PENDING so they can accept
         if (user.status() == UserStatus.DISABLED) {
             userApi.reactivateForReinvite(user.id());
         }
+
+        // Update user roles and profile to match the new invitation request (fix: response was returning old user data)
+        userApi.updateRoles(user.id(), effectiveRoles);
+        userApi.updateProfile(user.id(), request.firstName(), request.lastName(), request.phone(), request.birthDate());
 
         tokenRepository.deleteByInvitationId(invitation.getId());
         invitation.setStatus(InvitationStatus.PENDING);
@@ -159,7 +165,7 @@ class InvitationServiceImpl implements InvitationApi {
         createToken(invitation.getId());
         sendInvitationEmailAsync(invitation.getId(), 1);
 
-        log.info("Re-invited user {} (invitation {})", user.email(), invitation.getId());
+        log.info("Re-invited user {} (invitation {}, roles: {})", user.email(), invitation.getId(), effectiveRoles);
         return toDto(invitation);
     }
 
@@ -206,6 +212,16 @@ class InvitationServiceImpl implements InvitationApi {
         log.info("Cancelled invitation {}", invitationId);
     }
 
+    @Override
+    @Transactional
+    public void deleteByUserId(UUID userId) {
+        invitationRepository.findByUserId(userId).ifPresent(invitation -> {
+            tokenRepository.deleteByInvitationId(invitation.getId());
+            invitationRepository.delete(invitation);
+            log.info("Deleted invitation for user {}", userId);
+        });
+    }
+
     // ==================== Token validation ====================
 
     @Override
@@ -214,7 +230,9 @@ class InvitationServiceImpl implements InvitationApi {
         Optional<InvitationToken> tokenOpt = tokenRepository.findByToken(token);
 
         if (tokenOpt.isEmpty()) {
-            return TokenValidationResult.failure("Ссылка приглашения недействительна или уже использована.");
+            return TokenValidationResult.failure(
+                    TokenValidationResult.CODE_TOKEN_INVALID,
+                    "Ссылка приглашения недействительна или уже использована.");
         }
 
         InvitationToken invToken = tokenOpt.get();
@@ -222,16 +240,20 @@ class InvitationServiceImpl implements InvitationApi {
         UserDto user = userApi.findById(invitation.getUserId())
                 .orElseThrow(() -> InvitationErrors.userNotFound(invitation.getUserId()));
 
-        // Check if invitation expired
+        // Check if invitation expired (90-day validity)
         if (invitation.isExpired()) {
             invitation.setStatus(InvitationStatus.EXPIRED);
             invitationRepository.save(invitation);
-            return TokenValidationResult.failure("Срок действия приглашения истёк.");
+            return TokenValidationResult.failure(
+                    TokenValidationResult.CODE_INVITATION_EXPIRED,
+                    "Срок действия приглашения истёк.");
         }
 
-        // Check if invitation can be accepted
+        // Check if invitation can be accepted (not accepted, cancelled or expired)
         if (!invitation.canBeAccepted()) {
-            return TokenValidationResult.failure("Приглашение недоступно для активации (уже принято или отменено).");
+            return TokenValidationResult.failure(
+                    TokenValidationResult.CODE_INVITATION_NOT_ACCEPTABLE,
+                    "Приглашение недоступно для активации (уже принято или отменено).");
         }
 
         // Check if token expired
