@@ -40,7 +40,7 @@ class OfferingController {
     @PostMapping
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Create offering", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create offerings")
-    public ResponseEntity<GroupSubjectOfferingDto> createOffering(@RequestBody CreateOfferingRequest request) {
+    public ResponseEntity<GroupSubjectOfferingDto> createOffering(@Valid @RequestBody CreateOfferingRequest request) {
         GroupSubjectOfferingDto dto = offeringApi.createOffering(
                 request.groupId(),
                 request.curriculumSubjectId(),

@@ -6,7 +6,8 @@ import java.util.UUID;
 public record AssessmentTypeDto(
     UUID id,
     String code,
-    String name,
+    String chineseName,
+    String englishName,
     Boolean isGraded,
     Boolean isFinal,
     Integer sortOrder,

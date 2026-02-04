@@ -6,7 +6,8 @@ import java.util.UUID;
 public record SubjectDto(
     UUID id,
     String code,
-    String name,
+    String chineseName,
+    String englishName,
     String description,
     UUID departmentId,
     LocalDateTime createdAt,

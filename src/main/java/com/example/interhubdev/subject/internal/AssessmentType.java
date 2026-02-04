@@ -15,6 +15,10 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * JPA entity for an assessment type (e.g. exam, test, coursework).
+ * Code is unique. sortOrder determines display order in lists/dropdowns.
+ */
 @Entity
 @Table(name = "assessment_type")
 @Getter
@@ -31,8 +35,11 @@ class AssessmentType {
     @Column(name = "code", nullable = false, unique = true, length = 50)
     private String code;
 
-    @Column(name = "name", nullable = false, length = 255)
-    private String name;
+    @Column(name = "chinese_name", nullable = false, length = 255)
+    private String chineseName;
+
+    @Column(name = "english_name", length = 255)
+    private String englishName;
 
     @Column(name = "is_graded", nullable = false)
     @Builder.Default

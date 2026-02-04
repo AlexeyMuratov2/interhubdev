@@ -1,144 +1,144 @@
 package com.example.interhubdev.subject.internal;
 
-import com.example.interhubdev.error.Errors;
-import com.example.interhubdev.subject.AssessmentTypeDto;
-import com.example.interhubdev.subject.SubjectApi;
-import com.example.interhubdev.subject.SubjectDto;
+import com.example.interhubdev.subject.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Facade implementing {@link SubjectApi}. Delegates to internal catalog services
+ * for subjects and assessment types so that business logic stays in dedicated services.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 class SubjectServiceImpl implements SubjectApi {
 
-    private final SubjectRepository subjectRepository;
-    private final AssessmentTypeRepository assessmentTypeRepository;
+    private final SubjectCatalogService subjectCatalogService;
+    private final AssessmentTypeCatalogService assessmentTypeCatalogService;
 
+    // --- Subject ---
+
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link SubjectCatalogService#findById(UUID)}.
+     */
     @Override
     public Optional<SubjectDto> findSubjectById(UUID id) {
-        return subjectRepository.findById(id).map(this::toSubjectDto);
+        return subjectCatalogService.findById(id);
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link SubjectCatalogService#findByCode(String)}.
+     */
     @Override
     public Optional<SubjectDto> findSubjectByCode(String code) {
-        return subjectRepository.findByCode(code).map(this::toSubjectDto);
+        return subjectCatalogService.findByCode(code);
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link SubjectCatalogService#findAll()}. Order is stable (by code).
+     */
     @Override
     public List<SubjectDto> findAllSubjects() {
-        return subjectRepository.findAll().stream()
-                .map(this::toSubjectDto)
-                .toList();
+        return subjectCatalogService.findAll();
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link SubjectCatalogService#create(String, String, String, String, UUID)}.
+     * Validates code and department; throws CONFLICT if code already exists.
+     */
     @Override
     @Transactional
-    public SubjectDto createSubject(String code, String name, String description, UUID departmentId) {
-        if (code == null || code.isBlank()) {
-            throw Errors.badRequest("Subject code is required");
-        }
-        String trimmedCode = code.trim();
-        if (subjectRepository.existsByCode(trimmedCode)) {
-            throw Errors.conflict("Subject with code '" + trimmedCode + "' already exists");
-        }
-        Subject entity = Subject.builder()
-                .code(trimmedCode)
-                .name(name != null ? name.trim() : "")
-                .description(description != null ? description.trim() : null)
-                .departmentId(departmentId)
-                .build();
-        return toSubjectDto(subjectRepository.save(entity));
+    public SubjectDto createSubject(String code, String chineseName, String englishName, String description, UUID departmentId) {
+        return subjectCatalogService.create(code, chineseName, englishName, description, departmentId);
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link SubjectCatalogService#update(UUID, String, String, String, UUID)}.
+     * Throws NOT_FOUND if subject or (when set) department does not exist.
+     */
     @Override
     @Transactional
-    public SubjectDto updateSubject(UUID id, String name, String description, UUID departmentId) {
-        Subject entity = subjectRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Subject not found: " + id));
-        if (name != null) entity.setName(name);
-        if (description != null) entity.setDescription(description);
-        if (departmentId != null) entity.setDepartmentId(departmentId);
-        entity.setUpdatedAt(LocalDateTime.now());
-        return toSubjectDto(subjectRepository.save(entity));
+    public SubjectDto updateSubject(UUID id, String chineseName, String englishName, String description, UUID departmentId) {
+        return subjectCatalogService.update(id, chineseName, englishName, description, departmentId);
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link SubjectCatalogService#delete(UUID)}. Throws NOT_FOUND if subject does not exist.
+     */
     @Override
     @Transactional
     public void deleteSubject(UUID id) {
-        if (!subjectRepository.existsById(id)) {
-            throw Errors.notFound("Subject not found: " + id);
-        }
-        subjectRepository.deleteById(id);
+        subjectCatalogService.delete(id);
     }
 
+    // --- Assessment type ---
+
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link AssessmentTypeCatalogService#findById(UUID)}.
+     */
     @Override
     public Optional<AssessmentTypeDto> findAssessmentTypeById(UUID id) {
-        return assessmentTypeRepository.findById(id).map(this::toAssessmentTypeDto);
+        return assessmentTypeCatalogService.findById(id);
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link AssessmentTypeCatalogService#findByCode(String)}.
+     */
     @Override
     public Optional<AssessmentTypeDto> findAssessmentTypeByCode(String code) {
-        return assessmentTypeRepository.findByCode(code).map(this::toAssessmentTypeDto);
+        return assessmentTypeCatalogService.findByCode(code);
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link AssessmentTypeCatalogService#findAll()}. Order is stable (sort order, then code).
+     */
     @Override
     public List<AssessmentTypeDto> findAllAssessmentTypes() {
-        return assessmentTypeRepository.findAll().stream()
-                .map(this::toAssessmentTypeDto)
-                .toList();
+        return assessmentTypeCatalogService.findAll();
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link AssessmentTypeCatalogService#create(String, String, String, Boolean, Boolean, Integer)}.
+     * Validates code; throws CONFLICT if code already exists.
+     */
     @Override
     @Transactional
-    public AssessmentTypeDto createAssessmentType(String code, String name, Boolean isGraded, Boolean isFinal, Integer sortOrder) {
-        if (assessmentTypeRepository.existsByCode(code)) {
-            throw new IllegalArgumentException("Assessment type with code " + code + " already exists");
-        }
-        AssessmentType entity = AssessmentType.builder()
-                .code(code)
-                .name(name != null ? name : "")
-                .isGraded(isGraded != null ? isGraded : true)
-                .isFinal(isFinal != null ? isFinal : false)
-                .sortOrder(sortOrder != null ? sortOrder : 0)
-                .build();
-        return toAssessmentTypeDto(assessmentTypeRepository.save(entity));
+    public AssessmentTypeDto createAssessmentType(String code, String chineseName, String englishName, Boolean isGraded, Boolean isFinal, Integer sortOrder) {
+        return assessmentTypeCatalogService.create(code, chineseName, englishName, isGraded, isFinal, sortOrder);
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link AssessmentTypeCatalogService#update(UUID, String, String, Boolean, Boolean, Integer)}.
+     */
     @Override
     @Transactional
-    public AssessmentTypeDto updateAssessmentType(UUID id, String name, Boolean isGraded, Boolean isFinal, Integer sortOrder) {
-        AssessmentType entity = assessmentTypeRepository.findById(id)
-                .orElseThrow(() -> Errors.notFound("Assessment type not found: " + id));
-        if (name != null) entity.setName(name);
-        if (isGraded != null) entity.setIsGraded(isGraded);
-        if (isFinal != null) entity.setIsFinal(isFinal);
-        if (sortOrder != null) entity.setSortOrder(sortOrder);
-        return toAssessmentTypeDto(assessmentTypeRepository.save(entity));
+    public AssessmentTypeDto updateAssessmentType(UUID id, String chineseName, String englishName, Boolean isGraded, Boolean isFinal, Integer sortOrder) {
+        return assessmentTypeCatalogService.update(id, chineseName, englishName, isGraded, isFinal, sortOrder);
     }
 
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link AssessmentTypeCatalogService#delete(UUID)}. Throws NOT_FOUND if assessment type does not exist.
+     */
     @Override
     @Transactional
     public void deleteAssessmentType(UUID id) {
-        if (!assessmentTypeRepository.existsById(id)) {
-            throw Errors.notFound("Assessment type not found: " + id);
-        }
-        assessmentTypeRepository.deleteById(id);
-    }
-
-    private SubjectDto toSubjectDto(Subject e) {
-        return new SubjectDto(e.getId(), e.getCode(), e.getName(), e.getDescription(),
-                e.getDepartmentId(), e.getCreatedAt(), e.getUpdatedAt());
-    }
-
-    private AssessmentTypeDto toAssessmentTypeDto(AssessmentType e) {
-        return new AssessmentTypeDto(e.getId(), e.getCode(), e.getName(), 
-                e.getIsGraded(), e.getIsFinal(), e.getSortOrder(), e.getCreatedAt());
+        assessmentTypeCatalogService.delete(id);
     }
 }

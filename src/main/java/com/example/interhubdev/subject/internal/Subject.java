@@ -15,6 +15,10 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * JPA entity for a subject in the catalog (e.g. Mathematics, Physics).
+ * Belongs to a department (optional). Code is unique.
+ */
 @Entity
 @Table(name = "subject")
 @Getter
@@ -31,8 +35,11 @@ class Subject {
     @Column(name = "code", nullable = false, unique = true, length = 50)
     private String code;
 
-    @Column(name = "name", nullable = false, length = 255)
-    private String name;
+    @Column(name = "chinese_name", nullable = false, length = 255)
+    private String chineseName;
+
+    @Column(name = "english_name", length = 255)
+    private String englishName;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;

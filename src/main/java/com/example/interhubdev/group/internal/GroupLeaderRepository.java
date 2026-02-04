@@ -9,5 +9,8 @@ interface GroupLeaderRepository extends JpaRepository<GroupLeader, UUID> {
 
     List<GroupLeader> findByGroupId(UUID groupId);
 
+    /** Stable ordering for UI: role, then createdAt. */
+    List<GroupLeader> findByGroupIdOrderByRoleAscCreatedAtAsc(UUID groupId);
+
     boolean existsByGroupIdAndStudentIdAndRole(UUID groupId, UUID studentId, String role);
 }

@@ -3,31 +3,40 @@
  *
  * <h2>Public API</h2>
  * <ul>
- *   <li>{@link com.example.interhubdev.subject.SubjectApi} - subjects and assessment types</li>
+ *   <li>{@link com.example.interhubdev.subject.SubjectApi} - subjects and assessment types (facade)</li>
  *   <li>{@link com.example.interhubdev.subject.SubjectDto} - subject DTO</li>
  *   <li>{@link com.example.interhubdev.subject.AssessmentTypeDto} - assessment type DTO</li>
  * </ul>
  *
+ * <h2>Internal structure</h2>
+ * <ul>
+ *   <li>{@link com.example.interhubdev.subject.internal.SubjectServiceImpl} - facade implementing SubjectApi</li>
+ *   <li>{@link com.example.interhubdev.subject.internal.SubjectCatalogService} - CRUD for subjects (validates department)</li>
+ *   <li>{@link com.example.interhubdev.subject.internal.AssessmentTypeCatalogService} - CRUD for assessment types</li>
+ *   <li>{@link com.example.interhubdev.subject.internal.SubjectMappers} - entity to DTO mapping</li>
+ *   <li>{@link com.example.interhubdev.subject.internal.SubjectValidation} - code/chineseName/englishName trimming and required-field validation</li>
+ * </ul>
+ *
  * <h2>Access control</h2>
- * Create, update and delete operations for subjects and assessment types are allowed
- * Write operations only for roles: MODERATOR, ADMIN, SUPER_ADMIN. STAFF can only read. Teachers and students can only read.
+ * Write operations (create/update/delete) only for roles: MODERATOR, ADMIN, SUPER_ADMIN. Read operations for all authenticated users.
  *
  * <h2>Dependencies</h2>
  * <ul>
+ *   <li>department - subjects may reference a department; department existence validated on create/update when departmentId is set</li>
  *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors}</li>
  * </ul>
  *
  * <h2>Error codes (via {@link com.example.interhubdev.error.Errors})</h2>
  * <ul>
- *   <li>NOT_FOUND (404) - subject or assessment type not found</li>
+ *   <li>NOT_FOUND (404) - subject, assessment type or department (when departmentId set) not found</li>
  *   <li>CONFLICT (409) - subject or assessment type with given code already exists</li>
- *   <li>BAD_REQUEST (400) - code is blank or invalid input</li>
- *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create)</li>
+ *   <li>BAD_REQUEST (400) - subject/assessment type code is blank or invalid input</li>
+ *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create/update)</li>
  *   <li>FORBIDDEN (403) - user has no MODERATOR/ADMIN/SUPER_ADMIN role for write operations</li>
  * </ul>
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Subject",
-    allowedDependencies = {"error"}
+    allowedDependencies = {"department", "error"}
 )
 package com.example.interhubdev.subject;

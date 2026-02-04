@@ -10,4 +10,7 @@ interface CurriculumRepository extends JpaRepository<Curriculum, UUID> {
     List<Curriculum> findByProgramId(UUID programId);
 
     boolean existsByProgramIdAndVersion(UUID programId, String version);
+
+    /** Curricula for the given program ordered for stable UI rendering. */
+    List<Curriculum> findByProgramIdOrderByStartYearDescVersionDesc(UUID programId);
 }

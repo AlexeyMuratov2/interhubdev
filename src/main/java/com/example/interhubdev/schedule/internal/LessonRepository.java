@@ -8,9 +8,11 @@ import java.util.UUID;
 
 interface LessonRepository extends JpaRepository<Lesson, UUID> {
 
-    List<Lesson> findByOfferingId(UUID offeringId);
+    List<Lesson> findByOfferingIdOrderByDateAscTimeslotIdAsc(UUID offeringId);
 
-    List<Lesson> findByDate(LocalDate date);
+    List<Lesson> findByDateOrderByTimeslotIdAsc(LocalDate date);
 
     List<Lesson> findByOfferingIdAndDate(UUID offeringId, LocalDate date);
+
+    boolean existsByOfferingIdAndDateAndTimeslotId(UUID offeringId, LocalDate date, UUID timeslotId);
 }

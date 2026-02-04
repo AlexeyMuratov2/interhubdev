@@ -6,6 +6,7 @@ import com.example.interhubdev.academic.SemesterDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -182,7 +183,7 @@ class AcademicController {
             @NotNull(message = "End date is required") LocalDate endDate,
             LocalDate examStartDate,
             LocalDate examEndDate,
-            Integer weekCount,
+            @Min(value = 1, message = "Week count must be at least 1") @Max(value = 52, message = "Week count must be at most 52") Integer weekCount,
             Boolean isCurrent
     ) {}
 
@@ -192,7 +193,7 @@ class AcademicController {
             LocalDate endDate,
             LocalDate examStartDate,
             LocalDate examEndDate,
-            Integer weekCount,
+            @Min(value = 1, message = "Week count must be at least 1") @Max(value = 52, message = "Week count must be at most 52") Integer weekCount,
             Boolean isCurrent
     ) {}
 }

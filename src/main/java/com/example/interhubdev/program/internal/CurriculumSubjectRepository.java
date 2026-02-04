@@ -10,6 +10,9 @@ interface CurriculumSubjectRepository extends JpaRepository<CurriculumSubject, U
 
     List<CurriculumSubject> findByCurriculumId(UUID curriculumId);
 
+    /** Subjects of a curriculum ordered by semester and subject for stable rendering. */
+    List<CurriculumSubject> findByCurriculumIdOrderBySemesterNoAscSubjectIdAsc(UUID curriculumId);
+
     Optional<CurriculumSubject> findByCurriculumIdAndSubjectIdAndSemesterNo(
             UUID curriculumId, UUID subjectId, int semesterNo);
 

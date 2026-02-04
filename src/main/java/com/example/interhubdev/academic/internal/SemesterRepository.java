@@ -10,6 +10,9 @@ interface SemesterRepository extends JpaRepository<Semester, UUID> {
 
     List<Semester> findByAcademicYearId(UUID academicYearId);
 
+    /** Semesters for the given year ordered by number ascending. */
+    List<Semester> findByAcademicYearIdOrderByNumberAsc(UUID academicYearId);
+
     Optional<Semester> findByIsCurrent(boolean isCurrent);
 
     boolean existsByAcademicYearIdAndNumber(UUID academicYearId, int number);

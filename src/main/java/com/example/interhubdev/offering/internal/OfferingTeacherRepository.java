@@ -7,7 +7,7 @@ import java.util.UUID;
 
 interface OfferingTeacherRepository extends JpaRepository<OfferingTeacher, UUID> {
 
-    List<OfferingTeacher> findByOfferingId(UUID offeringId);
+    List<OfferingTeacher> findByOfferingIdOrderByRoleAscCreatedAtAsc(UUID offeringId);
 
     boolean existsByOfferingIdAndTeacherIdAndRole(UUID offeringId, UUID teacherId, String role);
 }

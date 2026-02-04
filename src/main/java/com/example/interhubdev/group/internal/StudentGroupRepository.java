@@ -12,5 +12,11 @@ interface StudentGroupRepository extends JpaRepository<StudentGroup, UUID> {
 
     List<StudentGroup> findByProgramId(UUID programId);
 
+    /** Stable ordering for UI: programId, then code. */
+    List<StudentGroup> findAllByOrderByProgramIdAscCodeAsc();
+
+    /** Stable ordering for UI within a program. */
+    List<StudentGroup> findByProgramIdOrderByCodeAsc(UUID programId);
+
     boolean existsByCode(String code);
 }

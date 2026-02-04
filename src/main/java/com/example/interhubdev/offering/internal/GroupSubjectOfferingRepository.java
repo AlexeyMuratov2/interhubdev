@@ -8,7 +8,7 @@ import java.util.UUID;
 
 interface GroupSubjectOfferingRepository extends JpaRepository<GroupSubjectOffering, UUID> {
 
-    List<GroupSubjectOffering> findByGroupId(UUID groupId);
+    List<GroupSubjectOffering> findByGroupIdOrderByCurriculumSubjectIdAsc(UUID groupId);
 
     Optional<GroupSubjectOffering> findByGroupIdAndCurriculumSubjectId(UUID groupId, UUID curriculumSubjectId);
 

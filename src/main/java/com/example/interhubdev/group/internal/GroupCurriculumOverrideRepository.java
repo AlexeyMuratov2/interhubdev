@@ -8,4 +8,7 @@ import java.util.UUID;
 interface GroupCurriculumOverrideRepository extends JpaRepository<GroupCurriculumOverride, UUID> {
 
     List<GroupCurriculumOverride> findByGroupId(UUID groupId);
+
+    /** Stable ordering for UI: newest first. */
+    List<GroupCurriculumOverride> findByGroupIdOrderByCreatedAtDesc(UUID groupId);
 }

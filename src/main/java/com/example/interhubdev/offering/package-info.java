@@ -3,13 +3,21 @@
  *
  * <h2>Public API</h2>
  * <ul>
- *   <li>{@link com.example.interhubdev.offering.OfferingApi} - offerings and offering teachers</li>
+ *   <li>{@link com.example.interhubdev.offering.OfferingApi} - offerings and offering teachers (facade)</li>
  *   <li>{@link com.example.interhubdev.offering.GroupSubjectOfferingDto}, {@link com.example.interhubdev.offering.OfferingTeacherDto} - DTOs</li>
  * </ul>
  *
+ * <h2>Internal structure</h2>
+ * <ul>
+ *   <li>{@link com.example.interhubdev.offering.internal.OfferingServiceImpl} - facade implementing OfferingApi</li>
+ *   <li>{@link com.example.interhubdev.offering.internal.OfferingCatalogService} - CRUD for group subject offerings</li>
+ *   <li>{@link com.example.interhubdev.offering.internal.OfferingTeacherService} - offering teachers (add/remove/list)</li>
+ *   <li>{@link com.example.interhubdev.offering.internal.OfferingMappers} - entity to DTO mapping</li>
+ *   <li>{@link com.example.interhubdev.offering.internal.OfferingValidation} - format/role normalization and validation</li>
+ * </ul>
+ *
  * <h2>Access control</h2>
- * Create, update and delete operations for offerings and offering teachers are allowed
- * Write operations only for roles: MODERATOR, ADMIN, SUPER_ADMIN. STAFF can only read. Teachers and students can only read.
+ * Write operations (create/update/delete) only for roles: MODERATOR, ADMIN, SUPER_ADMIN. Read operations for all authenticated users.
  *
  * <h2>Dependencies</h2>
  * <ul>
@@ -25,7 +33,7 @@
  *   <li>NOT_FOUND (404) - offering, group, curriculum subject, teacher, room or offering teacher not found</li>
  *   <li>CONFLICT (409) - offering already exists for group and curriculum subject; offering teacher with this role already exists</li>
  *   <li>BAD_REQUEST (400) - group/curriculum subject id required; format must be offline/online/mixed; teacher id/role required; role must be LECTURE/PRACTICE/LAB</li>
- *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create)</li>
+ *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create/update)</li>
  *   <li>FORBIDDEN (403) - user has no MODERATOR/ADMIN/SUPER_ADMIN role for write operations</li>
  * </ul>
  */

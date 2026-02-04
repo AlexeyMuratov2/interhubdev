@@ -35,7 +35,7 @@ class AcademicServiceImpl implements AcademicApi {
 
     @Override
     public List<AcademicYearDto> findAllAcademicYears() {
-        return academicYearRepository.findAll().stream()
+        return academicYearRepository.findAllByOrderByStartDateDesc().stream()
                 .map(this::toAcademicYearDto)
                 .toList();
     }
@@ -118,7 +118,7 @@ class AcademicServiceImpl implements AcademicApi {
 
     @Override
     public List<SemesterDto> findSemestersByAcademicYearId(UUID academicYearId) {
-        return semesterRepository.findByAcademicYearId(academicYearId).stream()
+        return semesterRepository.findByAcademicYearIdOrderByNumberAsc(academicYearId).stream()
                 .map(this::toSemesterDto)
                 .toList();
     }
@@ -139,9 +139,8 @@ class AcademicServiceImpl implements AcademicApi {
         if (academicYearId == null) {
             throw Errors.badRequest("Academic year id is required");
         }
-        if (academicYearRepository.findById(academicYearId).isEmpty()) {
-            throw Errors.notFound("Academic year not found: " + academicYearId);
-        }
+        AcademicYear academicYear = academicYearRepository.findById(academicYearId)
+                .orElseThrow(() -> Errors.notFound("Academic year not found: " + academicYearId));
         if (startDate == null || endDate == null) {
             throw Errors.badRequest("Start date and end date are required");
         }
@@ -150,6 +149,15 @@ class AcademicServiceImpl implements AcademicApi {
         }
         if (number < 1) {
             throw Errors.badRequest("Semester number must be >= 1");
+        }
+        if (weekCount != null && (weekCount < 1 || weekCount > 52)) {
+            throw Errors.badRequest("Week count must be between 1 and 52");
+        }
+        if (startDate.isBefore(academicYear.getStartDate())) {
+            throw Errors.badRequest("Semester start date must be on or after academic year start date");
+        }
+        if (endDate.isAfter(academicYear.getEndDate())) {
+            throw Errors.badRequest("Semester end date must be on or before academic year end date");
         }
         if (semesterRepository.existsByAcademicYearIdAndNumber(academicYearId, number)) {
             throw Errors.conflict("Semester " + number + " already exists for this academic year");
@@ -190,6 +198,14 @@ class AcademicServiceImpl implements AcademicApi {
         if (endDate != null) entity.setEndDate(endDate);
         if (entity.getEndDate() != null && entity.getStartDate() != null && !entity.getEndDate().isAfter(entity.getStartDate())) {
             throw Errors.badRequest("End date must be after start date");
+        }
+        AcademicYear academicYear = academicYearRepository.findById(entity.getAcademicYearId())
+                .orElseThrow(() -> Errors.notFound("Academic year not found: " + entity.getAcademicYearId()));
+        if (entity.getStartDate().isBefore(academicYear.getStartDate()) || entity.getEndDate().isAfter(academicYear.getEndDate())) {
+            throw Errors.badRequest("Semester dates must fall within academic year range");
+        }
+        if (weekCount != null && (weekCount < 1 || weekCount > 52)) {
+            throw Errors.badRequest("Week count must be between 1 and 52");
         }
         if (examStartDate != null) entity.setExamStartDate(examStartDate);
         if (examEndDate != null) entity.setExamEndDate(examEndDate);

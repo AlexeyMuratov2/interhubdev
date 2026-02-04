@@ -8,4 +8,7 @@ import java.util.UUID;
 interface CurriculumPracticeRepository extends JpaRepository<CurriculumPractice, UUID> {
 
     List<CurriculumPractice> findByCurriculumId(UUID curriculumId);
+
+    /** Practices for the given curriculum ordered by semester and name. */
+    List<CurriculumPractice> findByCurriculumIdOrderBySemesterNoAscNameAsc(UUID curriculumId);
 }
