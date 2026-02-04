@@ -23,9 +23,15 @@ public interface InvitationApi {
     Optional<InvitationDto> findByUserId(UUID userId);
 
     /**
-     * Get all invitations.
+     * Get invitations with cursor-based pagination.
+     * Sorted by send time (createdAt) descending — newest first.
+     * Max 30 items per page.
+     *
+     * @param cursor optional cursor (last invitation id from previous page); null for first page
+     * @param limit  page size, 1–30 (default 30)
+     * @return page with items and optional next cursor
      */
-    List<InvitationDto> findAll();
+    InvitationPage findPage(UUID cursor, int limit);
 
     /**
      * Get invitations by status.

@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -59,10 +61,27 @@ class InvitationServiceImpl implements InvitationApi {
         return invitationRepository.findByUserId(userId).map(this::toDto);
     }
 
+    private static final int MAX_PAGE_SIZE = 30;
+
     @Override
-    public List<InvitationDto> findAll() {
-        List<Invitation> invitations = invitationRepository.findAll();
-        return toDtoList(invitations);
+    public InvitationPage findPage(UUID cursor, int limit) {
+        int capped = Math.min(Math.max(1, limit), MAX_PAGE_SIZE);
+        List<Invitation> slice;
+        if (cursor == null) {
+            slice = invitationRepository.findFirst31ByOrderByCreatedAtDescIdDesc();
+        } else {
+            Invitation cursorInvitation = invitationRepository.findById(cursor)
+                    .orElseThrow(() -> InvitationErrors.invitationNotFound(cursor));
+            slice = invitationRepository.findAfterCursor(
+                    cursorInvitation.getCreatedAt(),
+                    cursorInvitation.getId(),
+                    PageRequest.of(0, capped + 1)
+            );
+        }
+        boolean hasMore = slice.size() > capped;
+        List<Invitation> pageInvitations = hasMore ? slice.subList(0, capped) : slice;
+        UUID nextCursor = hasMore ? pageInvitations.get(pageInvitations.size() - 1).getId() : null;
+        return new InvitationPage(toDtoList(pageInvitations), nextCursor);
     }
 
     @Override

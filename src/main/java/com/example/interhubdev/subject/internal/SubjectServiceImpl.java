@@ -40,7 +40,7 @@ class SubjectServiceImpl implements SubjectApi {
 
     @Override
     @Transactional
-    public SubjectDto createSubject(String code, String name, String description) {
+    public SubjectDto createSubject(String code, String name, String description, UUID departmentId) {
         if (code == null || code.isBlank()) {
             throw Errors.badRequest("Subject code is required");
         }
@@ -52,17 +52,19 @@ class SubjectServiceImpl implements SubjectApi {
                 .code(trimmedCode)
                 .name(name != null ? name.trim() : "")
                 .description(description != null ? description.trim() : null)
+                .departmentId(departmentId)
                 .build();
         return toSubjectDto(subjectRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public SubjectDto updateSubject(UUID id, String name, String description) {
+    public SubjectDto updateSubject(UUID id, String name, String description, UUID departmentId) {
         Subject entity = subjectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Subject not found: " + id));
         if (name != null) entity.setName(name);
         if (description != null) entity.setDescription(description);
+        if (departmentId != null) entity.setDepartmentId(departmentId);
         entity.setUpdatedAt(LocalDateTime.now());
         return toSubjectDto(subjectRepository.save(entity));
     }
@@ -95,14 +97,29 @@ class SubjectServiceImpl implements SubjectApi {
 
     @Override
     @Transactional
-    public AssessmentTypeDto createAssessmentType(String code, String name) {
+    public AssessmentTypeDto createAssessmentType(String code, String name, Boolean isGraded, Boolean isFinal, Integer sortOrder) {
         if (assessmentTypeRepository.existsByCode(code)) {
             throw new IllegalArgumentException("Assessment type with code " + code + " already exists");
         }
         AssessmentType entity = AssessmentType.builder()
                 .code(code)
                 .name(name != null ? name : "")
+                .isGraded(isGraded != null ? isGraded : true)
+                .isFinal(isFinal != null ? isFinal : false)
+                .sortOrder(sortOrder != null ? sortOrder : 0)
                 .build();
+        return toAssessmentTypeDto(assessmentTypeRepository.save(entity));
+    }
+
+    @Override
+    @Transactional
+    public AssessmentTypeDto updateAssessmentType(UUID id, String name, Boolean isGraded, Boolean isFinal, Integer sortOrder) {
+        AssessmentType entity = assessmentTypeRepository.findById(id)
+                .orElseThrow(() -> Errors.notFound("Assessment type not found: " + id));
+        if (name != null) entity.setName(name);
+        if (isGraded != null) entity.setIsGraded(isGraded);
+        if (isFinal != null) entity.setIsFinal(isFinal);
+        if (sortOrder != null) entity.setSortOrder(sortOrder);
         return toAssessmentTypeDto(assessmentTypeRepository.save(entity));
     }
 
@@ -117,10 +134,11 @@ class SubjectServiceImpl implements SubjectApi {
 
     private SubjectDto toSubjectDto(Subject e) {
         return new SubjectDto(e.getId(), e.getCode(), e.getName(), e.getDescription(),
-                e.getCreatedAt(), e.getUpdatedAt());
+                e.getDepartmentId(), e.getCreatedAt(), e.getUpdatedAt());
     }
 
     private AssessmentTypeDto toAssessmentTypeDto(AssessmentType e) {
-        return new AssessmentTypeDto(e.getId(), e.getCode(), e.getName(), e.getCreatedAt());
+        return new AssessmentTypeDto(e.getId(), e.getCode(), e.getName(), 
+                e.getIsGraded(), e.getIsFinal(), e.getSortOrder(), e.getCreatedAt());
     }
 }

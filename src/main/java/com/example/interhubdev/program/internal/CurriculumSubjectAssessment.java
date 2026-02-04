@@ -1,4 +1,4 @@
-package com.example.interhubdev.subject.internal;
+package com.example.interhubdev.program.internal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,39 +12,43 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "subject")
+@Table(name = "curriculum_subject_assessment")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-class Subject {
+class CurriculumSubjectAssessment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "code", nullable = false, unique = true, length = 50)
-    private String code;
+    @Column(name = "curriculum_subject_id", nullable = false)
+    private UUID curriculumSubjectId;
 
-    @Column(name = "name", nullable = false, length = 255)
-    private String name;
+    @Column(name = "assessment_type_id", nullable = false)
+    private UUID assessmentTypeId;
 
-    @Column(name = "description", columnDefinition = "TEXT")
-    private String description;
+    @Column(name = "week_number")
+    private Integer weekNumber;
 
-    @Column(name = "department_id")
-    private UUID departmentId;
+    @Column(name = "is_final", nullable = false)
+    @Builder.Default
+    private boolean isFinal = false;
+
+    @Column(name = "weight", precision = 3, scale = 2)
+    private BigDecimal weight;
+
+    @Column(name = "notes")
+    private String notes;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    @Column(name = "updated_at", nullable = false)
-    @Builder.Default
-    private LocalDateTime updatedAt = LocalDateTime.now();
 }

@@ -50,7 +50,7 @@ class SubjectController {
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Create subject", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create subjects")
     public ResponseEntity<SubjectDto> createSubject(@Valid @RequestBody CreateSubjectRequest request) {
-        SubjectDto dto = subjectApi.createSubject(request.code(), request.name(), request.description());
+        SubjectDto dto = subjectApi.createSubject(request.code(), request.name(), request.description(), request.departmentId());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
@@ -61,7 +61,7 @@ class SubjectController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateSubjectRequest request
     ) {
-        SubjectDto dto = subjectApi.updateSubject(id, request.name(), request.description());
+        SubjectDto dto = subjectApi.updateSubject(id, request.name(), request.description(), request.departmentId());
         return ResponseEntity.ok(dto);
     }
 
@@ -92,8 +92,21 @@ class SubjectController {
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Create assessment type", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create assessment types")
     public ResponseEntity<AssessmentTypeDto> createAssessmentType(@Valid @RequestBody CreateAssessmentTypeRequest request) {
-        AssessmentTypeDto dto = subjectApi.createAssessmentType(request.code(), request.name());
+        AssessmentTypeDto dto = subjectApi.createAssessmentType(
+                request.code(), request.name(), request.isGraded(), request.isFinal(), request.sortOrder());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    @PutMapping("/assessment-types/{id}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update assessment type", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update assessment types")
+    public ResponseEntity<AssessmentTypeDto> updateAssessmentType(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateAssessmentTypeRequest request
+    ) {
+        AssessmentTypeDto dto = subjectApi.updateAssessmentType(
+                id, request.name(), request.isGraded(), request.isFinal(), request.sortOrder());
+        return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/assessment-types/{id}")
@@ -107,11 +120,21 @@ class SubjectController {
     record CreateSubjectRequest(
             @NotBlank(message = "Code is required") String code,
             @NotBlank(message = "Name is required") String name,
-            String description
+            String description,
+            UUID departmentId
     ) {}
-    record UpdateSubjectRequest(String name, String description) {}
+    record UpdateSubjectRequest(String name, String description, UUID departmentId) {}
     record CreateAssessmentTypeRequest(
             @NotBlank(message = "Code is required") String code,
-            @NotBlank(message = "Name is required") String name
+            @NotBlank(message = "Name is required") String name,
+            Boolean isGraded,
+            Boolean isFinal,
+            Integer sortOrder
+    ) {}
+    record UpdateAssessmentTypeRequest(
+            String name,
+            Boolean isGraded,
+            Boolean isFinal,
+            Integer sortOrder
     ) {}
 }

@@ -8,6 +8,7 @@ public record SubjectDto(
     String code,
     String name,
     String description,
+    UUID departmentId,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {

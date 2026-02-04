@@ -16,9 +16,9 @@ public interface SubjectApi {
 
     List<SubjectDto> findAllSubjects();
 
-    SubjectDto createSubject(String code, String name, String description);
+    SubjectDto createSubject(String code, String name, String description, UUID departmentId);
 
-    SubjectDto updateSubject(UUID id, String name, String description);
+    SubjectDto updateSubject(UUID id, String name, String description, UUID departmentId);
 
     void deleteSubject(UUID id);
 
@@ -29,7 +29,9 @@ public interface SubjectApi {
 
     List<AssessmentTypeDto> findAllAssessmentTypes();
 
-    AssessmentTypeDto createAssessmentType(String code, String name);
+    AssessmentTypeDto createAssessmentType(String code, String name, Boolean isGraded, Boolean isFinal, Integer sortOrder);
+
+    AssessmentTypeDto updateAssessmentType(UUID id, String name, Boolean isGraded, Boolean isFinal, Integer sortOrder);
 
     void deleteAssessmentType(UUID id);
 }

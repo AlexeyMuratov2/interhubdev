@@ -27,9 +27,11 @@ public interface ProgramApi {
 
     List<CurriculumDto> findCurriculaByProgramId(UUID programId);
 
-    CurriculumDto createCurriculum(UUID programId, String version, int startYear, boolean isActive, String notes);
+    CurriculumDto createCurriculum(UUID programId, String version, int startYear, Integer endYear, boolean isActive, String notes);
 
-    CurriculumDto updateCurriculum(UUID id, String version, int startYear, boolean isActive, String notes);
+    CurriculumDto updateCurriculum(UUID id, String version, int startYear, Integer endYear, boolean isActive, CurriculumStatus status, String notes);
+
+    CurriculumDto approveCurriculum(UUID id, UUID approvedBy);
 
     void deleteCurriculum(UUID id);
 
@@ -48,8 +50,11 @@ public interface ProgramApi {
             Integer hoursLecture,
             Integer hoursPractice,
             Integer hoursLab,
+            Integer hoursSeminar,
+            Integer hoursSelfStudy,
+            Integer hoursConsultation,
+            Integer hoursCourseWork,
             UUID assessmentTypeId,
-            boolean isElective,
             java.math.BigDecimal credits
     );
 
@@ -60,10 +65,71 @@ public interface ProgramApi {
             Integer hoursLecture,
             Integer hoursPractice,
             Integer hoursLab,
+            Integer hoursSeminar,
+            Integer hoursSelfStudy,
+            Integer hoursConsultation,
+            Integer hoursCourseWork,
             UUID assessmentTypeId,
-            Boolean isElective,
             java.math.BigDecimal credits
     );
 
     void deleteCurriculumSubject(UUID id);
+
+    // --- Curriculum subject assessment ---
+    List<CurriculumSubjectAssessmentDto> findAssessmentsByCurriculumSubjectId(UUID curriculumSubjectId);
+
+    CurriculumSubjectAssessmentDto createCurriculumSubjectAssessment(
+            UUID curriculumSubjectId,
+            UUID assessmentTypeId,
+            Integer weekNumber,
+            boolean isFinal,
+            java.math.BigDecimal weight,
+            String notes
+    );
+
+    CurriculumSubjectAssessmentDto updateCurriculumSubjectAssessment(
+            UUID id,
+            UUID assessmentTypeId,
+            Integer weekNumber,
+            Boolean isFinal,
+            java.math.BigDecimal weight,
+            String notes
+    );
+
+    void deleteCurriculumSubjectAssessment(UUID id);
+
+    // --- Curriculum practice ---
+    List<CurriculumPracticeDto> findPracticesByCurriculumId(UUID curriculumId);
+
+    CurriculumPracticeDto createCurriculumPractice(
+            UUID curriculumId,
+            PracticeType practiceType,
+            String name,
+            String description,
+            int semesterNo,
+            int durationWeeks,
+            java.math.BigDecimal credits,
+            UUID assessmentTypeId,
+            PracticeLocation locationType,
+            boolean supervisorRequired,
+            boolean reportRequired,
+            String notes
+    );
+
+    CurriculumPracticeDto updateCurriculumPractice(
+            UUID id,
+            PracticeType practiceType,
+            String name,
+            String description,
+            Integer semesterNo,
+            Integer durationWeeks,
+            java.math.BigDecimal credits,
+            UUID assessmentTypeId,
+            PracticeLocation locationType,
+            Boolean supervisorRequired,
+            Boolean reportRequired,
+            String notes
+    );
+
+    void deleteCurriculumPractice(UUID id);
 }

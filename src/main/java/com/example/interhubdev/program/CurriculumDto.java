@@ -8,7 +8,11 @@ public record CurriculumDto(
     UUID programId,
     String version,
     int startYear,
+    Integer endYear,
     boolean isActive,
+    CurriculumStatus status,
+    LocalDateTime approvedAt,
+    UUID approvedBy,
     String notes,
     LocalDateTime createdAt,
     LocalDateTime updatedAt

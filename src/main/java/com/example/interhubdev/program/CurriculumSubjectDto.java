@@ -15,8 +15,11 @@ public record CurriculumSubjectDto(
     Integer hoursLecture,
     Integer hoursPractice,
     Integer hoursLab,
+    Integer hoursSeminar,
+    Integer hoursSelfStudy,
+    Integer hoursConsultation,
+    Integer hoursCourseWork,
     UUID assessmentTypeId,
-    boolean isElective,
     BigDecimal credits,
     LocalDateTime createdAt,
     LocalDateTime updatedAt

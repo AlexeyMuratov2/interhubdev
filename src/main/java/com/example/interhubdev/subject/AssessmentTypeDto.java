@@ -7,6 +7,9 @@ public record AssessmentTypeDto(
     UUID id,
     String code,
     String name,
+    Boolean isGraded,
+    Boolean isFinal,
+    Integer sortOrder,
     LocalDateTime createdAt
 ) {
 }

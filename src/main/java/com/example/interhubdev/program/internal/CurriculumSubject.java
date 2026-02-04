@@ -56,6 +56,18 @@ class CurriculumSubject {
     @Column(name = "hours_lab")
     private Integer hoursLab;
 
+    @Column(name = "hours_seminar")
+    private Integer hoursSeminar;
+
+    @Column(name = "hours_self_study")
+    private Integer hoursSelfStudy;
+
+    @Column(name = "hours_consultation")
+    private Integer hoursConsultation;
+
+    @Column(name = "hours_course_work")
+    private Integer hoursCourseWork;
+
     @Column(name = "assessment_type_id", nullable = false)
     private UUID assessmentTypeId;
 

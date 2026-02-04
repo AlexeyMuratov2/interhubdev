@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -31,11 +32,22 @@ class InvitationController {
 
     // ==================== Staff/Moderator/Admin endpoints ====================
 
+    private static final int DEFAULT_PAGE_SIZE = 30;
+    private static final int MAX_PAGE_SIZE = 30;
+
     @GetMapping
     @PreAuthorize("hasAnyRole('STAFF', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Get all invitations", description = "STAFF, MODERATOR, ADMIN, SUPER_ADMIN can view invitations")
-    public ResponseEntity<List<InvitationDto>> findAll() {
-        return ResponseEntity.ok(invitationApi.findAll());
+    @Operation(
+            summary = "Get invitations (cursor pagination)",
+            description = "Returns up to 30 invitations per request, sorted by send time (createdAt) descending. Use cursor for next page. STAFF, MODERATOR, ADMIN, SUPER_ADMIN."
+    )
+    public ResponseEntity<InvitationPage> findPage(
+            @RequestParam(required = false) Optional<UUID> cursor,
+            @RequestParam(required = false, defaultValue = "30") int limit
+    ) {
+        int size = limit <= 0 ? DEFAULT_PAGE_SIZE : Math.min(limit, MAX_PAGE_SIZE);
+        InvitationPage page = invitationApi.findPage(cursor.orElse(null), size);
+        return ResponseEntity.ok(page);
     }
 
     @GetMapping("/{id}")

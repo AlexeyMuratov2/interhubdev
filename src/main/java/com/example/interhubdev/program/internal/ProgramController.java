@@ -1,6 +1,14 @@
 package com.example.interhubdev.program.internal;
 
-import com.example.interhubdev.program.*;
+import com.example.interhubdev.program.CurriculumDto;
+import com.example.interhubdev.program.CurriculumPracticeDto;
+import com.example.interhubdev.program.CurriculumStatus;
+import com.example.interhubdev.program.CurriculumSubjectAssessmentDto;
+import com.example.interhubdev.program.CurriculumSubjectDto;
+import com.example.interhubdev.program.PracticeLocation;
+import com.example.interhubdev.program.PracticeType;
+import com.example.interhubdev.program.ProgramApi;
+import com.example.interhubdev.program.ProgramDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -105,6 +113,7 @@ class ProgramController {
                 programId,
                 request.version(),
                 request.startYear(),
+                request.endYear(),
                 request.isActive() != null ? request.isActive() : true,
                 request.notes()
         );
@@ -122,9 +131,22 @@ class ProgramController {
                 id,
                 request.version(),
                 request.startYear(),
+                request.endYear(),
                 request.isActive(),
+                request.status(),
                 request.notes()
         );
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/curricula/{id}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Approve curriculum", description = "Only ADMIN, SUPER_ADMIN can approve curricula")
+    public ResponseEntity<CurriculumDto> approveCurriculum(
+            @PathVariable UUID id,
+            @RequestParam UUID approvedBy
+    ) {
+        CurriculumDto dto = programApi.approveCurriculum(id, approvedBy);
         return ResponseEntity.ok(dto);
     }
 
@@ -168,8 +190,11 @@ class ProgramController {
                 request.hoursLecture(),
                 request.hoursPractice(),
                 request.hoursLab(),
+                request.hoursSeminar(),
+                request.hoursSelfStudy(),
+                request.hoursConsultation(),
+                request.hoursCourseWork(),
                 request.assessmentTypeId(),
-                request.isElective() != null && request.isElective(),
                 request.credits()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
@@ -189,8 +214,11 @@ class ProgramController {
                 request.hoursLecture(),
                 request.hoursPractice(),
                 request.hoursLab(),
+                request.hoursSeminar(),
+                request.hoursSelfStudy(),
+                request.hoursConsultation(),
+                request.hoursCourseWork(),
                 request.assessmentTypeId(),
-                request.isElective(),
                 request.credits()
         );
         return ResponseEntity.ok(dto);
@@ -201,6 +229,121 @@ class ProgramController {
     @Operation(summary = "Delete curriculum subject", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete curriculum subjects")
     public ResponseEntity<Void> deleteCurriculumSubject(@PathVariable UUID id) {
         programApi.deleteCurriculumSubject(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Curriculum subject assessments ---
+    @GetMapping("/curriculum-subjects/{curriculumSubjectId}/assessments")
+    @Operation(summary = "Get assessments by curriculum subject ID")
+    public ResponseEntity<List<CurriculumSubjectAssessmentDto>> findAssessmentsByCurriculumSubjectId(
+            @PathVariable UUID curriculumSubjectId) {
+        return ResponseEntity.ok(programApi.findAssessmentsByCurriculumSubjectId(curriculumSubjectId));
+    }
+
+    @PostMapping("/curriculum-subjects/{curriculumSubjectId}/assessments")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create curriculum subject assessment", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create assessments")
+    public ResponseEntity<CurriculumSubjectAssessmentDto> createCurriculumSubjectAssessment(
+            @PathVariable UUID curriculumSubjectId,
+            @Valid @RequestBody CreateCurriculumSubjectAssessmentRequest request
+    ) {
+        CurriculumSubjectAssessmentDto dto = programApi.createCurriculumSubjectAssessment(
+                curriculumSubjectId,
+                request.assessmentTypeId(),
+                request.weekNumber(),
+                request.isFinal() != null && request.isFinal(),
+                request.weight(),
+                request.notes()
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    @PutMapping("/curriculum-subject-assessments/{id}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update curriculum subject assessment", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update assessments")
+    public ResponseEntity<CurriculumSubjectAssessmentDto> updateCurriculumSubjectAssessment(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateCurriculumSubjectAssessmentRequest request
+    ) {
+        CurriculumSubjectAssessmentDto dto = programApi.updateCurriculumSubjectAssessment(
+                id,
+                request.assessmentTypeId(),
+                request.weekNumber(),
+                request.isFinal(),
+                request.weight(),
+                request.notes()
+        );
+        return ResponseEntity.ok(dto);
+    }
+
+    @DeleteMapping("/curriculum-subject-assessments/{id}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete curriculum subject assessment", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete assessments")
+    public ResponseEntity<Void> deleteCurriculumSubjectAssessment(@PathVariable UUID id) {
+        programApi.deleteCurriculumSubjectAssessment(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Curriculum practices ---
+    @GetMapping("/curricula/{curriculumId}/practices")
+    @Operation(summary = "Get practices by curriculum ID")
+    public ResponseEntity<List<CurriculumPracticeDto>> findPracticesByCurriculumId(@PathVariable UUID curriculumId) {
+        return ResponseEntity.ok(programApi.findPracticesByCurriculumId(curriculumId));
+    }
+
+    @PostMapping("/curricula/{curriculumId}/practices")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create curriculum practice", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create practices")
+    public ResponseEntity<CurriculumPracticeDto> createCurriculumPractice(
+            @PathVariable UUID curriculumId,
+            @Valid @RequestBody CreateCurriculumPracticeRequest request
+    ) {
+        CurriculumPracticeDto dto = programApi.createCurriculumPractice(
+                curriculumId,
+                request.practiceType(),
+                request.name(),
+                request.description(),
+                request.semesterNo(),
+                request.durationWeeks(),
+                request.credits(),
+                request.assessmentTypeId(),
+                request.locationType(),
+                request.supervisorRequired() != null ? request.supervisorRequired() : true,
+                request.reportRequired() != null ? request.reportRequired() : true,
+                request.notes()
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    @PutMapping("/curriculum-practices/{id}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update curriculum practice", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update practices")
+    public ResponseEntity<CurriculumPracticeDto> updateCurriculumPractice(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateCurriculumPracticeRequest request
+    ) {
+        CurriculumPracticeDto dto = programApi.updateCurriculumPractice(
+                id,
+                request.practiceType(),
+                request.name(),
+                request.description(),
+                request.semesterNo(),
+                request.durationWeeks(),
+                request.credits(),
+                request.assessmentTypeId(),
+                request.locationType(),
+                request.supervisorRequired(),
+                request.reportRequired(),
+                request.notes()
+        );
+        return ResponseEntity.ok(dto);
+    }
+
+    @DeleteMapping("/curriculum-practices/{id}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete curriculum practice", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete practices")
+    public ResponseEntity<Void> deleteCurriculumPractice(@PathVariable UUID id) {
+        programApi.deleteCurriculumPractice(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -215,13 +358,16 @@ class ProgramController {
     record CreateCurriculumRequest(
             @NotBlank(message = "Version is required") String version,
             @Min(value = 1900, message = "startYear must be at least 1900") @Max(value = 2100, message = "startYear must be at most 2100") int startYear,
+            @Min(value = 1900, message = "endYear must be at least 1900") @Max(value = 2100, message = "endYear must be at most 2100") Integer endYear,
             Boolean isActive,
             String notes
     ) {}
     record UpdateCurriculumRequest(
             String version,
             @Min(value = 1900, message = "startYear must be at least 1900") @Max(value = 2100, message = "startYear must be at most 2100") int startYear,
+            @Min(value = 1900, message = "endYear must be at least 1900") @Max(value = 2100, message = "endYear must be at most 2100") Integer endYear,
             boolean isActive,
+            CurriculumStatus status,
             String notes
     ) {}
     record CreateCurriculumSubjectRequest(
@@ -233,8 +379,11 @@ class ProgramController {
             Integer hoursLecture,
             Integer hoursPractice,
             Integer hoursLab,
+            Integer hoursSeminar,
+            Integer hoursSelfStudy,
+            Integer hoursConsultation,
+            Integer hoursCourseWork,
             @NotNull(message = "Assessment type id is required") UUID assessmentTypeId,
-            Boolean isElective,
             BigDecimal credits
     ) {}
     record UpdateCurriculumSubjectRequest(
@@ -243,8 +392,51 @@ class ProgramController {
             Integer hoursLecture,
             Integer hoursPractice,
             Integer hoursLab,
+            Integer hoursSeminar,
+            Integer hoursSelfStudy,
+            Integer hoursConsultation,
+            Integer hoursCourseWork,
             UUID assessmentTypeId,
-            Boolean isElective,
             BigDecimal credits
+    ) {}
+    record CreateCurriculumSubjectAssessmentRequest(
+            @NotNull(message = "Assessment type id is required") UUID assessmentTypeId,
+            Integer weekNumber,
+            Boolean isFinal,
+            BigDecimal weight,
+            String notes
+    ) {}
+    record UpdateCurriculumSubjectAssessmentRequest(
+            UUID assessmentTypeId,
+            Integer weekNumber,
+            Boolean isFinal,
+            BigDecimal weight,
+            String notes
+    ) {}
+    record CreateCurriculumPracticeRequest(
+            @NotNull(message = "Practice type is required") PracticeType practiceType,
+            @NotBlank(message = "Name is required") String name,
+            String description,
+            @Min(value = 1, message = "semesterNo must be at least 1") int semesterNo,
+            @Min(value = 1, message = "durationWeeks must be at least 1") int durationWeeks,
+            BigDecimal credits,
+            UUID assessmentTypeId,
+            PracticeLocation locationType,
+            Boolean supervisorRequired,
+            Boolean reportRequired,
+            String notes
+    ) {}
+    record UpdateCurriculumPracticeRequest(
+            PracticeType practiceType,
+            String name,
+            String description,
+            Integer semesterNo,
+            Integer durationWeeks,
+            BigDecimal credits,
+            UUID assessmentTypeId,
+            PracticeLocation locationType,
+            Boolean supervisorRequired,
+            Boolean reportRequired,
+            String notes
     ) {}
 }

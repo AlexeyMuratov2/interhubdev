@@ -1,4 +1,4 @@
-package com.example.interhubdev.subject.internal;
+package com.example.interhubdev.academic.internal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,39 +12,35 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "assessment_type")
+@Table(name = "academic_year")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-class AssessmentType {
+class AcademicYear {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "code", nullable = false, unique = true, length = 50)
-    private String code;
-
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false, length = 50)
     private String name;
 
-    @Column(name = "is_graded", nullable = false)
-    @Builder.Default
-    private Boolean isGraded = true;
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
 
-    @Column(name = "is_final", nullable = false)
-    @Builder.Default
-    private Boolean isFinal = false;
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
 
-    @Column(name = "sort_order", nullable = false)
+    @Column(name = "is_current", nullable = false)
     @Builder.Default
-    private Integer sortOrder = 0;
+    private boolean isCurrent = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
