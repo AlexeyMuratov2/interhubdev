@@ -12,7 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDateTime;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +39,7 @@ class BootstrapApiTest {
     void shouldCompleteBootstrapWhenAdminNotExists() {
         when(userApi.existsByEmail(any())).thenReturn(false);
         when(userApi.createUser(anyString(), any(), any(), any())).thenReturn(
-            new UserDto(UUID.randomUUID(), "admin@test.com", Set.of(Role.SUPER_ADMIN), UserStatus.PENDING, null, null, null, null, LocalDateTime.now(), null, null)
+            new UserDto(UUID.randomUUID(), "admin@test.com", List.of(Role.SUPER_ADMIN), UserStatus.PENDING, null, null, null, null, LocalDateTime.now(), null, null)
         );
         // Bootstrap runs on ApplicationReadyEvent before this test; stub is for API shape.
         // Unit-level bootstrap logic is in BootstrapServiceTest.

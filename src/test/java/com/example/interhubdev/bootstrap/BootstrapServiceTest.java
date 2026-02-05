@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,7 +38,7 @@ class BootstrapServiceTest {
         UserDto createdUser = new UserDto(
                 UUID.randomUUID(),
                 "admin@test.com",
-                Set.of(Role.SUPER_ADMIN),
+                List.of(Role.SUPER_ADMIN),
                 UserStatus.PENDING,
                 "Super",
                 "Admin",
@@ -54,7 +55,7 @@ class BootstrapServiceTest {
         // when
         executeBootstrap(service);
 
-        // then
+        // then (createUser accepts Collection<Role>; impl may pass Set or List)
         verify(userApi).createUser(
                 eq("admin@test.com"),
                 eq(Set.of(Role.SUPER_ADMIN)),
@@ -99,7 +100,7 @@ class BootstrapServiceTest {
         UserDto createdUser = new UserDto(
                 UUID.randomUUID(),
                 "admin@test.com",
-                Set.of(Role.SUPER_ADMIN),
+                List.of(Role.SUPER_ADMIN),
                 UserStatus.PENDING,
                 null,
                 null,

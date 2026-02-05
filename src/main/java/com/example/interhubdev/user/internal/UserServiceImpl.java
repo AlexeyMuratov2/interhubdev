@@ -85,13 +85,14 @@ class UserServiceImpl implements UserApi {
         }
         Role.validateAtMostOneStaffType(roleSet);
 
+        // Build user with empty roles, then add in place so Hibernate persists all rows (replacing collection can persist only one)
         User user = User.builder()
                 .email(email)
-                .roles(new java.util.HashSet<>(roleSet))
                 .firstName(firstName)
                 .lastName(lastName)
                 .status(UserStatus.PENDING)
                 .build();
+        user.getRoles().addAll(roleSet);
 
         return toDto(userRepository.save(user));
     }
@@ -190,7 +191,9 @@ class UserServiceImpl implements UserApi {
             throw new IllegalArgumentException("At least one role is required");
         }
         Role.validateAtMostOneStaffType(roleSet);
-        user.setRoles(new java.util.HashSet<>(roleSet));
+        // Modify collection in place so Hibernate persists all rows (replacing with new Set can persist only one)
+        user.getRoles().clear();
+        user.getRoles().addAll(roleSet);
         return toDto(userRepository.save(user));
     }
 
@@ -218,10 +221,14 @@ class UserServiceImpl implements UserApi {
     }
 
     private UserDto toDto(User user) {
+        // Load roles directly from user_roles table so all rows are returned (avoids ElementCollection returning only one)
+        List<Role> roles = userRepository.findRoleNamesByUserId(user.getId()).stream()
+                .map(Role::valueOf)
+                .toList();
         return new UserDto(
                 user.getId(),
                 user.getEmail(),
-                user.getRoles() != null ? Set.copyOf(user.getRoles()) : Set.of(),
+                roles,
                 user.getStatus(),
                 user.getFirstName(),
                 user.getLastName(),

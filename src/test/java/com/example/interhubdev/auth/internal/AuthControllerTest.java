@@ -23,7 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -167,7 +166,7 @@ class AuthControllerTest {
         @DisplayName("returns 200 and user when authenticated")
         void authenticated() throws Exception {
             UserDto user = new UserDto(
-                    USER_ID, EMAIL, Set.of(Role.STUDENT), UserStatus.ACTIVE,
+                    USER_ID, EMAIL, List.of(Role.STUDENT), UserStatus.ACTIVE,
                     "John", "Doe", null, null,
                     LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now()
             );

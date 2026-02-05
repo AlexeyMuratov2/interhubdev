@@ -21,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,7 +60,7 @@ class AuthServiceImplTest {
 
     private static UserDto activeUser() {
         return new UserDto(
-                USER_ID, EMAIL, Set.of(Role.STUDENT), UserStatus.ACTIVE,
+                USER_ID, EMAIL, List.of(Role.STUDENT), UserStatus.ACTIVE,
                 "John", "Doe", null, null,
                 LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now()
         );
@@ -118,7 +117,7 @@ class AuthServiceImplTest {
         @DisplayName("throws USER_NOT_ACTIVE when user status is PENDING")
         void userPending() {
             UserDto user = new UserDto(
-                    USER_ID, EMAIL, Set.of(Role.STUDENT), UserStatus.PENDING,
+                    USER_ID, EMAIL, List.of(Role.STUDENT), UserStatus.PENDING,
                     null, null, null, null,
                     LocalDateTime.now(), null, null
             );
@@ -136,7 +135,7 @@ class AuthServiceImplTest {
         @DisplayName("throws USER_DISABLED when user status is DISABLED")
         void userDisabled() {
             UserDto user = new UserDto(
-                    USER_ID, EMAIL, Set.of(Role.STUDENT), UserStatus.DISABLED,
+                    USER_ID, EMAIL, List.of(Role.STUDENT), UserStatus.DISABLED,
                     null, null, null, null,
                     LocalDateTime.now(), null, null
             );
