@@ -1,9 +1,18 @@
 package com.example.interhubdev.account.internal;
 
 import com.example.interhubdev.account.AccountApi;
+import com.example.interhubdev.account.StudentListPage;
+import com.example.interhubdev.account.StudentProfileItem;
+import com.example.interhubdev.account.TeacherListPage;
+import com.example.interhubdev.account.TeacherProfileItem;
 import com.example.interhubdev.account.UpdateProfileRequest;
 import com.example.interhubdev.account.UpdateUserRequest;
+import com.example.interhubdev.account.UserWithProfilesDto;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.student.CreateStudentRequest;
+import com.example.interhubdev.student.StudentDto;
+import com.example.interhubdev.teacher.CreateTeacherRequest;
+import com.example.interhubdev.teacher.TeacherDto;
 import com.example.interhubdev.user.UserDto;
 import com.example.interhubdev.user.UserPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -68,11 +77,11 @@ class AccountController {
 
     @GetMapping("/users/{id}")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Get user by ID")
-    public ResponseEntity<UserDto> getUser(@PathVariable UUID id) {
-        UserDto user = accountApi.getUser(id)
+    @Operation(summary = "Get user by ID with all role profiles", description = "Returns user and optional teacher/student profiles. List endpoint /users is unchanged.")
+    public ResponseEntity<UserWithProfilesDto> getUser(@PathVariable UUID id) {
+        UserWithProfilesDto dto = accountApi.getUserWithProfiles(id)
                 .orElseThrow(() -> AccountErrors.userNotFound(id));
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(dto);
     }
 
     @PatchMapping("/users/{id}")
@@ -97,5 +106,73 @@ class AccountController {
                 .orElseThrow(() -> Errors.unauthorized("Требуется вход в систему."));
         accountApi.deleteUser(id, current);
         return ResponseEntity.noContent().build();
+    }
+
+    // --------------- Teachers: list and get (mod/admin); edit only owner ---------------
+
+    @GetMapping("/teachers")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "List teachers (cursor pagination)", description = "Max 30 per page. Items include display name.")
+    public ResponseEntity<TeacherListPage> listTeachers(
+            @RequestParam(required = false) Optional<UUID> cursor,
+            @RequestParam(required = false, defaultValue = "30") int limit
+    ) {
+        int size = limit <= 0 ? DEFAULT_PAGE_SIZE : Math.min(limit, MAX_PAGE_SIZE);
+        return ResponseEntity.ok(accountApi.listTeachers(cursor.orElse(null), size));
+    }
+
+    @GetMapping("/teachers/{userId}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Get teacher by user ID")
+    public ResponseEntity<TeacherProfileItem> getTeacher(@PathVariable UUID userId) {
+        TeacherProfileItem item = accountApi.getTeacher(userId)
+                .orElseThrow(() -> AccountErrors.teacherProfileNotFound(userId));
+        return ResponseEntity.ok(item);
+    }
+
+    @PatchMapping("/teachers/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Update my teacher profile", description = "Only the account owner. Admin cannot edit teacher data.")
+    public ResponseEntity<TeacherDto> updateMyTeacherProfile(
+            HttpServletRequest request,
+            @Valid @RequestBody CreateTeacherRequest body
+    ) {
+        UserDto current = accountApi.getCurrentUser(request)
+                .orElseThrow(() -> Errors.unauthorized("Требуется вход в систему."));
+        return ResponseEntity.ok(accountApi.updateMyTeacherProfile(current.id(), body));
+    }
+
+    // --------------- Students: list and get (mod/admin); edit only owner ---------------
+
+    @GetMapping("/students")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "List students (cursor pagination)", description = "Max 30 per page. Items include display name.")
+    public ResponseEntity<StudentListPage> listStudents(
+            @RequestParam(required = false) Optional<UUID> cursor,
+            @RequestParam(required = false, defaultValue = "30") int limit
+    ) {
+        int size = limit <= 0 ? DEFAULT_PAGE_SIZE : Math.min(limit, MAX_PAGE_SIZE);
+        return ResponseEntity.ok(accountApi.listStudents(cursor.orElse(null), size));
+    }
+
+    @GetMapping("/students/{userId}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Get student by user ID")
+    public ResponseEntity<StudentProfileItem> getStudent(@PathVariable UUID userId) {
+        StudentProfileItem item = accountApi.getStudent(userId)
+                .orElseThrow(() -> AccountErrors.studentProfileNotFound(userId));
+        return ResponseEntity.ok(item);
+    }
+
+    @PatchMapping("/students/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Update my student profile", description = "Only the account owner. Admin cannot edit student data.")
+    public ResponseEntity<StudentDto> updateMyStudentProfile(
+            HttpServletRequest request,
+            @Valid @RequestBody CreateStudentRequest body
+    ) {
+        UserDto current = accountApi.getCurrentUser(request)
+                .orElseThrow(() -> Errors.unauthorized("Требуется вход в систему."));
+        return ResponseEntity.ok(accountApi.updateMyStudentProfile(current.id(), body));
     }
 }

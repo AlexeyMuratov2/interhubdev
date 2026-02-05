@@ -58,6 +58,15 @@ public interface TeacherApi {
     List<TeacherDto> findAll();
 
     /**
+     * List teachers with cursor-based pagination. Ordered by id ascending.
+     *
+     * @param cursor optional cursor (last teacher entity id from previous page); null for first page
+     * @param limit  max items per page (will be capped at 30)
+     * @return page with items and optional next cursor
+     */
+    TeacherPage listTeachers(UUID cursor, int limit);
+
+    /**
      * Find teachers by faculty.
      *
      * @param faculty faculty name

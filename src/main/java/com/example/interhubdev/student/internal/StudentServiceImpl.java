@@ -3,6 +3,7 @@ package com.example.interhubdev.student.internal;
 import com.example.interhubdev.student.CreateStudentRequest;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
+import com.example.interhubdev.student.StudentPage;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
@@ -57,6 +58,21 @@ class StudentServiceImpl implements StudentApi {
         return studentRepository.findAll().stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Override
+    public StudentPage listStudents(UUID cursor, int limit) {
+        int capped = Math.min(Math.max(1, limit), 30);
+        List<Student> slice = cursor == null
+                ? studentRepository.findFirst31ByOrderByIdAsc()
+                : studentRepository.findFirst31ByIdGreaterThanOrderByIdAsc(cursor);
+        boolean hasMore = slice.size() > capped;
+        List<Student> pageStudents = hasMore ? slice.subList(0, capped) : slice;
+        UUID nextCursor = hasMore ? pageStudents.get(pageStudents.size() - 1).getId() : null;
+        return new StudentPage(
+                pageStudents.stream().map(this::toDto).toList(),
+                nextCursor
+        );
     }
 
     @Override

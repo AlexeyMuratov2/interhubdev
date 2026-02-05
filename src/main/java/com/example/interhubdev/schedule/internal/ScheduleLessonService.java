@@ -1,8 +1,8 @@
 package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
-import com.example.interhubdev.offering.OfferingApi;
 import com.example.interhubdev.schedule.LessonDto;
+import com.example.interhubdev.schedule.OfferingLookupPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +21,7 @@ class ScheduleLessonService {
     private final LessonRepository lessonRepository;
     private final RoomRepository roomRepository;
     private final TimeslotRepository timeslotRepository;
-    private final OfferingApi offeringApi;
+    private final OfferingLookupPort offeringLookupPort;
 
     Optional<LessonDto> findById(UUID id) {
         return lessonRepository.findById(id).map(ScheduleMappers::toLessonDto);
@@ -50,7 +50,7 @@ class ScheduleLessonService {
         if (timeslotId == null) {
             throw Errors.badRequest("Timeslot id is required");
         }
-        if (offeringApi.findOfferingById(offeringId).isEmpty()) {
+        if (!offeringLookupPort.existsById(offeringId)) {
             throw Errors.notFound("Offering not found: " + offeringId);
         }
         if (timeslotRepository.findById(timeslotId).isEmpty()) {

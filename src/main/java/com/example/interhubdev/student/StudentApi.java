@@ -58,6 +58,15 @@ public interface StudentApi {
     List<StudentDto> findAll();
 
     /**
+     * List students with cursor-based pagination. Ordered by id ascending.
+     *
+     * @param cursor optional cursor (last student entity id from previous page); null for first page
+     * @param limit  max items per page (will be capped at 30)
+     * @return page with items and optional next cursor
+     */
+    StudentPage listStudents(UUID cursor, int limit);
+
+    /**
      * Find students by faculty.
      *
      * @param faculty faculty name

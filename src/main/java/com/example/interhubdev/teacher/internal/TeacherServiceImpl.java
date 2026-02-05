@@ -3,6 +3,7 @@ package com.example.interhubdev.teacher.internal;
 import com.example.interhubdev.teacher.CreateTeacherRequest;
 import com.example.interhubdev.teacher.TeacherApi;
 import com.example.interhubdev.teacher.TeacherDto;
+import com.example.interhubdev.teacher.TeacherPage;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
@@ -57,6 +58,21 @@ class TeacherServiceImpl implements TeacherApi {
         return teacherRepository.findAll().stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Override
+    public TeacherPage listTeachers(UUID cursor, int limit) {
+        int capped = Math.min(Math.max(1, limit), 30);
+        List<Teacher> slice = cursor == null
+                ? teacherRepository.findFirst31ByOrderByIdAsc()
+                : teacherRepository.findFirst31ByIdGreaterThanOrderByIdAsc(cursor);
+        boolean hasMore = slice.size() > capped;
+        List<Teacher> pageTeachers = hasMore ? slice.subList(0, capped) : slice;
+        UUID nextCursor = hasMore ? pageTeachers.get(pageTeachers.size() - 1).getId() : null;
+        return new TeacherPage(
+                pageTeachers.stream().map(this::toDto).toList(),
+                nextCursor
+        );
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.schedule.RoomDto;
+import com.example.interhubdev.schedule.RoomExistsPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,9 +15,14 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class ScheduleRoomService {
+class ScheduleRoomService implements RoomExistsPort {
 
     private final RoomRepository roomRepository;
+
+    @Override
+    public boolean existsById(UUID roomId) {
+        return roomRepository.existsById(roomId);
+    }
 
     Optional<RoomDto> findById(UUID id) {
         return roomRepository.findById(id).map(ScheduleMappers::toRoomDto);

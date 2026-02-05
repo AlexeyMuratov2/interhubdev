@@ -21,4 +21,8 @@ interface TeacherRepository extends JpaRepository<Teacher, UUID> {
     boolean existsByUserId(UUID userId);
 
     List<Teacher> findByFaculty(String faculty);
+
+    List<Teacher> findFirst31ByOrderByIdAsc();
+
+    List<Teacher> findFirst31ByIdGreaterThanOrderByIdAsc(UUID after);
 }

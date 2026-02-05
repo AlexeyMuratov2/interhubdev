@@ -20,6 +20,8 @@ public final class AccountErrors {
     public static final String CODE_CANNOT_EDIT_EMAIL = "ACCOUNT_CANNOT_EDIT_EMAIL";
     public static final String CODE_CANNOT_DELETE_SELF = "ACCOUNT_CANNOT_DELETE_SELF";
     public static final String CODE_ONLY_SUPER_ADMIN_CAN_DELETE_SUPER_ADMIN = "ACCOUNT_ONLY_SUPER_ADMIN_CAN_DELETE_SUPER_ADMIN";
+    public static final String CODE_TEACHER_PROFILE_NOT_FOUND = "ACCOUNT_TEACHER_PROFILE_NOT_FOUND";
+    public static final String CODE_STUDENT_PROFILE_NOT_FOUND = "ACCOUNT_STUDENT_PROFILE_NOT_FOUND";
 
     public static AppException userNotFound(UUID id) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_USER_NOT_FOUND,
@@ -44,5 +46,15 @@ public final class AccountErrors {
     public static AppException onlySuperAdminCanDeleteSuperAdmin() {
         return Errors.of(HttpStatus.FORBIDDEN, CODE_ONLY_SUPER_ADMIN_CAN_DELETE_SUPER_ADMIN,
                 "Удалить супер-администратора может только другой супер-администратор.");
+    }
+
+    public static AppException teacherProfileNotFound(UUID userId) {
+        return Errors.of(HttpStatus.NOT_FOUND, CODE_TEACHER_PROFILE_NOT_FOUND,
+                "Профиль преподавателя не найден для пользователя: " + userId);
+    }
+
+    public static AppException studentProfileNotFound(UUID userId) {
+        return Errors.of(HttpStatus.NOT_FOUND, CODE_STUDENT_PROFILE_NOT_FOUND,
+                "Профиль студента не найден для пользователя: " + userId);
     }
 }

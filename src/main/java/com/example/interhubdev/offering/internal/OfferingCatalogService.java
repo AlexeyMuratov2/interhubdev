@@ -3,8 +3,9 @@ package com.example.interhubdev.offering.internal;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.group.GroupApi;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
+import com.example.interhubdev.offering.OfferingExistsPort;
+import com.example.interhubdev.offering.RoomLookupPort;
 import com.example.interhubdev.program.ProgramApi;
-import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.teacher.TeacherApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,13 +19,18 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class OfferingCatalogService {
+class OfferingCatalogService implements OfferingExistsPort {
 
     private final GroupSubjectOfferingRepository offeringRepository;
     private final GroupApi groupApi;
     private final ProgramApi programApi;
     private final TeacherApi teacherApi;
-    private final ScheduleApi scheduleApi;
+    private final RoomLookupPort roomLookupPort;
+
+    @Override
+    public boolean existsById(UUID offeringId) {
+        return offeringRepository.existsById(offeringId);
+    }
 
     Optional<GroupSubjectOfferingDto> findById(UUID id) {
         return offeringRepository.findById(id).map(OfferingMappers::toOfferingDto);
@@ -60,7 +66,7 @@ class OfferingCatalogService {
         if (teacherId != null && teacherApi.findById(teacherId).isEmpty()) {
             throw Errors.notFound("Teacher not found: " + teacherId);
         }
-        if (roomId != null && scheduleApi.findRoomById(roomId).isEmpty()) {
+        if (roomId != null && !roomLookupPort.existsById(roomId)) {
             throw Errors.notFound("Room not found: " + roomId);
         }
         String normalizedFormat = (format == null || format.isBlank()) ? null : OfferingValidation.normalizeFormat(format);
@@ -85,7 +91,7 @@ class OfferingCatalogService {
         if (teacherId != null && teacherApi.findById(teacherId).isEmpty()) {
             throw Errors.notFound("Teacher not found: " + teacherId);
         }
-        if (roomId != null && scheduleApi.findRoomById(roomId).isEmpty()) {
+        if (roomId != null && !roomLookupPort.existsById(roomId)) {
             throw Errors.notFound("Room not found: " + roomId);
         }
         String normalizedFormat = format != null && !format.isBlank() ? OfferingValidation.normalizeFormat(format) : null;
