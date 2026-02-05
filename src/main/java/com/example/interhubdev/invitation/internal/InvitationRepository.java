@@ -3,6 +3,7 @@ package com.example.interhubdev.invitation.internal;
 import com.example.interhubdev.invitation.InvitationStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -30,4 +31,9 @@ interface InvitationRepository extends JpaRepository<Invitation, UUID> {
     /** Next page: invitations after cursor — (createdAt < :cursorCreatedAt) OR (createdAt = :cursorCreatedAt AND id < :cursorId). Limit via Pageable (e.g. 31). */
     @Query("SELECT i FROM Invitation i WHERE (i.createdAt < :cursorCreatedAt) OR (i.createdAt = :cursorCreatedAt AND i.id < :cursorId) ORDER BY i.createdAt DESC, i.id DESC")
     List<Invitation> findAfterCursor(@Param("cursorCreatedAt") Instant cursorCreatedAt, @Param("cursorId") UUID cursorId, Pageable pageable);
+
+    /** Clear invited_by reference so the inviter user can be deleted (FK). */
+    @Modifying
+    @Query("UPDATE Invitation i SET i.invitedById = null WHERE i.invitedById = :userId")
+    int clearInvitedByForUser(@Param("userId") UUID userId);
 }

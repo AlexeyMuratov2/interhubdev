@@ -96,9 +96,22 @@ class AccountServiceImpl implements AccountApi {
     @Override
     @Transactional
     public UserDto updateUser(UUID userId, UpdateUserRequest request) {
+        if (request == null) {
+            return userApi.findById(userId).orElseThrow(() -> AccountErrors.userNotFound(userId));
+        }
         userApi.findById(userId).orElseThrow(() -> AccountErrors.userNotFound(userId));
-        if (request != null && (request.firstName() != null || request.lastName() != null
-                || request.phone() != null || request.birthDate() != null)) {
+
+        updateBasicProfileIfPresent(userId, request);
+        UserDto updated = applyRolesAndCleanupProfiles(userId, request);
+        applyStudentProfileIfPresent(userId, request, updated);
+        applyTeacherProfileIfPresent(userId, request, updated);
+
+        return userApi.findById(userId).orElseThrow(() -> AccountErrors.userNotFound(userId));
+    }
+
+    private void updateBasicProfileIfPresent(UUID userId, UpdateUserRequest request) {
+        if (request.firstName() != null || request.lastName() != null
+                || request.phone() != null || request.birthDate() != null) {
             userApi.updateProfile(
                     userId,
                     request.firstName(),
@@ -107,10 +120,71 @@ class AccountServiceImpl implements AccountApi {
                     request.birthDate()
             );
         }
-        if (request != null && request.roles() != null && !request.roles().isEmpty()) {
-            userApi.updateRoles(userId, request.roles());
+    }
+
+    private UserDto applyRolesAndCleanupProfiles(UUID userId, UpdateUserRequest request) {
+        if (request.roles() == null || request.roles().isEmpty()) {
+            return userApi.findById(userId).orElseThrow(() -> AccountErrors.userNotFound(userId));
         }
-        return userApi.findById(userId).orElseThrow(() -> AccountErrors.userNotFound(userId));
+        userApi.updateRoles(userId, request.roles());
+        UserDto updated = userApi.findById(userId).orElseThrow(() -> AccountErrors.userNotFound(userId));
+        if (!updated.hasRole(Role.STUDENT)) {
+            studentApi.findByUserId(userId).ifPresent(s -> studentApi.delete(userId));
+        }
+        if (!updated.hasRole(Role.TEACHER)) {
+            teacherApi.findByUserId(userId).ifPresent(t -> teacherApi.delete(userId));
+        }
+        return updated;
+    }
+
+    private void applyStudentProfileIfPresent(UUID userId, UpdateUserRequest request, UserDto updated) {
+        if (request.studentProfile() == null) {
+            return;
+        }
+        if (!updated.hasRole(Role.STUDENT)) {
+            throw AccountErrors.studentProfileRequiresRole();
+        }
+        if (studentApi.findByUserId(userId).isEmpty()) {
+            var missing = requireStudentProfileFieldsForCreate(request.studentProfile());
+            if (!missing.isEmpty()) {
+                throw AccountErrors.studentProfileCreateRequiredFields(missing);
+            }
+            studentApi.create(userId, request.studentProfile());
+        } else {
+            studentApi.update(userId, request.studentProfile());
+        }
+    }
+
+    private void applyTeacherProfileIfPresent(UUID userId, UpdateUserRequest request, UserDto updated) {
+        if (request.teacherProfile() == null) {
+            return;
+        }
+        if (!updated.hasRole(Role.TEACHER)) {
+            throw AccountErrors.teacherProfileRequiresRole();
+        }
+        if (teacherApi.findByUserId(userId).isEmpty()) {
+            var missing = requireTeacherProfileFieldsForCreate(request.teacherProfile());
+            if (!missing.isEmpty()) {
+                throw AccountErrors.teacherProfileCreateRequiredFields(missing);
+            }
+            teacherApi.create(userId, request.teacherProfile());
+        } else {
+            teacherApi.update(userId, request.teacherProfile());
+        }
+    }
+
+    private static String requireStudentProfileFieldsForCreate(CreateStudentRequest profile) {
+        var missing = new java.util.ArrayList<String>();
+        if (profile.studentId() == null || profile.studentId().isBlank()) missing.add("studentId");
+        if (profile.faculty() == null || profile.faculty().isBlank()) missing.add("faculty");
+        return String.join(", ", missing);
+    }
+
+    private static String requireTeacherProfileFieldsForCreate(CreateTeacherRequest profile) {
+        var missing = new java.util.ArrayList<String>();
+        if (profile.teacherId() == null || profile.teacherId().isBlank()) missing.add("teacherId");
+        if (profile.faculty() == null || profile.faculty().isBlank()) missing.add("faculty");
+        return String.join(", ", missing);
     }
 
     @Override
@@ -128,6 +202,7 @@ class AccountServiceImpl implements AccountApi {
         studentApi.findByUserId(userId).ifPresent(s -> studentApi.delete(userId));
         teacherApi.findByUserId(userId).ifPresent(t -> teacherApi.delete(userId));
         invitationApi.deleteByUserId(userId);
+        invitationApi.clearInvitedByForUser(userId);
         userApi.deleteUser(userId);
     }
 

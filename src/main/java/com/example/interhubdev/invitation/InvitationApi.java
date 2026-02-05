@@ -84,6 +84,14 @@ public interface InvitationApi {
      */
     void deleteByUserId(UUID userId);
 
+    /**
+     * Clear "invited by" reference in all invitations created by this user.
+     * Use before deleting a user so that no invitation row references them via invited_by_id.
+     *
+     * @param userId user ID (the inviter)
+     */
+    void clearInvitedByForUser(UUID userId);
+
     // ==================== Token validation ====================
 
     /**

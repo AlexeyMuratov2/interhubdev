@@ -241,6 +241,15 @@ class InvitationServiceImpl implements InvitationApi {
         });
     }
 
+    @Override
+    @Transactional
+    public void clearInvitedByForUser(UUID userId) {
+        int updated = invitationRepository.clearInvitedByForUser(userId);
+        if (updated > 0) {
+            log.info("Cleared invited_by for {} invitations created by user {}", updated, userId);
+        }
+    }
+
     // ==================== Token validation ====================
 
     @Override
