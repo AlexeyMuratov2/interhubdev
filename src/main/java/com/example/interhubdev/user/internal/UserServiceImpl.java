@@ -152,12 +152,20 @@ class UserServiceImpl implements UserApi {
         userRepository.save(user);
     }
 
+    /**
+     * Valid BCrypt hash used only for constant-time behaviour when user is not found.
+     * Ensures response time does not reveal whether the email exists.
+     */
+    private static final String DUMMY_BCRYPT_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
     @Override
     public boolean verifyPassword(String email, String rawPassword) {
-        return userRepository.findByEmail(email)
-                .filter(User::canLogin)
-                .map(user -> passwordEncoder.matches(rawPassword, user.getPasswordHash()))
-                .orElse(false);
+        Optional<User> userOpt = userRepository.findByEmail(email).filter(User::canLogin);
+        if (userOpt.isEmpty()) {
+            passwordEncoder.matches(rawPassword, DUMMY_BCRYPT_HASH);
+            return false;
+        }
+        return passwordEncoder.matches(rawPassword, userOpt.get().getPasswordHash());
     }
 
     @Override

@@ -78,12 +78,6 @@ class Student {
     @Column(name = "group_name", length = 50)
     private String groupName;
 
-    /**
-     * Reference to student_group (university schema). Replaces/supplements group_name.
-     */
-    @Column(name = "group_id")
-    private UUID groupId;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

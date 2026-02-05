@@ -12,7 +12,7 @@ public record StudentGroupDto(
     String description,
     int startYear,
     Integer graduationYear,
-    UUID curatorTeacherId,
+    UUID curatorUserId,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {

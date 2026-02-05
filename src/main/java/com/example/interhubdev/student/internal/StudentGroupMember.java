@@ -1,4 +1,4 @@
-package com.example.interhubdev.group.internal;
+package com.example.interhubdev.student.internal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,44 +10,30 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Many-to-many link: student can belong to multiple groups.
+ */
 @Entity
-@Table(name = "group_curriculum_override")
+@Table(name = "student_group_member")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-class GroupCurriculumOverride {
+class StudentGroupMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "student_id", nullable = false)
+    private UUID studentId;
+
     @Column(name = "group_id", nullable = false)
     private UUID groupId;
-
-    @Column(name = "curriculum_subject_id")
-    private UUID curriculumSubjectId;
-
-    @Column(name = "subject_id")
-    private UUID subjectId;
-
-    @Column(name = "action", nullable = false, length = 20)
-    private String action;
-
-    @Column(name = "new_assessment_type_id")
-    private UUID newAssessmentTypeId;
-
-    @Column(name = "new_duration_weeks")
-    private Integer newDurationWeeks;
-
-    @Column(name = "reason", columnDefinition = "TEXT")
-    private String reason;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

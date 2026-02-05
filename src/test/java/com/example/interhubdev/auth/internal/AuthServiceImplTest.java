@@ -51,6 +51,8 @@ class AuthServiceImplTest {
     @Mock
     private CookieHelper cookieHelper;
     @Mock
+    private LoginRateLimitService loginRateLimitService;
+    @Mock
     private HttpServletRequest request;
     @Mock
     private HttpServletResponse response;
@@ -73,6 +75,7 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("returns AuthResult and sets cookies when credentials valid")
         void success() {
+            when(loginRateLimitService.tryAcquire(anyString())).thenReturn(true);
             UserDto user = activeUser();
             when(userApi.findByEmail(EMAIL)).thenReturn(Optional.of(user));
             when(userApi.verifyPassword(EMAIL, PASSWORD)).thenReturn(true);
@@ -102,6 +105,8 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("throws INVALID_CREDENTIALS when user not found")
         void userNotFound() {
+            when(loginRateLimitService.tryAcquire(anyString())).thenReturn(true);
+            when(cookieHelper.getClientIp(request)).thenReturn("127.0.0.1");
             when(userApi.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response))
@@ -116,6 +121,8 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("throws USER_NOT_ACTIVE when user status is PENDING")
         void userPending() {
+            when(loginRateLimitService.tryAcquire(anyString())).thenReturn(true);
+            when(cookieHelper.getClientIp(request)).thenReturn("127.0.0.1");
             UserDto user = new UserDto(
                     USER_ID, EMAIL, List.of(Role.STUDENT), UserStatus.PENDING,
                     null, null, null, null,
@@ -134,6 +141,8 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("throws USER_DISABLED when user status is DISABLED")
         void userDisabled() {
+            when(loginRateLimitService.tryAcquire(anyString())).thenReturn(true);
+            when(cookieHelper.getClientIp(request)).thenReturn("127.0.0.1");
             UserDto user = new UserDto(
                     USER_ID, EMAIL, List.of(Role.STUDENT), UserStatus.DISABLED,
                     null, null, null, null,
@@ -152,6 +161,8 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("throws INVALID_CREDENTIALS when password wrong")
         void wrongPassword() {
+            when(loginRateLimitService.tryAcquire(anyString())).thenReturn(true);
+            when(cookieHelper.getClientIp(request)).thenReturn("127.0.0.1");
             UserDto user = activeUser();
             when(userApi.findByEmail(EMAIL)).thenReturn(Optional.of(user));
             when(userApi.verifyPassword(EMAIL, PASSWORD)).thenReturn(false);
@@ -162,6 +173,20 @@ class AuthServiceImplTest {
                             .isEqualTo(AuthErrorCode.INVALID_CREDENTIALS));
 
             verify(refreshTokenRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("throws TOO_MANY_REQUESTS when login rate limit exceeded")
+        void tooManyRequests() {
+            when(cookieHelper.getClientIp(request)).thenReturn("192.168.1.1");
+            when(loginRateLimitService.tryAcquire("192.168.1.1")).thenReturn(false);
+
+            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response))
+                    .isInstanceOf(AuthenticationException.class)
+                    .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
+                            .isEqualTo(AuthErrorCode.TOO_MANY_REQUESTS));
+
+            verify(userApi, never()).findByEmail(anyString());
         }
     }
 

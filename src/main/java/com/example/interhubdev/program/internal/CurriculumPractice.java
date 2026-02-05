@@ -15,8 +15,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -40,7 +38,6 @@ class CurriculumPractice {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "practice_type", nullable = false)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private PracticeType practiceType;
 
     @Column(name = "name", nullable = false, length = 255)
@@ -63,7 +60,6 @@ class CurriculumPractice {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "location_type")
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Builder.Default
     private PracticeLocation locationType = PracticeLocation.ENTERPRISE;
 

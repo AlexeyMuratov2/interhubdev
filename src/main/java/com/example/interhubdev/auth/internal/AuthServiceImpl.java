@@ -1,6 +1,8 @@
 package com.example.interhubdev.auth.internal;
 
 import com.example.interhubdev.auth.AuthApi;
+import com.example.interhubdev.auth.AuthApi.AuthenticationException;
+import com.example.interhubdev.auth.AuthApi.AuthErrorCode;
 import com.example.interhubdev.auth.AuthResult;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
@@ -30,33 +32,43 @@ class AuthServiceImpl implements AuthApi {
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final CookieHelper cookieHelper;
+    private final LoginRateLimitService loginRateLimitService;
 
     @Override
     @Transactional
     public AuthResult login(String email, String password, HttpServletRequest request, HttpServletResponse response) {
         log.debug("Login attempt for email: {}", email);
 
+        String clientIp = cookieHelper.getClientIp(request);
+        if (!loginRateLimitService.tryAcquire(clientIp)) {
+            throw new AuthenticationException(AuthErrorCode.TOO_MANY_REQUESTS, "Too many login attempts. Try again later.");
+        }
+
         // Find user
         UserDto user = userApi.findByEmail(email)
                 .orElseThrow(() -> {
                     log.debug("User not found: {}", email);
+                    loginRateLimitService.recordFailedAttempt(clientIp);
                     return new AuthenticationException(AuthErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
                 });
 
         // Check user status
         if (user.status() == UserStatus.PENDING) {
             log.debug("User {} has PENDING status - account not activated", email);
+            loginRateLimitService.recordFailedAttempt(clientIp);
             throw new AuthenticationException(AuthErrorCode.USER_NOT_ACTIVE, "Account not activated. Please check your email for activation link.");
         }
 
         if (user.status() == UserStatus.DISABLED) {
             log.debug("User {} is DISABLED", email);
+            loginRateLimitService.recordFailedAttempt(clientIp);
             throw new AuthenticationException(AuthErrorCode.USER_DISABLED, "Account is disabled. Please contact administrator.");
         }
 
         // Verify password
         if (!userApi.verifyPassword(email, password)) {
             log.debug("Invalid password for user: {}", email);
+            loginRateLimitService.recordFailedAttempt(clientIp);
             throw new AuthenticationException(AuthErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
         }
 

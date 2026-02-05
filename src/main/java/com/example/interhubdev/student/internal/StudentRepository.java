@@ -24,8 +24,6 @@ interface StudentRepository extends JpaRepository<Student, UUID> {
 
     List<Student> findByGroupName(String groupName);
 
-    List<Student> findByGroupId(UUID groupId);
-
     List<Student> findFirst31ByOrderByIdAsc();
 
     List<Student> findFirst31ByIdGreaterThanOrderByIdAsc(UUID after);

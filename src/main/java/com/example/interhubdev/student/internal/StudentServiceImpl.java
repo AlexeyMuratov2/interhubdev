@@ -1,5 +1,6 @@
 package com.example.interhubdev.student.internal;
 
+import com.example.interhubdev.group.GroupApi;
 import com.example.interhubdev.student.CreateStudentRequest;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
@@ -7,7 +8,7 @@ import com.example.interhubdev.student.StudentPage;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,12 +22,23 @@ import java.util.UUID;
  * Package-private: only accessible within the student module.
  */
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 class StudentServiceImpl implements StudentApi {
 
     private final StudentRepository studentRepository;
+    private final StudentGroupMemberRepository memberRepository;
     private final UserApi userApi;
+    private final GroupApi groupApi;
+
+    StudentServiceImpl(StudentRepository studentRepository,
+                       StudentGroupMemberRepository memberRepository,
+                       UserApi userApi,
+                       @Lazy GroupApi groupApi) {
+        this.studentRepository = studentRepository;
+        this.memberRepository = memberRepository;
+        this.userApi = userApi;
+        this.groupApi = groupApi;
+    }
 
     @Override
     public Optional<StudentDto> findById(UUID id) {
@@ -91,19 +103,66 @@ class StudentServiceImpl implements StudentApi {
 
     @Override
     public List<StudentDto> findByGroupId(UUID groupId) {
-        return studentRepository.findByGroupId(groupId).stream()
+        List<UUID> studentIds = memberRepository.findByGroupId(groupId).stream()
+                .map(StudentGroupMember::getStudentId)
+                .toList();
+        if (studentIds.isEmpty()) return List.of();
+        return studentRepository.findAllById(studentIds).stream()
                 .map(this::toDto)
                 .toList();
     }
 
     @Override
     @Transactional
-    public StudentDto updateGroupId(UUID userId, UUID groupId) {
-        Student student = studentRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Student profile not found for user: " + userId));
-        student.setGroupId(groupId);
-        student.setUpdatedAt(LocalDateTime.now());
-        return toDto(studentRepository.save(student));
+    public void addToGroup(UUID studentId, UUID groupId) {
+        if (studentRepository.findById(studentId).isEmpty()) {
+            throw new IllegalArgumentException("Student not found: " + studentId);
+        }
+        if (groupApi.findGroupById(groupId).isEmpty()) {
+            throw new IllegalArgumentException("Group not found: " + groupId);
+        }
+        if (memberRepository.existsByStudentIdAndGroupId(studentId, groupId)) {
+            return; // idempotent
+        }
+        memberRepository.save(StudentGroupMember.builder()
+                .studentId(studentId)
+                .groupId(groupId)
+                .build());
+    }
+
+    @Override
+    @Transactional
+    public void addToGroupBulk(UUID groupId, List<UUID> studentIds) {
+        if (studentIds == null || studentIds.isEmpty()) return;
+        if (groupApi.findGroupById(groupId).isEmpty()) {
+            throw new IllegalArgumentException("Group not found: " + groupId);
+        }
+        for (UUID studentId : studentIds) {
+            if (studentRepository.findById(studentId).isEmpty()) {
+                throw new IllegalArgumentException("Student not found: " + studentId);
+            }
+            if (!memberRepository.existsByStudentIdAndGroupId(studentId, groupId)) {
+                memberRepository.save(StudentGroupMember.builder()
+                        .studentId(studentId)
+                        .groupId(groupId)
+                        .build());
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void removeFromGroup(UUID studentId, UUID groupId) {
+        memberRepository.deleteByStudentIdAndGroupId(studentId, groupId);
+    }
+
+    @Override
+    public List<UUID> getGroupIdsByUserId(UUID userId) {
+        Optional<Student> student = studentRepository.findByUserId(userId);
+        if (student.isEmpty()) return List.of();
+        return memberRepository.findByStudentId(student.get().getId()).stream()
+                .map(StudentGroupMember::getGroupId)
+                .toList();
     }
 
     @Override
@@ -194,7 +253,6 @@ class StudentServiceImpl implements StudentApi {
                 student.getCourse(),
                 student.getEnrollmentYear(),
                 student.getGroupName(),
-                student.getGroupId(),
                 student.getCreatedAt(),
                 student.getUpdatedAt()
         );

@@ -11,7 +11,7 @@ final class GroupMappers {
 
     static StudentGroupDto toGroupDto(StudentGroup e) {
         return new StudentGroupDto(e.getId(), e.getProgramId(), e.getCurriculumId(), e.getCode(), e.getName(),
-                e.getDescription(), e.getStartYear(), e.getGraduationYear(), e.getCuratorTeacherId(),
+                e.getDescription(), e.getStartYear(), e.getGraduationYear(), e.getCuratorUserId(),
                 e.getCreatedAt(), e.getUpdatedAt());
     }
 

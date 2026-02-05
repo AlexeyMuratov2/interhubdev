@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +28,7 @@ class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitFilter rateLimitFilter;
+    private final AuthProperties authProperties;
 
     /**
      * Password encoder using BCrypt algorithm.
@@ -46,6 +48,18 @@ class SecurityConfig {
         http
             // Disable CSRF - we use SameSite=Strict cookies for protection
             .csrf(csrf -> csrf.disable())
+            
+            // Security response headers
+            .headers(headers -> {
+                headers.frameOptions(this::applyFrameOptions);
+                headers.contentTypeOptions(cto -> {});
+                var hsts = authProperties.getSecurityHeaders();
+                if (hsts.getHstsMaxAgeSeconds() > 0) {
+                    headers.httpStrictTransportSecurity(h -> h
+                            .maxAgeInSeconds(hsts.getHstsMaxAgeSeconds())
+                            .includeSubDomains(hsts.isHstsIncludeSubdomains()));
+                }
+            })
             
             // Stateless session management (JWT-based)
             .sessionManagement(session -> 
@@ -74,5 +88,16 @@ class SecurityConfig {
             );
         
         return http.build();
+    }
+
+    private void applyFrameOptions(HeadersConfigurer<?>.FrameOptionsConfig config) {
+        String value = authProperties.getSecurityHeaders().getFrameOptions();
+        if ("DENY".equalsIgnoreCase(value)) {
+            config.deny();
+        } else if ("SAMEORIGIN".equalsIgnoreCase(value)) {
+            config.sameOrigin();
+        } else {
+            config.deny();
+        }
     }
 }

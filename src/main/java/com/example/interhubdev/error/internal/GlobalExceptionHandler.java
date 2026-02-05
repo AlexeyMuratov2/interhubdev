@@ -89,10 +89,14 @@ class GlobalExceptionHandler {
             case INVALID_CREDENTIALS, TOKEN_INVALID, TOKEN_EXPIRED -> HttpStatus.UNAUTHORIZED;
             case USER_NOT_ACTIVE, USER_DISABLED -> HttpStatus.FORBIDDEN;
             case USER_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case TOO_MANY_REQUESTS -> HttpStatus.TOO_MANY_REQUESTS;
         };
-        return ResponseEntity
-                .status(status)
-                .body(ErrorResponse.of(ex.getErrorCode().name(), ex.getMessage()));
+        var body = ErrorResponse.of(ex.getErrorCode().name(), ex.getMessage());
+        var builder = ResponseEntity.status(status);
+        if (ex.getErrorCode() == AuthApi.AuthErrorCode.TOO_MANY_REQUESTS) {
+            builder.header("Retry-After", "60");
+        }
+        return builder.body(body);
     }
 
     @ExceptionHandler(ResponseStatusException.class)
@@ -181,6 +185,7 @@ class GlobalExceptionHandler {
             case 405 -> "METHOD_NOT_ALLOWED";
             case 409 -> "CONFLICT";
             case 415 -> "UNSUPPORTED_MEDIA_TYPE";
+            case 429 -> "TOO_MANY_REQUESTS";
             case 422 -> "UNPROCESSABLE_ENTITY";
             case 500 -> "INTERNAL_ERROR";
             default -> status.name().replace(" ", "_");
@@ -196,6 +201,7 @@ class GlobalExceptionHandler {
             case 405 -> "Для этого адреса не поддерживается указанный метод.";
             case 409 -> "Действие невозможно из-за текущего состояния данных.";
             case 415 -> "Неподдерживаемый тип содержимого.";
+            case 429 -> "Слишком много запросов. Повторите позже.";
             case 422 -> "Запрос не может быть обработан.";
             case 500 -> "Произошла ошибка. Попробуйте позже.";
             default -> status.getReasonPhrase();

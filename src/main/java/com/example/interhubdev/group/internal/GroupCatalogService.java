@@ -3,7 +3,7 @@ package com.example.interhubdev.group.internal;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.group.StudentGroupDto;
 import com.example.interhubdev.program.ProgramApi;
-import com.example.interhubdev.teacher.TeacherApi;
+import com.example.interhubdev.user.UserApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +20,7 @@ class GroupCatalogService {
 
     private final StudentGroupRepository studentGroupRepository;
     private final ProgramApi programApi;
-    private final TeacherApi teacherApi;
+    private final UserApi userApi;
 
     Optional<StudentGroupDto> findGroupById(UUID id) {
         return studentGroupRepository.findById(id).map(GroupMappers::toGroupDto);
@@ -51,7 +51,7 @@ class GroupCatalogService {
             String description,
             int startYear,
             Integer graduationYear,
-            UUID curatorTeacherId
+            UUID curatorUserId
     ) {
         if (programId == null) throw Errors.badRequest("Program id is required");
         if (curriculumId == null) throw Errors.badRequest("Curriculum id is required");
@@ -65,8 +65,8 @@ class GroupCatalogService {
         if (programApi.findCurriculumById(curriculumId).isEmpty()) {
             throw Errors.notFound("Curriculum not found: " + curriculumId);
         }
-        if (curatorTeacherId != null && teacherApi.findById(curatorTeacherId).isEmpty()) {
-            throw Errors.notFound("Teacher not found: " + curatorTeacherId);
+        if (curatorUserId != null && userApi.findById(curatorUserId).isEmpty()) {
+            throw Errors.notFound("User not found: " + curatorUserId);
         }
         if (studentGroupRepository.existsByCode(trimmedCode)) {
             throw Errors.conflict("Group with code '" + trimmedCode + "' already exists");
@@ -80,7 +80,7 @@ class GroupCatalogService {
                 .description(description != null ? description.trim() : null)
                 .startYear(startYear)
                 .graduationYear(graduationYear)
-                .curatorTeacherId(curatorTeacherId)
+                .curatorUserId(curatorUserId)
                 .build();
         return GroupMappers.toGroupDto(studentGroupRepository.save(entity));
     }
@@ -91,17 +91,17 @@ class GroupCatalogService {
             String name,
             String description,
             Integer graduationYear,
-            UUID curatorTeacherId
+            UUID curatorUserId
     ) {
         StudentGroup entity = studentGroupRepository.findById(id)
                 .orElseThrow(() -> Errors.notFound("Group not found: " + id));
-        if (curatorTeacherId != null && teacherApi.findById(curatorTeacherId).isEmpty()) {
-            throw Errors.notFound("Teacher not found: " + curatorTeacherId);
+        if (curatorUserId != null && userApi.findById(curatorUserId).isEmpty()) {
+            throw Errors.notFound("User not found: " + curatorUserId);
         }
         if (name != null) entity.setName(name.trim());
         if (description != null) entity.setDescription(description.trim());
         if (graduationYear != null) entity.setGraduationYear(graduationYear);
-        entity.setCuratorTeacherId(curatorTeacherId);
+        entity.setCuratorUserId(curatorUserId);
         entity.setUpdatedAt(LocalDateTime.now());
         return GroupMappers.toGroupDto(studentGroupRepository.save(entity));
     }

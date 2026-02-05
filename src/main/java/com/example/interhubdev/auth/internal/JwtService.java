@@ -2,13 +2,14 @@ package com.example.interhubdev.auth.internal;
 
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserDto;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +20,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HexFormat;
@@ -32,22 +32,44 @@ import java.util.stream.Collectors;
  * Service for JWT token generation and validation.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 class JwtService {
 
+    private static final String DEFAULT_SECRET = "default-secret-key-for-development-only-change-in-production-min-32-chars";
+
     private final AuthProperties authProperties;
+    private final org.springframework.core.env.Environment environment;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private SecretKey secretKey;
     private final SecureRandom secureRandom = new SecureRandom();
+
+    JwtService(AuthProperties authProperties,
+               org.springframework.core.env.Environment environment) {
+        this.authProperties = authProperties;
+        this.environment = environment;
+    }
 
     @PostConstruct
     void init() {
         String secret = authProperties.getSecret();
-        if (secret == null || secret.length() < 32) {
-            log.warn("JWT secret is too short! Using default, but this is NOT secure for production.");
-            secret = "default-secret-key-for-development-only-change-in-production-min-32-chars";
+        if (secret == null || secret.isBlank() || secret.length() < 32) {
+            log.warn("JWT secret is too short or missing. Using default (development only).");
+            secret = DEFAULT_SECRET;
+        }
+        if (isProductionProfile() && DEFAULT_SECRET.equals(secret)) {
+            throw new IllegalStateException(
+                    "JWT secret must be set in production. Do not use the default secret.");
         }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private boolean isProductionProfile() {
+        for (String profile : environment.getActiveProfiles()) {
+            if ("prod".equalsIgnoreCase(profile) || "production".equalsIgnoreCase(profile)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -145,15 +167,14 @@ class JwtService {
      */
     public Optional<UUID> extractUserIdUnsafe(String token) {
         try {
-            // Parse without validation to get subject
             String[] parts = token.split("\\.");
             if (parts.length != 3) return Optional.empty();
-            
-            String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-            // Simple extraction - in production use proper JSON parsing
-            int subStart = payload.indexOf("\"sub\":\"") + 7;
-            int subEnd = payload.indexOf("\"", subStart);
-            return Optional.of(UUID.fromString(payload.substring(subStart, subEnd)));
+
+            String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+            JsonNode root = objectMapper.readTree(payloadJson);
+            JsonNode sub = root.get("sub");
+            if (sub == null || !sub.isTextual()) return Optional.empty();
+            return Optional.of(UUID.fromString(sub.asText()));
         } catch (Exception e) {
             return Optional.empty();
         }

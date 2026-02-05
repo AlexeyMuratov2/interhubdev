@@ -2,24 +2,30 @@ package com.example.interhubdev.bootstrap.internal;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
  * Application startup listener that triggers the bootstrap process.
- * 
+ *
  * <p>This component listens for {@link ApplicationReadyEvent} and delegates
  * the actual bootstrap logic to {@link BootstrapServiceImpl}.</p>
- * 
+ *
  * <p>Unlike regular users who go through the invite flow (PENDING → ACTIVE),
  * the bootstrap SUPER_ADMIN is created directly with ACTIVE status and password set.
  * This is necessary because there must be at least one admin to invite other users.</p>
+ *
+ * <p>Set {@code app.bootstrap.enabled=false} (e.g. in tests) to skip bootstrap on startup.</p>
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 class AdminBootstrapRunner {
+
+    @Value("${app.bootstrap.enabled:true}")
+    private boolean enabled;
 
     private final BootstrapServiceImpl bootstrapService;
 
@@ -28,10 +34,14 @@ class AdminBootstrapRunner {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
+        if (!enabled) {
+            log.debug("Bootstrap disabled (app.bootstrap.enabled=false), skipping.");
+            return;
+        }
         log.info("Application ready, starting bootstrap process...");
-        
+
         boolean success = bootstrapService.executeBootstrap();
-        
+
         if (success) {
             log.info("Bootstrap process completed successfully");
         } else {

@@ -1,6 +1,7 @@
 package com.example.interhubdev.group.internal;
 
 import com.example.interhubdev.group.*;
+import com.example.interhubdev.student.StudentApi;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ import java.util.UUID;
 class GroupController {
 
     private final GroupApi groupApi;
+    private final StudentApi studentApi;
 
     @GetMapping
     @Operation(summary = "Get all groups")
@@ -66,7 +68,7 @@ class GroupController {
                 request.description(),
                 request.startYear(),
                 request.graduationYear(),
-                request.curatorTeacherId()
+                request.curatorUserId()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
@@ -83,7 +85,7 @@ class GroupController {
                 request.name(),
                 request.description(),
                 request.graduationYear(),
-                request.curatorTeacherId()
+                request.curatorUserId()
         );
         return ResponseEntity.ok(dto);
     }
@@ -96,9 +98,60 @@ class GroupController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{groupId}/members")
+    @Operation(summary = "Get group members", description = "List students belonging to the group (n:m) with user data for display names")
+    public ResponseEntity<List<GroupMemberDto>> getGroupMembers(@PathVariable UUID groupId) {
+        if (groupApi.findGroupById(groupId).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(groupApi.getGroupMembersWithUsers(groupId));
+    }
+
+    @PostMapping("/{groupId}/members")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Add student to group", description = "Add one student. Idempotent if already a member.")
+    public ResponseEntity<Void> addGroupMember(
+            @PathVariable UUID groupId,
+            @Valid @RequestBody AddGroupMemberRequest request
+    ) {
+        if (groupApi.findGroupById(groupId).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        studentApi.addToGroup(request.studentId(), groupId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PostMapping("/{groupId}/members/bulk")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Add multiple students to group", description = "Add many students at once. Idempotent per student. Empty list is no-op.")
+    public ResponseEntity<Void> addGroupMembersBulk(
+            @PathVariable UUID groupId,
+            @Valid @RequestBody AddGroupMembersBulkRequest request
+    ) {
+        if (groupApi.findGroupById(groupId).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        studentApi.addToGroupBulk(groupId, request.studentIds());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @DeleteMapping("/{groupId}/members/{studentId}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Remove student from group")
+    public ResponseEntity<Void> removeGroupMember(
+            @PathVariable UUID groupId,
+            @PathVariable UUID studentId
+    ) {
+        if (groupApi.findGroupById(groupId).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        studentApi.removeFromGroup(studentId, groupId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{groupId}/leaders")
-    @Operation(summary = "Get group leaders")
-    public ResponseEntity<List<GroupLeaderDto>> findLeadersByGroupId(@PathVariable UUID groupId) {
+    @Operation(summary = "Get group leaders", description = "Returns leaders with full student and user data for display names")
+    public ResponseEntity<List<GroupLeaderDetailDto>> findLeadersByGroupId(@PathVariable UUID groupId) {
         return ResponseEntity.ok(groupApi.findLeadersByGroupId(groupId));
     }
 
@@ -160,6 +213,10 @@ class GroupController {
         return ResponseEntity.noContent().build();
     }
 
+    record AddGroupMemberRequest(@NotNull(message = "Student id is required") UUID studentId) {}
+
+    record AddGroupMembersBulkRequest(@NotNull(message = "Student ids are required") List<UUID> studentIds) {}
+
     record CreateGroupRequest(
             @NotNull(message = "Program id is required") UUID programId,
             @NotNull(message = "Curriculum id is required") UUID curriculumId,
@@ -168,9 +225,9 @@ class GroupController {
             String description,
             @Min(value = 1900, message = "startYear must be at least 1900") @Max(value = 2100, message = "startYear must be at most 2100") int startYear,
             Integer graduationYear,
-            UUID curatorTeacherId
+            UUID curatorUserId
     ) {}
-    record UpdateGroupRequest(String name, String description, Integer graduationYear, UUID curatorTeacherId) {}
+    record UpdateGroupRequest(String name, String description, Integer graduationYear, UUID curatorUserId) {}
     record AddGroupLeaderRequest(
             @NotNull(message = "Student id is required") UUID studentId,
             @NotBlank(message = "Role is required") String role,

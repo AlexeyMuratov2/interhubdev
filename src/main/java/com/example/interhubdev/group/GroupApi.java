@@ -26,7 +26,7 @@ public interface GroupApi {
             String description,
             int startYear,
             Integer graduationYear,
-            UUID curatorTeacherId
+            UUID curatorUserId
     );
 
     StudentGroupDto updateGroup(
@@ -34,13 +34,21 @@ public interface GroupApi {
             String name,
             String description,
             Integer graduationYear,
-            UUID curatorTeacherId
+            UUID curatorUserId
     );
 
     void deleteGroup(UUID id);
 
+    /**
+     * Get group members with full student and user data (for display names).
+     */
+    List<GroupMemberDto> getGroupMembersWithUsers(UUID groupId);
+
     // --- Group leader ---
-    List<GroupLeaderDto> findLeadersByGroupId(UUID groupId);
+    /**
+     * Get group leaders with full student and user data (for display names).
+     */
+    List<GroupLeaderDetailDto> findLeadersByGroupId(UUID groupId);
 
     GroupLeaderDto addGroupLeader(UUID groupId, UUID studentId, String role, java.time.LocalDate fromDate, java.time.LocalDate toDate);
 

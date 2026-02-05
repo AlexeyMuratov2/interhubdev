@@ -93,6 +93,7 @@ public interface AuthApi {
         USER_DISABLED,
         TOKEN_EXPIRED,
         TOKEN_INVALID,
-        USER_NOT_FOUND
+        USER_NOT_FOUND,
+        TOO_MANY_REQUESTS
     }
 }

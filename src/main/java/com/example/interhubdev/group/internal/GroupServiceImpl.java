@@ -1,14 +1,20 @@
 package com.example.interhubdev.group.internal;
 
 import com.example.interhubdev.group.*;
+import com.example.interhubdev.student.StudentApi;
+import com.example.interhubdev.student.StudentDto;
+import com.example.interhubdev.user.UserApi;
+import com.example.interhubdev.user.UserDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +24,8 @@ class GroupServiceImpl implements GroupApi {
     private final GroupCatalogService groupCatalogService;
     private final GroupLeaderService groupLeaderService;
     private final GroupOverrideService groupOverrideService;
+    private final StudentApi studentApi;
+    private final UserApi userApi;
 
     @Override
     public Optional<StudentGroupDto> findGroupById(UUID id) {
@@ -49,9 +57,9 @@ class GroupServiceImpl implements GroupApi {
             String description,
             int startYear,
             Integer graduationYear,
-            UUID curatorTeacherId
+            UUID curatorUserId
     ) {
-        return groupCatalogService.createGroup(programId, curriculumId, code, name, description, startYear, graduationYear, curatorTeacherId);
+        return groupCatalogService.createGroup(programId, curriculumId, code, name, description, startYear, graduationYear, curatorUserId);
     }
 
     @Override
@@ -61,9 +69,9 @@ class GroupServiceImpl implements GroupApi {
             String name,
             String description,
             Integer graduationYear,
-            UUID curatorTeacherId
+            UUID curatorUserId
     ) {
-        return groupCatalogService.updateGroup(id, name, description, graduationYear, curatorTeacherId);
+        return groupCatalogService.updateGroup(id, name, description, graduationYear, curatorUserId);
     }
 
     @Override
@@ -73,7 +81,19 @@ class GroupServiceImpl implements GroupApi {
     }
 
     @Override
-    public List<GroupLeaderDto> findLeadersByGroupId(UUID groupId) {
+    public List<GroupMemberDto> getGroupMembersWithUsers(UUID groupId) {
+        List<StudentDto> students = studentApi.findByGroupId(groupId);
+        if (students.isEmpty()) return List.of();
+        List<UUID> userIds = students.stream().map(StudentDto::userId).distinct().toList();
+        List<UserDto> users = userApi.findByIds(userIds);
+        Map<UUID, UserDto> userMap = users.stream().collect(Collectors.toMap(UserDto::id, u -> u));
+        return students.stream()
+                .map(s -> new GroupMemberDto(s, userMap.get(s.userId())))
+                .toList();
+    }
+
+    @Override
+    public List<GroupLeaderDetailDto> findLeadersByGroupId(UUID groupId) {
         return groupLeaderService.findLeadersByGroupId(groupId);
     }
 

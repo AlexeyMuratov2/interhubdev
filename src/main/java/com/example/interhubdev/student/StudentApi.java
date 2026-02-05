@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+
 /**
  * Public API for the Student module.
  * Manages student profiles linked to users with STUDENT role.
@@ -83,7 +84,7 @@ public interface StudentApi {
     List<StudentDto> findByGroupName(String groupName);
 
     /**
-     * Find students by group ID (student_group.id).
+     * Find students by group ID (student_group.id). Uses n:m membership table.
      *
      * @param groupId student group UUID
      * @return list of students in the group
@@ -91,14 +92,39 @@ public interface StudentApi {
     List<StudentDto> findByGroupId(UUID groupId);
 
     /**
-     * Update student's group assignment.
+     * Add student to a group. Idempotent if already a member.
      *
-     * @param userId  the user ID
-     * @param groupId new group ID (null to unassign)
-     * @return updated student profile
-     * @throws IllegalArgumentException if profile not found
+     * @param studentId student profile ID (students.id)
+     * @param groupId   group ID
+     * @throws IllegalArgumentException if student or group not found
+     * @throws IllegalStateException    if already a member (optional, may be idempotent)
      */
-    StudentDto updateGroupId(UUID userId, UUID groupId);
+    void addToGroup(UUID studentId, UUID groupId);
+
+    /**
+     * Add multiple students to a group. Idempotent per student (already members are skipped).
+     *
+     * @param groupId    group ID
+     * @param studentIds list of student profile IDs (students.id); null or empty is no-op
+     * @throws IllegalArgumentException if group not found or any student not found
+     */
+    void addToGroupBulk(UUID groupId, List<UUID> studentIds);
+
+    /**
+     * Remove student from a group.
+     *
+     * @param studentId student profile ID (students.id)
+     * @param groupId   group ID
+     */
+    void removeFromGroup(UUID studentId, UUID groupId);
+
+    /**
+     * Get group IDs the student belongs to (by user ID).
+     *
+     * @param userId user ID of the student
+     * @return list of group UUIDs; empty if no profile or no memberships
+     */
+    List<UUID> getGroupIdsByUserId(UUID userId);
 
     /**
      * Create a student profile for a user.

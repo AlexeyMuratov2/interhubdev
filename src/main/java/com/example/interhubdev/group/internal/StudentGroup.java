@@ -49,8 +49,8 @@ class StudentGroup {
     @Column(name = "graduation_year")
     private Integer graduationYear;
 
-    @Column(name = "curator_teacher_id")
-    private UUID curatorTeacherId;
+    @Column(name = "curator_user_id")
+    private UUID curatorUserId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
