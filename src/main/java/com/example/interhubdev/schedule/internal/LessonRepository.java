@@ -15,4 +15,6 @@ interface LessonRepository extends JpaRepository<Lesson, UUID> {
     List<Lesson> findByOfferingIdAndDate(UUID offeringId, LocalDate date);
 
     boolean existsByOfferingIdAndDateAndTimeslotId(UUID offeringId, LocalDate date, UUID timeslotId);
+
+    void deleteByOfferingId(UUID offeringId);
 }

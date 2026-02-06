@@ -9,6 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Internal service for group curriculum overrides (ADD/REMOVE/REPLACE).
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -36,7 +39,7 @@ class GroupOverrideService {
         String normalizedAction = GroupValidation.normalizeOverrideAction(action);
 
         if (studentGroupRepository.findById(groupId).isEmpty()) {
-            throw Errors.notFound("Group not found: " + groupId);
+            throw GroupErrors.groupNotFound(groupId);
         }
 
         if ("REMOVE".equals(normalizedAction) && curriculumSubjectId == null) {
@@ -64,7 +67,7 @@ class GroupOverrideService {
     @Transactional
     void deleteOverride(UUID id) {
         if (!overrideRepository.existsById(id)) {
-            throw Errors.notFound("Override not found: " + id);
+            throw GroupErrors.overrideNotFound(id);
         }
         overrideRepository.deleteById(id);
     }

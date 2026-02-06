@@ -8,6 +8,7 @@ final class OfferingValidation {
 
     static final List<String> VALID_FORMATS = List.of("offline", "online", "mixed");
     static final List<String> VALID_TEACHER_ROLES = List.of("LECTURE", "PRACTICE", "LAB");
+    static final List<String> VALID_LESSON_TYPES = List.of("LECTURE", "PRACTICE", "LAB", "SEMINAR");
 
     private OfferingValidation() {
     }
@@ -32,6 +33,18 @@ final class OfferingValidation {
         String normalized = role.trim().toUpperCase();
         if (!VALID_TEACHER_ROLES.contains(normalized)) {
             throw Errors.badRequest("Role must be LECTURE, PRACTICE, or LAB");
+        }
+        return normalized;
+    }
+
+    /** Returns normalized lesson type (trimmed, uppercased). Throws BAD_REQUEST if null/blank or invalid. */
+    static String normalizeLessonType(String lessonType) {
+        if (lessonType == null || lessonType.isBlank()) {
+            throw Errors.badRequest("Lesson type is required");
+        }
+        String normalized = lessonType.trim().toUpperCase();
+        if (!VALID_LESSON_TYPES.contains(normalized)) {
+            throw Errors.badRequest("Lesson type must be LECTURE, PRACTICE, LAB, or SEMINAR");
         }
         return normalized;
     }

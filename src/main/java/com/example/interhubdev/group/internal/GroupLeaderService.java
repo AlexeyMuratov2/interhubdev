@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Internal service for group leaders (headman, deputy).
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -49,13 +52,13 @@ class GroupLeaderService {
         String normalizedRole = GroupValidation.normalizeLeaderRole(role);
 
         if (studentGroupRepository.findById(groupId).isEmpty()) {
-            throw Errors.notFound("Group not found: " + groupId);
+            throw GroupErrors.groupNotFound(groupId);
         }
         if (studentApi.findById(studentId).isEmpty()) {
             throw Errors.notFound("Student not found: " + studentId);
         }
         if (groupLeaderRepository.existsByGroupIdAndStudentIdAndRole(groupId, studentId, normalizedRole)) {
-            throw Errors.conflict("Leader with this role already exists for group/student");
+            throw GroupErrors.leaderRoleExists();
         }
 
         GroupLeader entity = GroupLeader.builder()
@@ -71,9 +74,15 @@ class GroupLeaderService {
     @Transactional
     void removeGroupLeader(UUID id) {
         if (!groupLeaderRepository.existsById(id)) {
-            throw Errors.notFound("Group leader not found: " + id);
+            throw GroupErrors.groupLeaderNotFound(id);
         }
         groupLeaderRepository.deleteById(id);
+    }
+
+    /** Remove all leader records for given student in group (when member is removed from group). */
+    @Transactional
+    void removeLeadersForMember(UUID groupId, UUID studentId) {
+        groupLeaderRepository.deleteByGroupIdAndStudentId(groupId, studentId);
     }
 }
 

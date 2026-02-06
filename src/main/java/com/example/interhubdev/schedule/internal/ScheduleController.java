@@ -1,7 +1,9 @@
 package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.schedule.BuildingDto;
 import com.example.interhubdev.schedule.LessonDto;
+import com.example.interhubdev.schedule.RoomCreateRequest;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.schedule.TimeslotDto;
@@ -28,10 +30,51 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/schedule")
 @RequiredArgsConstructor
-@Tag(name = "Schedule", description = "Rooms and timeslots")
+@Tag(name = "Schedule", description = "Buildings, rooms, timeslots")
 class ScheduleController {
 
     private final ScheduleApi scheduleApi;
+
+    @GetMapping("/buildings")
+    @Operation(summary = "Get all buildings")
+    public ResponseEntity<List<BuildingDto>> findAllBuildings() {
+        return ResponseEntity.ok(scheduleApi.findAllBuildings());
+    }
+
+    @GetMapping("/buildings/{id}")
+    @Operation(summary = "Get building by ID")
+    public ResponseEntity<BuildingDto> findBuildingById(@PathVariable UUID id) {
+        return scheduleApi.findBuildingById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/buildings")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create building", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create buildings")
+    public ResponseEntity<BuildingDto> createBuilding(@Valid @RequestBody CreateBuildingRequest request) {
+        BuildingDto dto = scheduleApi.createBuilding(request.name(), request.address());
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    @PutMapping("/buildings/{id}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Update building", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update buildings")
+    public ResponseEntity<BuildingDto> updateBuilding(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateBuildingRequest request
+    ) {
+        BuildingDto dto = scheduleApi.updateBuilding(id, request.name(), request.address());
+        return ResponseEntity.ok(dto);
+    }
+
+    @DeleteMapping("/buildings/{id}")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete building", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete buildings; fails if building has rooms")
+    public ResponseEntity<Void> deleteBuilding(@PathVariable UUID id) {
+        scheduleApi.deleteBuilding(id);
+        return ResponseEntity.noContent().build();
+    }
 
     @GetMapping("/rooms")
     @Operation(summary = "Get all rooms")
@@ -50,14 +93,22 @@ class ScheduleController {
     @PostMapping("/rooms")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Create room", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create rooms")
-    public ResponseEntity<RoomDto> createRoom(@Valid @RequestBody CreateRoomRequest request) {
+    public ResponseEntity<RoomDto> createRoom(@Valid @RequestBody RoomCreateRequest request) {
         RoomDto dto = scheduleApi.createRoom(
-                request.building(),
+                request.buildingId(),
                 request.number(),
                 request.capacity(),
                 request.type()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    @PostMapping("/rooms/bulk")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create rooms in bulk", description = "Only MODERATOR, ADMIN, SUPER_ADMIN; all-or-nothing transaction")
+    public ResponseEntity<List<RoomDto>> createRoomsBulk(@Valid @RequestBody List<RoomCreateRequest> request) {
+        List<RoomDto> dtos = scheduleApi.createRoomsInBulk(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dtos);
     }
 
     @PutMapping("/rooms/{id}")
@@ -69,7 +120,7 @@ class ScheduleController {
     ) {
         RoomDto dto = scheduleApi.updateRoom(
                 id,
-                request.building(),
+                request.buildingId(),
                 request.number(),
                 request.capacity(),
                 request.type()
@@ -192,13 +243,12 @@ class ScheduleController {
         }
     }
 
-    record CreateRoomRequest(
-            @NotBlank(message = "Building is required") String building,
-            @NotBlank(message = "Number is required") String number,
-            @Min(value = 0, message = "Capacity must be >= 0") Integer capacity,
-            String type
+    record CreateBuildingRequest(
+            @NotBlank(message = "Name is required") String name,
+            String address
     ) {}
-    record UpdateRoomRequest(String building, String number,
+    record UpdateBuildingRequest(String name, String address) {}
+    record UpdateRoomRequest(UUID buildingId, String number,
                              @Min(value = 0, message = "Capacity must be >= 0") Integer capacity,
                              String type) {}
     record CreateTimeslotRequest(

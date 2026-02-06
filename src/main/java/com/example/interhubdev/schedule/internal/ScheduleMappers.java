@@ -1,5 +1,6 @@
 package com.example.interhubdev.schedule.internal;
 
+import com.example.interhubdev.schedule.BuildingDto;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.TimeslotDto;
@@ -9,10 +10,22 @@ final class ScheduleMappers {
     private ScheduleMappers() {
     }
 
+    static BuildingDto toBuildingDto(Building e) {
+        return new BuildingDto(
+                e.getId(),
+                e.getName(),
+                e.getAddress(),
+                e.getCreatedAt(),
+                e.getUpdatedAt()
+        );
+    }
+
     static RoomDto toRoomDto(Room e) {
+        Building b = e.getBuilding();
         return new RoomDto(
                 e.getId(),
-                e.getBuilding(),
+                b.getId(),
+                b.getName(),
                 e.getNumber(),
                 e.getCapacity(),
                 e.getType(),

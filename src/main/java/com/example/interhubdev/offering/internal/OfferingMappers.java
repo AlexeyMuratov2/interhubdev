@@ -1,10 +1,14 @@
 package com.example.interhubdev.offering.internal;
 
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
+import com.example.interhubdev.offering.OfferingSlotDto;
 import com.example.interhubdev.offering.OfferingTeacherDto;
 
 import java.time.LocalDateTime;
 
+/**
+ * Entity to DTO mapping for offering module entities.
+ */
 final class OfferingMappers {
 
     private OfferingMappers() {
@@ -30,6 +34,18 @@ final class OfferingMappers {
                 e.getOfferingId(),
                 e.getTeacherId(),
                 e.getRole(),
+                e.getCreatedAt()
+        );
+    }
+
+    static OfferingSlotDto toSlotDto(OfferingSlot e) {
+        return new OfferingSlotDto(
+                e.getId(),
+                e.getOfferingId(),
+                e.getTimeslotId(),
+                e.getLessonType(),
+                e.getRoomId(),
+                e.getTeacherId(),
                 e.getCreatedAt()
         );
     }

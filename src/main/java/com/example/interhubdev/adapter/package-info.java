@@ -5,9 +5,11 @@
  * <ul>
  *   <li>Schedule needs to validate that an offering exists when creating a lesson.</li>
  *   <li>Offering needs to validate that a room exists when creating/updating an offering (rooms live in Schedule).</li>
+ *   <li>Offering needs timeslot info (day of week) for lesson generation.</li>
+ *   <li>Offering needs to create/delete lessons in bulk for lesson generation.</li>
  * </ul>
  * Direct dependency Schedule ↔ Offering would be circular. This package implements the consumer ports
- * of each module by delegating to the other module's "exists" ports.
+ * of each module by delegating to the other module's ports or APIs.
  *
  * <h2>Adapters</h2>
  * <ul>
@@ -17,6 +19,12 @@
  *   <li>{@link com.example.interhubdev.adapter.ScheduleRoomLookupAdapter} - implements Offering's
  *       {@link com.example.interhubdev.offering.RoomLookupPort} using Schedule's
  *       {@link com.example.interhubdev.schedule.RoomExistsPort}.</li>
+ *   <li>{@link com.example.interhubdev.adapter.ScheduleTimeslotLookupAdapter} - implements Offering's
+ *       {@link com.example.interhubdev.offering.TimeslotLookupPort} using Schedule's
+ *       {@link com.example.interhubdev.schedule.ScheduleApi}.</li>
+ *   <li>{@link com.example.interhubdev.adapter.ScheduleLessonCreationAdapter} - implements Offering's
+ *       {@link com.example.interhubdev.offering.LessonCreationPort} using Schedule's
+ *       {@link com.example.interhubdev.schedule.ScheduleApi}.</li>
  * </ul>
  *
  * <h2>Dependencies</h2>

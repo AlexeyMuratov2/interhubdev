@@ -13,4 +13,7 @@ interface GroupLeaderRepository extends JpaRepository<GroupLeader, UUID> {
     List<GroupLeader> findByGroupIdOrderByRoleAscCreatedAtAsc(UUID groupId);
 
     boolean existsByGroupIdAndStudentIdAndRole(UUID groupId, UUID studentId, String role);
+
+    /** Remove all leader roles for a student in a group (e.g. when student is removed from group). */
+    void deleteByGroupIdAndStudentId(UUID groupId, UUID studentId);
 }

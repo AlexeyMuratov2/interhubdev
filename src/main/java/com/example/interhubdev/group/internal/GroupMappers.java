@@ -4,6 +4,9 @@ import com.example.interhubdev.group.GroupCurriculumOverrideDto;
 import com.example.interhubdev.group.GroupLeaderDto;
 import com.example.interhubdev.group.StudentGroupDto;
 
+/**
+ * Entity to DTO mapping for group module. No instantiation.
+ */
 final class GroupMappers {
 
     private GroupMappers() {

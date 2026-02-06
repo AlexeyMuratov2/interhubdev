@@ -54,7 +54,7 @@ class AuthProperties {
     @Setter
     public static class RateLimitConfig {
         /** Max requests per window per client. */
-        private int maxRequestsPerSecond = 10;
+        private int maxRequestsPerSecond = 50;
         /** Window duration in milliseconds. */
         private long windowMs = 1000L;
         /** Cleanup interval: remove client keys older than this (ms). */

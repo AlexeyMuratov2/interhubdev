@@ -16,6 +16,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of {@link GroupApi}; orchestrates catalog, leaders, overrides and membership.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -81,7 +84,38 @@ class GroupServiceImpl implements GroupApi {
     }
 
     @Override
+    @Transactional
+    public void addGroupMember(UUID groupId, UUID studentId) {
+        if (groupCatalogService.findGroupById(groupId).isEmpty()) {
+            throw GroupErrors.groupNotFound(groupId);
+        }
+        studentApi.addToGroup(studentId, groupId);
+    }
+
+    @Override
+    @Transactional
+    public void addGroupMembersBulk(UUID groupId, List<UUID> studentIds) {
+        if (groupCatalogService.findGroupById(groupId).isEmpty()) {
+            throw GroupErrors.groupNotFound(groupId);
+        }
+        studentApi.addToGroupBulk(groupId, studentIds);
+    }
+
+    @Override
+    @Transactional
+    public void removeGroupMember(UUID groupId, UUID studentId) {
+        if (groupCatalogService.findGroupById(groupId).isEmpty()) {
+            throw GroupErrors.groupNotFound(groupId);
+        }
+        groupLeaderService.removeLeadersForMember(groupId, studentId);
+        studentApi.removeFromGroup(studentId, groupId);
+    }
+
+    @Override
     public List<GroupMemberDto> getGroupMembersWithUsers(UUID groupId) {
+        if (groupCatalogService.findGroupById(groupId).isEmpty()) {
+            throw GroupErrors.groupNotFound(groupId);
+        }
         List<StudentDto> students = studentApi.findByGroupId(groupId);
         if (students.isEmpty()) return List.of();
         List<UUID> userIds = students.stream().map(StudentDto::userId).distinct().toList();

@@ -18,6 +18,7 @@ import java.util.UUID;
 class ScheduleRoomService implements RoomExistsPort {
 
     private final RoomRepository roomRepository;
+    private final BuildingRepository buildingRepository;
 
     @Override
     public boolean existsById(UUID roomId) {
@@ -29,16 +30,15 @@ class ScheduleRoomService implements RoomExistsPort {
     }
 
     List<RoomDto> findAll() {
-        return roomRepository.findAllByOrderByBuildingAscNumberAsc().stream()
+        return roomRepository.findAllByOrderByBuilding_NameAscNumberAsc().stream()
                 .map(ScheduleMappers::toRoomDto)
                 .toList();
     }
 
     @Transactional
-    RoomDto create(String building, String number, Integer capacity, String type) {
-        if (building == null || building.isBlank()) {
-            throw Errors.badRequest("Room building is required");
-        }
+    RoomDto create(UUID buildingId, String number, Integer capacity, String type) {
+        Building building = buildingRepository.findById(buildingId)
+                .orElseThrow(() -> Errors.notFound("Building not found: " + buildingId));
         if (number == null || number.isBlank()) {
             throw Errors.badRequest("Room number is required");
         }
@@ -46,7 +46,7 @@ class ScheduleRoomService implements RoomExistsPort {
             throw Errors.badRequest("Room capacity must be >= 0");
         }
         Room entity = Room.builder()
-                .building(building.trim())
+                .building(building)
                 .number(number.trim())
                 .capacity(capacity)
                 .type(type != null ? type.trim() : null)
@@ -55,10 +55,14 @@ class ScheduleRoomService implements RoomExistsPort {
     }
 
     @Transactional
-    RoomDto update(UUID id, String building, String number, Integer capacity, String type) {
+    RoomDto update(UUID id, UUID buildingId, String number, Integer capacity, String type) {
         Room entity = roomRepository.findById(id)
                 .orElseThrow(() -> Errors.notFound("Room not found: " + id));
-        if (building != null) entity.setBuilding(building.trim());
+        if (buildingId != null) {
+            Building building = buildingRepository.findById(buildingId)
+                    .orElseThrow(() -> Errors.notFound("Building not found: " + buildingId));
+            entity.setBuilding(building);
+        }
         if (number != null) entity.setNumber(number.trim());
         if (capacity != null) {
             if (capacity < 0) throw Errors.badRequest("Room capacity must be >= 0");
@@ -70,10 +74,24 @@ class ScheduleRoomService implements RoomExistsPort {
     }
 
     @Transactional
+    List<RoomDto> createBulk(List<RoomBulkCreateItem> items) {
+        List<RoomDto> result = new java.util.ArrayList<>(items.size());
+        for (RoomBulkCreateItem item : items) {
+            result.add(create(item.buildingId(), item.number(), item.capacity(), item.type()));
+        }
+        return result;
+    }
+
+    @Transactional
     void delete(UUID id) {
         if (!roomRepository.existsById(id)) {
             throw Errors.notFound("Room not found: " + id);
         }
         roomRepository.deleteById(id);
     }
+
+    /**
+     * Single room item for bulk create. Internal use only.
+     */
+    record RoomBulkCreateItem(UUID buildingId, String number, Integer capacity, String type) {}
 }

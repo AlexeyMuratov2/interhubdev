@@ -1,6 +1,7 @@
 package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.schedule.LessonBulkCreateRequest;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.OfferingLookupPort;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -96,5 +98,39 @@ class ScheduleLessonService {
             throw Errors.notFound("Lesson not found: " + id);
         }
         lessonRepository.deleteById(id);
+    }
+
+    /**
+     * Create multiple lessons in a batch. Skips duplicates (same offering+date+timeslot).
+     * Caller is responsible for ensuring offering/timeslot existence.
+     */
+    @Transactional
+    List<LessonDto> createBulk(List<LessonBulkCreateRequest> requests) {
+        List<Lesson> entities = new ArrayList<>();
+        for (LessonBulkCreateRequest req : requests) {
+            if (lessonRepository.existsByOfferingIdAndDateAndTimeslotId(
+                    req.offeringId(), req.date(), req.timeslotId())) {
+                continue; // skip duplicates silently
+            }
+            String normalizedStatus = ScheduleValidation.normalizeLessonStatus(req.status());
+            entities.add(Lesson.builder()
+                    .offeringId(req.offeringId())
+                    .date(req.date())
+                    .timeslotId(req.timeslotId())
+                    .roomId(req.roomId())
+                    .status(normalizedStatus)
+                    .build());
+        }
+        return lessonRepository.saveAll(entities).stream()
+                .map(ScheduleMappers::toLessonDto)
+                .toList();
+    }
+
+    /**
+     * Delete all lessons for a given offering.
+     */
+    @Transactional
+    void deleteByOfferingId(UUID offeringId) {
+        lessonRepository.deleteByOfferingId(offeringId);
     }
 }

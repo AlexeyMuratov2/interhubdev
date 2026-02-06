@@ -9,6 +9,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Facade implementing OfferingApi: delegates to internal services for
+ * offerings, teachers, weekly slots, and lesson generation.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -16,6 +20,10 @@ class OfferingServiceImpl implements OfferingApi {
 
     private final OfferingCatalogService catalogService;
     private final OfferingTeacherService teacherService;
+    private final OfferingSlotService slotService;
+    private final LessonGenerationService lessonGenerationService;
+
+    // --- Offering CRUD ---
 
     @Override
     public Optional<GroupSubjectOfferingDto> findOfferingById(UUID id) {
@@ -58,6 +66,8 @@ class OfferingServiceImpl implements OfferingApi {
         catalogService.delete(id);
     }
 
+    // --- Offering Teachers ---
+
     @Override
     public List<OfferingTeacherDto> findTeachersByOfferingId(UUID offeringId) {
         return teacherService.findTeachersByOfferingId(offeringId);
@@ -73,5 +83,44 @@ class OfferingServiceImpl implements OfferingApi {
     @Transactional
     public void removeOfferingTeacher(UUID id) {
         teacherService.remove(id);
+    }
+
+    // --- Offering Slots ---
+
+    @Override
+    public List<OfferingSlotDto> findSlotsByOfferingId(UUID offeringId) {
+        return slotService.findByOfferingId(offeringId);
+    }
+
+    @Override
+    @Transactional
+    public OfferingSlotDto addOfferingSlot(UUID offeringId, UUID timeslotId, String lessonType, UUID roomId, UUID teacherId) {
+        return slotService.add(offeringId, timeslotId, lessonType, roomId, teacherId);
+    }
+
+    @Override
+    @Transactional
+    public void removeOfferingSlot(UUID id) {
+        slotService.remove(id);
+    }
+
+    // --- Lesson Generation ---
+
+    @Override
+    @Transactional
+    public int generateLessonsForOffering(UUID offeringId, UUID semesterId) {
+        return lessonGenerationService.generateForOffering(offeringId, semesterId);
+    }
+
+    @Override
+    @Transactional
+    public int generateLessonsForGroup(UUID groupId, UUID semesterId) {
+        return lessonGenerationService.generateForGroup(groupId, semesterId);
+    }
+
+    @Override
+    @Transactional
+    public int regenerateLessonsForOffering(UUID offeringId, UUID semesterId) {
+        return lessonGenerationService.regenerateForOffering(offeringId, semesterId);
     }
 }

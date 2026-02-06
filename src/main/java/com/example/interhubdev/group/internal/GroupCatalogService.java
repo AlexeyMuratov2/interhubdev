@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Internal service for group CRUD and catalog queries.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -69,7 +72,7 @@ class GroupCatalogService {
             throw Errors.notFound("User not found: " + curatorUserId);
         }
         if (studentGroupRepository.existsByCode(trimmedCode)) {
-            throw Errors.conflict("Group with code '" + trimmedCode + "' already exists");
+            throw GroupErrors.groupCodeExists(trimmedCode);
         }
 
         StudentGroup entity = StudentGroup.builder()
@@ -94,7 +97,7 @@ class GroupCatalogService {
             UUID curatorUserId
     ) {
         StudentGroup entity = studentGroupRepository.findById(id)
-                .orElseThrow(() -> Errors.notFound("Group not found: " + id));
+                .orElseThrow(() -> GroupErrors.groupNotFound(id));
         if (curatorUserId != null && userApi.findById(curatorUserId).isEmpty()) {
             throw Errors.notFound("User not found: " + curatorUserId);
         }
@@ -109,7 +112,7 @@ class GroupCatalogService {
     @Transactional
     void deleteGroup(UUID id) {
         if (!studentGroupRepository.existsById(id)) {
-            throw Errors.notFound("Group not found: " + id);
+            throw GroupErrors.groupNotFound(id);
         }
         studentGroupRepository.deleteById(id);
     }

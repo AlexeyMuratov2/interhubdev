@@ -1,6 +1,12 @@
 package com.example.interhubdev.schedule.internal;
 
-import com.example.interhubdev.schedule.*;
+import com.example.interhubdev.schedule.BuildingDto;
+import com.example.interhubdev.schedule.LessonBulkCreateRequest;
+import com.example.interhubdev.schedule.LessonDto;
+import com.example.interhubdev.schedule.RoomCreateRequest;
+import com.example.interhubdev.schedule.RoomDto;
+import com.example.interhubdev.schedule.ScheduleApi;
+import com.example.interhubdev.schedule.TimeslotDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,9 +21,38 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 class ScheduleServiceImpl implements ScheduleApi {
 
+    private final ScheduleBuildingService buildingService;
     private final ScheduleRoomService roomService;
     private final ScheduleTimeslotService timeslotService;
     private final ScheduleLessonService lessonService;
+
+    @Override
+    public Optional<BuildingDto> findBuildingById(UUID id) {
+        return buildingService.findById(id);
+    }
+
+    @Override
+    public List<BuildingDto> findAllBuildings() {
+        return buildingService.findAll();
+    }
+
+    @Override
+    @Transactional
+    public BuildingDto createBuilding(String name, String address) {
+        return buildingService.create(name, address);
+    }
+
+    @Override
+    @Transactional
+    public BuildingDto updateBuilding(UUID id, String name, String address) {
+        return buildingService.update(id, name, address);
+    }
+
+    @Override
+    @Transactional
+    public void deleteBuilding(UUID id) {
+        buildingService.delete(id);
+    }
 
     @Override
     public Optional<RoomDto> findRoomById(UUID id) {
@@ -31,14 +66,26 @@ class ScheduleServiceImpl implements ScheduleApi {
 
     @Override
     @Transactional
-    public RoomDto createRoom(String building, String number, Integer capacity, String type) {
-        return roomService.create(building, number, capacity, type);
+    public RoomDto createRoom(UUID buildingId, String number, Integer capacity, String type) {
+        return roomService.create(buildingId, number, capacity, type);
     }
 
     @Override
     @Transactional
-    public RoomDto updateRoom(UUID id, String building, String number, Integer capacity, String type) {
-        return roomService.update(id, building, number, capacity, type);
+    public List<RoomDto> createRoomsInBulk(List<RoomCreateRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+        List<ScheduleRoomService.RoomBulkCreateItem> items = requests.stream()
+                .map(r -> new ScheduleRoomService.RoomBulkCreateItem(r.buildingId(), r.number(), r.capacity(), r.type()))
+                .toList();
+        return roomService.createBulk(items);
+    }
+
+    @Override
+    @Transactional
+    public RoomDto updateRoom(UUID id, UUID buildingId, String number, Integer capacity, String type) {
+        return roomService.update(id, buildingId, number, capacity, type);
     }
 
     @Override
@@ -100,5 +147,17 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Transactional
     public void deleteLesson(UUID id) {
         lessonService.delete(id);
+    }
+
+    @Override
+    @Transactional
+    public List<LessonDto> createLessonsInBulk(List<LessonBulkCreateRequest> requests) {
+        return lessonService.createBulk(requests);
+    }
+
+    @Override
+    @Transactional
+    public void deleteLessonsByOfferingId(UUID offeringId) {
+        lessonService.deleteByOfferingId(offeringId);
     }
 }

@@ -7,5 +7,7 @@ import java.util.UUID;
 
 interface RoomRepository extends JpaRepository<Room, UUID> {
 
-    List<Room> findAllByOrderByBuildingAscNumberAsc();
+    List<Room> findAllByOrderByBuilding_NameAscNumberAsc();
+
+    long countByBuildingId(UUID buildingId);
 }

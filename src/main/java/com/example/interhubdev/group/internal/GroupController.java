@@ -1,7 +1,6 @@
 package com.example.interhubdev.group.internal;
 
 import com.example.interhubdev.group.*;
-import com.example.interhubdev.student.StudentApi;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,6 +18,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * REST controller for groups, group members, leaders and curriculum overrides. Delegates to {@link GroupApi} only.
+ */
 @RestController
 @RequestMapping("/api/groups")
 @RequiredArgsConstructor
@@ -26,7 +28,6 @@ import java.util.UUID;
 class GroupController {
 
     private final GroupApi groupApi;
-    private final StudentApi studentApi;
 
     @GetMapping
     @Operation(summary = "Get all groups")
@@ -37,17 +38,15 @@ class GroupController {
     @GetMapping("/{id}")
     @Operation(summary = "Get group by ID")
     public ResponseEntity<StudentGroupDto> findGroupById(@PathVariable UUID id) {
-        return groupApi.findGroupById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(groupApi.findGroupById(id)
+                .orElseThrow(() -> GroupErrors.groupNotFound(id)));
     }
 
     @GetMapping("/code/{code}")
     @Operation(summary = "Get group by code")
     public ResponseEntity<StudentGroupDto> findGroupByCode(@PathVariable String code) {
-        return groupApi.findGroupByCode(code)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(groupApi.findGroupByCode(code)
+                .orElseThrow(() -> GroupErrors.groupNotFoundByCode(code)));
     }
 
     @GetMapping("/program/{programId}")
@@ -101,9 +100,6 @@ class GroupController {
     @GetMapping("/{groupId}/members")
     @Operation(summary = "Get group members", description = "List students belonging to the group (n:m) with user data for display names")
     public ResponseEntity<List<GroupMemberDto>> getGroupMembers(@PathVariable UUID groupId) {
-        if (groupApi.findGroupById(groupId).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
         return ResponseEntity.ok(groupApi.getGroupMembersWithUsers(groupId));
     }
 
@@ -114,10 +110,7 @@ class GroupController {
             @PathVariable UUID groupId,
             @Valid @RequestBody AddGroupMemberRequest request
     ) {
-        if (groupApi.findGroupById(groupId).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        studentApi.addToGroup(request.studentId(), groupId);
+        groupApi.addGroupMember(groupId, request.studentId());
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
@@ -128,10 +121,7 @@ class GroupController {
             @PathVariable UUID groupId,
             @Valid @RequestBody AddGroupMembersBulkRequest request
     ) {
-        if (groupApi.findGroupById(groupId).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        studentApi.addToGroupBulk(groupId, request.studentIds());
+        groupApi.addGroupMembersBulk(groupId, request.studentIds());
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
@@ -142,10 +132,7 @@ class GroupController {
             @PathVariable UUID groupId,
             @PathVariable UUID studentId
     ) {
-        if (groupApi.findGroupById(groupId).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        studentApi.removeFromGroup(studentId, groupId);
+        groupApi.removeGroupMember(groupId, studentId);
         return ResponseEntity.noContent().build();
     }
 

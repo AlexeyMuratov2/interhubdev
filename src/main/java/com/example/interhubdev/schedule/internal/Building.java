@@ -2,12 +2,9 @@ package com.example.interhubdev.schedule.internal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,33 +16,26 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * JPA entity: room (classroom or lab). Belongs to a building.
+ * JPA entity: building (campus block). Rooms belong to a building.
  */
 @Entity
-@Table(name = "room")
+@Table(name = "building")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-class Room {
+class Building {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "building_id", nullable = false)
-    private Building building;
+    @Column(name = "name", nullable = false, length = 200)
+    private String name;
 
-    @Column(name = "number", nullable = false, length = 50)
-    private String number;
-
-    @Column(name = "capacity")
-    private Integer capacity;
-
-    @Column(name = "type", length = 50)
-    private String type;
+    @Column(name = "address", length = 500)
+    private String address;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

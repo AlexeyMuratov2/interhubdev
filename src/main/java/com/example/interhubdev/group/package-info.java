@@ -14,22 +14,19 @@
  * <h2>Dependencies</h2>
  * <ul>
  *   <li>program - groups reference program and curriculum</li>
- *   <li>student - group leaders reference students</li>
+ *   <li>student - group leaders and members reference students</li>
  *   <li>teacher - group curator</li>
- *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors}</li>
+ *   <li>user - curator and display names for leaders/members</li>
+ *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors} / {@link com.example.interhubdev.group.internal.GroupErrors}</li>
  * </ul>
  *
- * <h2>Error codes (via {@link com.example.interhubdev.error.Errors})</h2>
- * <ul>
- *   <li>NOT_FOUND (404) - group, program, curriculum, teacher, student, group leader or override not found</li>
- *   <li>CONFLICT (409) - group code already exists; leader role already exists for group/student</li>
- *   <li>BAD_REQUEST (400) - code/ids/action/role required; startYear out of range; action must be ADD/REMOVE/REPLACE; role must be headman/deputy</li>
- *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create)</li>
- *   <li>FORBIDDEN (403) - user has no MODERATOR/ADMIN/SUPER_ADMIN role for write operations</li>
- * </ul>
+ * <h2>Error codes</h2>
+ * Via {@link com.example.interhubdev.group.internal.GroupErrors}: GROUP_NOT_FOUND (404), GROUP_LEADER_NOT_FOUND (404),
+ * GROUP_OVERRIDE_NOT_FOUND (404), GROUP_CODE_EXISTS (409), GROUP_LEADER_ROLE_EXISTS (409).
+ * Via {@link com.example.interhubdev.error.Errors}: NOT_FOUND for program/curriculum/user/student; BAD_REQUEST, FORBIDDEN, VALIDATION_FAILED.
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Group",
-    allowedDependencies = {"program", "student", "teacher", "error"}
+    allowedDependencies = {"program", "student", "teacher", "user", "error"}
 )
 package com.example.interhubdev.group;
