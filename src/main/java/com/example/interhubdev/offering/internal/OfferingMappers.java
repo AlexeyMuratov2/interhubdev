@@ -5,6 +5,7 @@ import com.example.interhubdev.offering.OfferingSlotDto;
 import com.example.interhubdev.offering.OfferingTeacherDto;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 /**
  * Entity to DTO mapping for offering module entities.
@@ -42,6 +43,9 @@ final class OfferingMappers {
         return new OfferingSlotDto(
                 e.getId(),
                 e.getOfferingId(),
+                e.getDayOfWeek(),
+                e.getStartTime(),
+                e.getEndTime(),
                 e.getTimeslotId(),
                 e.getLessonType(),
                 e.getRoomId(),

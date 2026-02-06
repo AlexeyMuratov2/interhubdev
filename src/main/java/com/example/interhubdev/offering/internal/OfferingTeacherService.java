@@ -31,10 +31,10 @@ class OfferingTeacherService {
             throw Errors.badRequest("Teacher id is required");
         }
         if (offeringRepository.findById(offeringId).isEmpty()) {
-            throw Errors.notFound("Offering not found: " + offeringId);
+            throw Errors.notFound("Offering not found");
         }
         if (teacherApi.findById(teacherId).isEmpty()) {
-            throw Errors.notFound("Teacher not found: " + teacherId);
+            throw Errors.notFound("Teacher not found");
         }
         String normalizedRole = OfferingValidation.normalizeRole(role);
         if (offeringTeacherRepository.existsByOfferingIdAndTeacherIdAndRole(offeringId, teacherId, normalizedRole)) {
@@ -51,7 +51,7 @@ class OfferingTeacherService {
     @Transactional
     void remove(UUID id) {
         if (!offeringTeacherRepository.existsById(id)) {
-            throw Errors.notFound("Offering teacher not found: " + id);
+            throw Errors.notFound("Offering teacher not found");
         }
         offeringTeacherRepository.deleteById(id);
     }

@@ -1,6 +1,7 @@
 package com.example.interhubdev.offering;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,17 +14,14 @@ import java.util.UUID;
 public interface LessonCreationPort {
 
     /**
-     * Command to create a single lesson.
-     *
-     * @param offeringId offering ID
-     * @param date lesson date
-     * @param timeslotId timeslot ID
-     * @param roomId room ID (nullable)
-     * @param status lesson status (e.g., "planned")
+     * Command to create a single lesson. Lesson owns time (startTime, endTime).
+     * timeslotId is optional (UI hint).
      */
     record LessonCreateCommand(
             UUID offeringId,
             LocalDate date,
+            LocalTime startTime,
+            LocalTime endTime,
             UUID timeslotId,
             UUID roomId,
             String status
@@ -39,8 +37,6 @@ public interface LessonCreationPort {
 
     /**
      * Delete all lessons belonging to a specific offering.
-     *
-     * @param offeringId offering ID
      */
     void deleteLessonsByOfferingId(UUID offeringId);
 }

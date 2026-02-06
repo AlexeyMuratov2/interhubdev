@@ -1,6 +1,7 @@
 package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.schedule.internal.ScheduleErrors;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.RoomExistsPort;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/** CRUD for rooms; implements RoomExistsPort for other modules. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -38,7 +40,7 @@ class ScheduleRoomService implements RoomExistsPort {
     @Transactional
     RoomDto create(UUID buildingId, String number, Integer capacity, String type) {
         Building building = buildingRepository.findById(buildingId)
-                .orElseThrow(() -> Errors.notFound("Building not found: " + buildingId));
+                .orElseThrow(() -> ScheduleErrors.buildingNotFound(buildingId));
         if (number == null || number.isBlank()) {
             throw Errors.badRequest("Room number is required");
         }
@@ -57,10 +59,10 @@ class ScheduleRoomService implements RoomExistsPort {
     @Transactional
     RoomDto update(UUID id, UUID buildingId, String number, Integer capacity, String type) {
         Room entity = roomRepository.findById(id)
-                .orElseThrow(() -> Errors.notFound("Room not found: " + id));
+                .orElseThrow(() -> ScheduleErrors.roomNotFound(id));
         if (buildingId != null) {
             Building building = buildingRepository.findById(buildingId)
-                    .orElseThrow(() -> Errors.notFound("Building not found: " + buildingId));
+                    .orElseThrow(() -> ScheduleErrors.buildingNotFound(buildingId));
             entity.setBuilding(building);
         }
         if (number != null) entity.setNumber(number.trim());
@@ -85,7 +87,7 @@ class ScheduleRoomService implements RoomExistsPort {
     @Transactional
     void delete(UUID id) {
         if (!roomRepository.existsById(id)) {
-            throw Errors.notFound("Room not found: " + id);
+            throw ScheduleErrors.roomNotFound(id);
         }
         roomRepository.deleteById(id);
     }

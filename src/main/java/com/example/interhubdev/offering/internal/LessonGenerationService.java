@@ -4,8 +4,6 @@ import com.example.interhubdev.academic.AcademicApi;
 import com.example.interhubdev.academic.SemesterDto;
 import com.example.interhubdev.offering.LessonCreationPort;
 import com.example.interhubdev.offering.LessonCreationPort.LessonCreateCommand;
-import com.example.interhubdev.offering.TimeslotLookupPort;
-import com.example.interhubdev.offering.TimeslotLookupPort.TimeslotInfo;
 import com.example.interhubdev.program.CurriculumSubjectDto;
 import com.example.interhubdev.program.ProgramApi;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +20,7 @@ import java.util.UUID;
 
 /**
  * Core service for automatic lesson generation.
- * <p>
- * Given an offering (or all offerings of a group) and a semester, generates
- * Lesson entities for each weekly slot across the curriculum subject's duration.
+ * Uses offering slots' own day and time (slot owns time; timeslot was UI hint only).
  */
 @Service
 @RequiredArgsConstructor
@@ -36,16 +32,8 @@ class LessonGenerationService {
     private final OfferingSlotRepository slotRepository;
     private final ProgramApi programApi;
     private final AcademicApi academicApi;
-    private final TimeslotLookupPort timeslotLookupPort;
     private final LessonCreationPort lessonCreationPort;
 
-    /**
-     * Generate lessons for a single offering across the given semester.
-     *
-     * @param offeringId offering ID
-     * @param semesterId semester ID (determines start/end dates)
-     * @return number of lessons created
-     */
     @Transactional
     int generateForOffering(UUID offeringId, UUID semesterId) {
         GroupSubjectOffering offering = offeringRepository.findById(offeringId)
@@ -57,7 +45,7 @@ class LessonGenerationService {
         CurriculumSubjectDto currSubject = programApi.findCurriculumSubjectById(offering.getCurriculumSubjectId())
                 .orElseThrow(() -> OfferingErrors.curriculumSubjectNotFound(offering.getCurriculumSubjectId()));
 
-        List<OfferingSlot> slots = slotRepository.findByOfferingIdOrderByLessonTypeAscCreatedAtAsc(offeringId);
+        List<OfferingSlot> slots = slotRepository.findByOfferingIdOrderByDayOfWeekAscStartTimeAsc(offeringId);
         if (slots.isEmpty()) {
             throw OfferingErrors.noSlots(offeringId);
         }
@@ -73,13 +61,6 @@ class LessonGenerationService {
         return created;
     }
 
-    /**
-     * Generate lessons for all offerings of a group across the given semester.
-     *
-     * @param groupId group ID
-     * @param semesterId semester ID
-     * @return total number of lessons created across all offerings
-     */
     @Transactional
     int generateForGroup(UUID groupId, UUID semesterId) {
         SemesterDto semester = academicApi.findSemesterById(semesterId)
@@ -91,7 +72,7 @@ class LessonGenerationService {
         int totalCreated = 0;
         for (GroupSubjectOffering offering : offerings) {
             List<OfferingSlot> slots = slotRepository
-                    .findByOfferingIdOrderByLessonTypeAscCreatedAtAsc(offering.getId());
+                    .findByOfferingIdOrderByDayOfWeekAscStartTimeAsc(offering.getId());
             if (slots.isEmpty()) {
                 log.debug("Skipping offering {} (no slots)", offering.getId());
                 continue;
@@ -119,13 +100,6 @@ class LessonGenerationService {
         return totalCreated;
     }
 
-    /**
-     * Delete all existing lessons for the offering and regenerate.
-     *
-     * @param offeringId offering ID
-     * @param semesterId semester ID
-     * @return number of lessons created
-     */
     @Transactional
     int regenerateForOffering(UUID offeringId, UUID semesterId) {
         if (!offeringRepository.existsById(offeringId)) {
@@ -136,16 +110,6 @@ class LessonGenerationService {
         return generateForOffering(offeringId, semesterId);
     }
 
-    // ---- internal helpers ----
-
-    /**
-     * Build the list of lesson creation commands for a single offering.
-     * For each slot, calculates weekly lesson dates based on:
-     * - semester start date
-     * - timeslot's day of week
-     * - curriculum subject's durationWeeks
-     * - semester end date (hard limit)
-     */
     private List<LessonCreateCommand> buildLessonCommands(
             GroupSubjectOffering offering,
             List<OfferingSlot> slots,
@@ -158,16 +122,11 @@ class LessonGenerationService {
         int durationWeeks = currSubject.durationWeeks();
 
         for (OfferingSlot slot : slots) {
-            TimeslotInfo tsInfo = timeslotLookupPort.findById(slot.getTimeslotId())
-                    .orElseThrow(() -> OfferingErrors.timeslotNotResolved(slot.getTimeslotId()));
-
-            DayOfWeek targetDay = DayOfWeek.of(tsInfo.dayOfWeek());
-            // Find the first occurrence of the target day on or after semester start
+            DayOfWeek targetDay = DayOfWeek.of(slot.getDayOfWeek());
             LocalDate firstDate = semesterStart.getDayOfWeek() == targetDay
                     ? semesterStart
                     : semesterStart.with(TemporalAdjusters.next(targetDay));
 
-            // Determine effective room: slot override > offering default
             UUID effectiveRoom = slot.getRoomId() != null ? slot.getRoomId() : offering.getRoomId();
 
             for (int week = 0; week < durationWeeks; week++) {
@@ -178,6 +137,8 @@ class LessonGenerationService {
                 commands.add(new LessonCreateCommand(
                         offering.getId(),
                         lessonDate,
+                        slot.getStartTime(),
+                        slot.getEndTime(),
                         slot.getTimeslotId(),
                         effectiveRoom,
                         "planned"

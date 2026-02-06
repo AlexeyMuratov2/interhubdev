@@ -31,10 +31,10 @@
  *   <li>group - offerings belong to a group</li>
  *   <li>program - offerings reference curriculum subject (durationWeeks for lesson generation)</li>
  *   <li>teacher - offerings and offering teachers reference teachers</li>
- *   <li>schedule - offerings reference rooms and timeslots (via ports); lessons created via port</li>
  *   <li>academic - lesson generation uses semester dates</li>
  *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors}</li>
  * </ul>
+ * Rooms, timeslots and lesson creation are accessed via ports (implemented by adapters depending on schedule).
  *
  * <h2>Error codes (via {@link com.example.interhubdev.error.Errors})</h2>
  * <ul>
@@ -47,6 +47,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Offering",
-    allowedDependencies = {"group", "program", "teacher", "schedule", "academic", "error"}
+    allowedDependencies = {"group", "program", "teacher", "academic", "error"}
 )
 package com.example.interhubdev.offering;

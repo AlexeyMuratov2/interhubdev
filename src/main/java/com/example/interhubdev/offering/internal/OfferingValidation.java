@@ -2,6 +2,8 @@ package com.example.interhubdev.offering.internal;
 
 import com.example.interhubdev.error.Errors;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 final class OfferingValidation {
@@ -11,6 +13,18 @@ final class OfferingValidation {
     static final List<String> VALID_LESSON_TYPES = List.of("LECTURE", "PRACTICE", "LAB", "SEMINAR");
 
     private OfferingValidation() {
+    }
+
+    /** Parses time string (HH:mm or HH:mm:ss). Throws BAD_REQUEST if blank or invalid. */
+    static LocalTime parseTime(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw Errors.badRequest(fieldName + " is required");
+        }
+        try {
+            return LocalTime.parse(value);
+        } catch (DateTimeParseException e) {
+            throw Errors.badRequest("Invalid " + fieldName + " format, use HH:mm or HH:mm:ss");
+        }
     }
 
     /** Returns normalized format (trimmed, lowercased) or null. Throws BAD_REQUEST if non-null and invalid. */

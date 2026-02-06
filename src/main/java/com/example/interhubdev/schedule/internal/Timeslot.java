@@ -15,6 +15,9 @@ import lombok.Setter;
 import java.time.LocalTime;
 import java.util.UUID;
 
+/**
+ * JPA entity: timeslot — time template (day of week + time range) for UI convenience when setting lesson time.
+ */
 @Entity
 @Table(name = "timeslot")
 @Getter

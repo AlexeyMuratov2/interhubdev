@@ -9,8 +9,9 @@ import java.util.UUID;
 /**
  * Offering module error codes and user-facing messages.
  * All errors are thrown as {@link AppException} and handled by global handler.
+ * Instance not intended; use static factory methods only.
  */
-public final class OfferingErrors {
+final class OfferingErrors {
 
     private OfferingErrors() {
     }
@@ -30,31 +31,31 @@ public final class OfferingErrors {
 
     public static AppException noSlots(UUID offeringId) {
         return Errors.of(HttpStatus.BAD_REQUEST, CODE_NO_SLOTS,
-                "Offering has no weekly slots assigned: " + offeringId);
+                "Offering has no weekly slots assigned");
     }
 
     public static AppException lessonsAlreadyExist(UUID offeringId) {
         return Errors.of(HttpStatus.CONFLICT, CODE_LESSONS_ALREADY_EXIST,
-                "Lessons already exist for offering: " + offeringId + ". Use regenerate to replace them.");
+                "Lessons already exist for this offering. Use regenerate to replace them.");
     }
 
     public static AppException semesterNotFound(UUID semesterId) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_SEMESTER_NOT_FOUND,
-                "Semester not found: " + semesterId);
+                "Semester not found");
     }
 
     public static AppException curriculumSubjectNotFound(UUID curriculumSubjectId) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_CURRICULUM_SUBJECT_NOT_FOUND,
-                "Curriculum subject not found: " + curriculumSubjectId);
+                "Curriculum subject not found");
     }
 
     public static AppException offeringNotFound(UUID offeringId) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_OFFERING_NOT_FOUND,
-                "Offering not found: " + offeringId);
+                "Offering not found");
     }
 
     public static AppException timeslotNotResolved(UUID timeslotId) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_TIMESLOT_NOT_RESOLVED,
-                "Timeslot could not be resolved: " + timeslotId);
+                "Timeslot could not be resolved");
     }
 }

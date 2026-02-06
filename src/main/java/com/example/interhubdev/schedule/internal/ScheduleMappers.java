@@ -5,6 +5,7 @@ import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.TimeslotDto;
 
+/** Entity to DTO mapping for schedule module. Do not instantiate. */
 final class ScheduleMappers {
 
     private ScheduleMappers() {
@@ -48,6 +49,8 @@ final class ScheduleMappers {
                 e.getId(),
                 e.getOfferingId(),
                 e.getDate(),
+                e.getStartTime(),
+                e.getEndTime(),
                 e.getTimeslotId(),
                 e.getRoomId(),
                 e.getTopic(),

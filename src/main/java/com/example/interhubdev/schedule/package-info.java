@@ -7,6 +7,9 @@
  *   <li>{@link com.example.interhubdev.schedule.BuildingDto}, {@link com.example.interhubdev.schedule.RoomDto},
  *       {@link com.example.interhubdev.schedule.TimeslotDto}, {@link com.example.interhubdev.schedule.LessonDto} - DTOs</li>
  *   <li>{@link com.example.interhubdev.schedule.RoomCreateRequest} - request for single or bulk room creation</li>
+ *   <li>{@link com.example.interhubdev.schedule.TimeslotCreateRequest} - request for single or bulk timeslot creation</li>
+ *   <li>{@link com.example.interhubdev.schedule.LessonBulkCreateRequest} - request item for bulk lesson creation</li>
+ *   <li>{@link com.example.interhubdev.schedule.OfferingLookupPort}, {@link com.example.interhubdev.schedule.RoomExistsPort} - ports</li>
  * </ul>
  *
  * <h2>Internal structure</h2>
@@ -17,7 +20,8 @@
  *   <li>{@link com.example.interhubdev.schedule.internal.ScheduleTimeslotService} - CRUD for timeslots</li>
  *   <li>{@link com.example.interhubdev.schedule.internal.ScheduleLessonService} - CRUD for lessons (validates offering)</li>
  *   <li>{@link com.example.interhubdev.schedule.internal.ScheduleMappers} - entity to DTO mapping</li>
- *   <li>{@link com.example.interhubdev.schedule.internal.ScheduleValidation} - lesson status normalization</li>
+ *   <li>{@link com.example.interhubdev.schedule.internal.ScheduleValidation} - date/time parsing, lesson status</li>
+ *   <li>{@link com.example.interhubdev.schedule.internal.ScheduleErrors} - module error codes and factory</li>
  * </ul>
  *
  * <h2>Access control</h2>
@@ -25,21 +29,21 @@
  *
  * <h2>Dependencies</h2>
  * <ul>
- *   <li>offering - lessons reference offering; offering existence validated on lesson create</li>
- *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors}</li>
+ *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors} or {@link com.example.interhubdev.schedule.internal.ScheduleErrors}</li>
+ *   <li>offering is used via port {@link com.example.interhubdev.schedule.OfferingLookupPort} (adapter in adapter package)</li>
  * </ul>
  *
- * <h2>Error codes (via {@link com.example.interhubdev.error.Errors})</h2>
+ * <h2>Error codes (via {@link com.example.interhubdev.schedule.internal.ScheduleErrors} or {@link com.example.interhubdev.error.Errors})</h2>
  * <ul>
- *   <li>NOT_FOUND (404) - building, room, timeslot, lesson or offering not found</li>
- *   <li>CONFLICT (409) - lesson already exists for same offering, date and timeslot; building has rooms (on building delete)</li>
- *   <li>BAD_REQUEST (400) - building name/room number required; buildingId invalid; capacity &lt; 0; dayOfWeek not 1..7; startTime/endTime required or invalid; endTime not after startTime; offering/date/timeslot required; invalid date/time format; status not planned/cancelled/done</li>
+ *   <li>SCHEDULE_BUILDING_NOT_FOUND, SCHEDULE_ROOM_NOT_FOUND, SCHEDULE_TIMESLOT_NOT_FOUND, SCHEDULE_LESSON_NOT_FOUND, SCHEDULE_OFFERING_NOT_FOUND (404)</li>
+ *   <li>SCHEDULE_BUILDING_HAS_ROOMS, SCHEDULE_LESSON_ALREADY_EXISTS (409)</li>
+ *   <li>BAD_REQUEST (400) - building name/room number required; capacity &lt; 0; dayOfWeek not 1..7; invalid date/time format; status not planned/cancelled/done; endTime not after startTime</li>
  *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create/update)</li>
  *   <li>FORBIDDEN (403) - user has no MODERATOR/ADMIN/SUPER_ADMIN role for write operations</li>
  * </ul>
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Schedule",
-    allowedDependencies = {"offering", "error"}
+    allowedDependencies = {"error"}
 )
 package com.example.interhubdev.schedule;

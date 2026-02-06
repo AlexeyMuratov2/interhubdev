@@ -1,16 +1,15 @@
 package com.example.interhubdev.schedule.internal;
 
-import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.schedule.BuildingDto;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.RoomCreateRequest;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.ScheduleApi;
+import com.example.interhubdev.schedule.TimeslotCreateRequest;
 import com.example.interhubdev.schedule.TimeslotDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,11 +21,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 
+/** REST controller for schedule: buildings, rooms, timeslots, lessons. Delegates to ScheduleApi. */
 @RestController
 @RequestMapping("/api/schedule")
 @RequiredArgsConstructor
@@ -44,9 +42,8 @@ class ScheduleController {
     @GetMapping("/buildings/{id}")
     @Operation(summary = "Get building by ID")
     public ResponseEntity<BuildingDto> findBuildingById(@PathVariable UUID id) {
-        return scheduleApi.findBuildingById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(scheduleApi.findBuildingById(id)
+                .orElseThrow(() -> ScheduleErrors.buildingNotFound(id)));
     }
 
     @PostMapping("/buildings")
@@ -85,9 +82,8 @@ class ScheduleController {
     @GetMapping("/rooms/{id}")
     @Operation(summary = "Get room by ID")
     public ResponseEntity<RoomDto> findRoomById(@PathVariable UUID id) {
-        return scheduleApi.findRoomById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(scheduleApi.findRoomById(id)
+                .orElseThrow(() -> ScheduleErrors.roomNotFound(id)));
     }
 
     @PostMapping("/rooms")
@@ -137,7 +133,7 @@ class ScheduleController {
     }
 
     @GetMapping("/timeslots")
-    @Operation(summary = "Get all timeslots")
+    @Operation(summary = "Get all timeslots (time templates for UI)")
     public ResponseEntity<List<TimeslotDto>> findAllTimeslots() {
         return ResponseEntity.ok(scheduleApi.findAllTimeslots());
     }
@@ -145,19 +141,24 @@ class ScheduleController {
     @GetMapping("/timeslots/{id}")
     @Operation(summary = "Get timeslot by ID")
     public ResponseEntity<TimeslotDto> findTimeslotById(@PathVariable UUID id) {
-        return scheduleApi.findTimeslotById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(scheduleApi.findTimeslotById(id)
+                .orElseThrow(() -> ScheduleErrors.timeslotNotFound(id)));
     }
 
     @PostMapping("/timeslots")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Create timeslot", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create timeslots")
-    public ResponseEntity<TimeslotDto> createTimeslot(@Valid @RequestBody CreateTimeslotRequest request) {
-        LocalTime startTime = parseTime(request.startTime(), "startTime");
-        LocalTime endTime = parseTime(request.endTime(), "endTime");
-        TimeslotDto dto = scheduleApi.createTimeslot(request.dayOfWeek(), startTime, endTime);
+    public ResponseEntity<TimeslotDto> createTimeslot(@Valid @RequestBody TimeslotCreateRequest request) {
+        TimeslotDto dto = scheduleApi.createTimeslot(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    @PostMapping("/timeslots/bulk")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Create timeslots in bulk", description = "Only MODERATOR, ADMIN, SUPER_ADMIN; all-or-nothing transaction")
+    public ResponseEntity<List<TimeslotDto>> createTimeslotsBulk(@Valid @RequestBody List<TimeslotCreateRequest> request) {
+        List<TimeslotDto> dtos = scheduleApi.createTimeslotsInBulk(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dtos);
     }
 
     @DeleteMapping("/timeslots/{id}")
@@ -184,27 +185,19 @@ class ScheduleController {
     @GetMapping("/lessons/{id}")
     @Operation(summary = "Get lesson by ID")
     public ResponseEntity<LessonDto> findLessonById(@PathVariable UUID id) {
-        return scheduleApi.findLessonById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(scheduleApi.findLessonById(id)
+                .orElseThrow(() -> ScheduleErrors.lessonNotFound(id)));
     }
 
     @PostMapping("/lessons")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Create lesson", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create lessons")
+    @Operation(summary = "Create lesson", description = "Lesson owns time (startTime, endTime). timeslotId optional (UI hint).")
     public ResponseEntity<LessonDto> createLesson(@Valid @RequestBody CreateLessonRequest request) {
-        if (request.date() == null || request.date().isBlank()) {
-            throw Errors.badRequest("Date is required");
-        }
-        LocalDate date;
-        try {
-            date = LocalDate.parse(request.date());
-        } catch (DateTimeParseException e) {
-            throw Errors.badRequest("Invalid date format, use ISO-8601 (yyyy-MM-dd)");
-        }
         LessonDto dto = scheduleApi.createLesson(
                 request.offeringId(),
-                date,
+                request.date(),
+                request.startTime(),
+                request.endTime(),
                 request.timeslotId(),
                 request.roomId(),
                 request.topic(),
@@ -215,12 +208,12 @@ class ScheduleController {
 
     @PutMapping("/lessons/{id}")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Update lesson", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can update lessons")
+    @Operation(summary = "Update lesson", description = "Can update time (startTime, endTime), room, topic, status")
     public ResponseEntity<LessonDto> updateLesson(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateLessonRequest request
     ) {
-        LessonDto dto = scheduleApi.updateLesson(id, request.roomId(), request.topic(), request.status());
+        LessonDto dto = scheduleApi.updateLesson(id, request.startTime(), request.endTime(), request.roomId(), request.topic(), request.status());
         return ResponseEntity.ok(dto);
     }
 
@@ -232,17 +225,6 @@ class ScheduleController {
         return ResponseEntity.noContent().build();
     }
 
-    private static LocalTime parseTime(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw Errors.badRequest(fieldName + " is required");
-        }
-        try {
-            return LocalTime.parse(value);
-        } catch (DateTimeParseException e) {
-            throw Errors.badRequest("Invalid " + fieldName + " format, use HH:mm or HH:mm:ss");
-        }
-    }
-
     record CreateBuildingRequest(
             @NotBlank(message = "Name is required") String name,
             String address
@@ -251,18 +233,15 @@ class ScheduleController {
     record UpdateRoomRequest(UUID buildingId, String number,
                              @Min(value = 0, message = "Capacity must be >= 0") Integer capacity,
                              String type) {}
-    record CreateTimeslotRequest(
-            @Min(value = 1, message = "dayOfWeek must be 1..7") @Max(value = 7, message = "dayOfWeek must be 1..7") int dayOfWeek,
-            @NotBlank(message = "startTime is required") String startTime,
-            @NotBlank(message = "endTime is required") String endTime
-    ) {}
     record CreateLessonRequest(
             @NotNull(message = "Offering id is required") UUID offeringId,
             @NotBlank(message = "Date is required") String date,
-            @NotNull(message = "Timeslot id is required") UUID timeslotId,
+            @NotBlank(message = "Start time is required") String startTime,
+            @NotBlank(message = "End time is required") String endTime,
+            UUID timeslotId,
             UUID roomId,
             String topic,
             String status
     ) {}
-    record UpdateLessonRequest(UUID roomId, String topic, String status) {}
+    record UpdateLessonRequest(String startTime, String endTime, UUID roomId, String topic, String status) {}
 }

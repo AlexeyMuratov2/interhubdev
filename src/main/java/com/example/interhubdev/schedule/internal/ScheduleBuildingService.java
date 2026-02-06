@@ -1,6 +1,7 @@
 package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.schedule.internal.ScheduleErrors;
 import com.example.interhubdev.schedule.BuildingDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,7 +48,7 @@ class ScheduleBuildingService {
     @Transactional
     BuildingDto update(UUID id, String name, String address) {
         Building entity = buildingRepository.findById(id)
-                .orElseThrow(() -> Errors.notFound("Building not found: " + id));
+                .orElseThrow(() -> ScheduleErrors.buildingNotFound(id));
         if (name != null) entity.setName(name.trim());
         if (address != null) entity.setAddress(address.trim());
         entity.setUpdatedAt(LocalDateTime.now());
@@ -57,11 +58,11 @@ class ScheduleBuildingService {
     @Transactional
     void delete(UUID id) {
         if (!buildingRepository.existsById(id)) {
-            throw Errors.notFound("Building not found: " + id);
+            throw ScheduleErrors.buildingNotFound(id);
         }
         long roomCount = roomRepository.countByBuildingId(id);
         if (roomCount > 0) {
-            throw Errors.conflict("Building has rooms; delete or reassign rooms first");
+            throw ScheduleErrors.buildingHasRooms(id);
         }
         buildingRepository.deleteById(id);
     }

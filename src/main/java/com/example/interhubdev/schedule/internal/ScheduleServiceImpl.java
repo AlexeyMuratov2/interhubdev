@@ -6,6 +6,7 @@ import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.RoomCreateRequest;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.ScheduleApi;
+import com.example.interhubdev.schedule.TimeslotCreateRequest;
 import com.example.interhubdev.schedule.TimeslotDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/** Implements ScheduleApi; orchestrates building, room, timeslot, lesson services. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -106,8 +108,25 @@ class ScheduleServiceImpl implements ScheduleApi {
 
     @Override
     @Transactional
-    public TimeslotDto createTimeslot(int dayOfWeek, java.time.LocalTime startTime, java.time.LocalTime endTime) {
-        return timeslotService.create(dayOfWeek, startTime, endTime);
+    public TimeslotDto createTimeslot(TimeslotCreateRequest request) {
+        var startTime = ScheduleValidation.parseTime(request.startTime(), "startTime");
+        var endTime = ScheduleValidation.parseTime(request.endTime(), "endTime");
+        return timeslotService.create(request.dayOfWeek(), startTime, endTime);
+    }
+
+    @Override
+    @Transactional
+    public List<TimeslotDto> createTimeslotsInBulk(List<TimeslotCreateRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+        List<ScheduleTimeslotService.TimeslotBulkItem> items = requests.stream()
+                .map(r -> new ScheduleTimeslotService.TimeslotBulkItem(
+                        r.dayOfWeek(),
+                        ScheduleValidation.parseTime(r.startTime(), "startTime"),
+                        ScheduleValidation.parseTime(r.endTime(), "endTime")))
+                .toList();
+        return timeslotService.createBulk(items);
     }
 
     @Override
@@ -133,14 +152,15 @@ class ScheduleServiceImpl implements ScheduleApi {
 
     @Override
     @Transactional
-    public LessonDto createLesson(UUID offeringId, LocalDate date, UUID timeslotId, UUID roomId, String topic, String status) {
-        return lessonService.create(offeringId, date, timeslotId, roomId, topic, status);
+    public LessonDto createLesson(UUID offeringId, String date, String startTime, String endTime,
+                                  UUID timeslotId, UUID roomId, String topic, String status) {
+        return lessonService.create(offeringId, date, startTime, endTime, timeslotId, roomId, topic, status);
     }
 
     @Override
     @Transactional
-    public LessonDto updateLesson(UUID id, UUID roomId, String topic, String status) {
-        return lessonService.update(id, roomId, topic, status);
+    public LessonDto updateLesson(UUID id, String startTime, String endTime, UUID roomId, String topic, String status) {
+        return lessonService.update(id, startTime, endTime, roomId, topic, status);
     }
 
     @Override

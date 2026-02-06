@@ -32,9 +32,8 @@ class OfferingController {
     @GetMapping("/{id}")
     @Operation(summary = "Get offering by ID")
     public ResponseEntity<GroupSubjectOfferingDto> findOfferingById(@PathVariable UUID id) {
-        return offeringApi.findOfferingById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(offeringApi.findOfferingById(id)
+                .orElseThrow(() -> OfferingErrors.offeringNotFound(id)));
     }
 
     @PostMapping
@@ -116,14 +115,25 @@ class OfferingController {
 
     @PostMapping("/{offeringId}/slots")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Add weekly slot to offering", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can add offering slots")
+    @Operation(summary = "Add weekly slot to offering", description = "Slot owns time. Provide timeslotId (copy time) or dayOfWeek+startTime+endTime")
     public ResponseEntity<OfferingSlotDto> addOfferingSlot(
             @PathVariable UUID offeringId,
             @Valid @RequestBody AddOfferingSlotRequest request
     ) {
+        Integer dayOfWeek = null;
+        java.time.LocalTime startTime = null;
+        java.time.LocalTime endTime = null;
+        if (request.timeslotId() == null) {
+            dayOfWeek = request.dayOfWeek();
+            startTime = OfferingValidation.parseTime(request.startTime(), "startTime");
+            endTime = OfferingValidation.parseTime(request.endTime(), "endTime");
+        }
         OfferingSlotDto dto = offeringApi.addOfferingSlot(
                 offeringId,
                 request.timeslotId(),
+                dayOfWeek,
+                startTime,
+                endTime,
                 request.lessonType(),
                 request.roomId(),
                 request.teacherId()
@@ -191,7 +201,10 @@ class OfferingController {
             @NotBlank(message = "Role is required") String role
     ) {}
     record AddOfferingSlotRequest(
-            @NotNull(message = "Timeslot id is required") UUID timeslotId,
+            UUID timeslotId,
+            Integer dayOfWeek,
+            String startTime,
+            String endTime,
             @NotBlank(message = "Lesson type is required") String lessonType,
             UUID roomId,
             UUID teacherId

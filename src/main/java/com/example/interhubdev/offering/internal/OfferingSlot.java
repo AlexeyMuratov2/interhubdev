@@ -13,11 +13,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
 /**
- * Weekly recurring timeslot for an offering.
- * Defines when (day of week + time) a particular lesson type occurs for an offering.
+ * Weekly recurring slot for an offering. Owns day of week and time (start_time, end_time).
+ * timeslot_id is optional (UI hint when created from a timeslot template).
  */
 @Entity
 @Table(name = "offering_slot")
@@ -35,18 +36,24 @@ class OfferingSlot {
     @Column(name = "offering_id", nullable = false)
     private UUID offeringId;
 
-    @Column(name = "timeslot_id", nullable = false)
+    @Column(name = "day_of_week", nullable = false)
+    private int dayOfWeek;
+
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
+
+    @Column(name = "end_time", nullable = false)
+    private LocalTime endTime;
+
+    @Column(name = "timeslot_id")
     private UUID timeslotId;
 
-    /** Lesson type: LECTURE, PRACTICE, LAB, SEMINAR. */
     @Column(name = "lesson_type", nullable = false, length = 50)
     private String lessonType;
 
-    /** Optional room override (if different from offering's default room). */
     @Column(name = "room_id")
     private UUID roomId;
 
-    /** Optional teacher override (if different from offering's default teacher). */
     @Column(name = "teacher_id")
     private UUID teacherId;
 

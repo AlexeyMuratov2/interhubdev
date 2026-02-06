@@ -14,8 +14,13 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
+/**
+ * JPA entity: lesson — single scheduled occurrence. Owns date and time (start_time, end_time).
+ * timeslot_id is optional, used as UI hint when lesson was created from a slot.
+ */
 @Entity
 @Table(name = "lesson")
 @Getter
@@ -35,7 +40,13 @@ class Lesson {
     @Column(name = "date", nullable = false)
     private LocalDate date;
 
-    @Column(name = "timeslot_id", nullable = false)
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
+
+    @Column(name = "end_time", nullable = false)
+    private LocalTime endTime;
+
+    @Column(name = "timeslot_id")
     private UUID timeslotId;
 
     @Column(name = "room_id")

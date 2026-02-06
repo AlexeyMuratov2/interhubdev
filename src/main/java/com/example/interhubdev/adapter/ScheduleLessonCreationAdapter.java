@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Adapter: implements Offering module's LessonCreationPort using Schedule module's ScheduleApi.
@@ -25,6 +24,8 @@ public class ScheduleLessonCreationAdapter implements LessonCreationPort {
                 .map(cmd -> new LessonBulkCreateRequest(
                         cmd.offeringId(),
                         cmd.date(),
+                        cmd.startTime(),
+                        cmd.endTime(),
                         cmd.timeslotId(),
                         cmd.roomId(),
                         cmd.status()
@@ -34,7 +35,7 @@ public class ScheduleLessonCreationAdapter implements LessonCreationPort {
     }
 
     @Override
-    public void deleteLessonsByOfferingId(UUID offeringId) {
+    public void deleteLessonsByOfferingId(java.util.UUID offeringId) {
         scheduleApi.deleteLessonsByOfferingId(offeringId);
     }
 }

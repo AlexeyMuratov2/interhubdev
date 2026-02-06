@@ -21,7 +21,7 @@ public class ScheduleTimeslotLookupAdapter implements TimeslotLookupPort {
     @Override
     public Optional<TimeslotInfo> findById(UUID timeslotId) {
         return scheduleApi.findTimeslotById(timeslotId)
-                .map(ts -> new TimeslotInfo(ts.id(), ts.dayOfWeek()));
+                .map(ts -> new TimeslotInfo(ts.id(), ts.dayOfWeek(), ts.startTime(), ts.endTime()));
     }
 
     @Override

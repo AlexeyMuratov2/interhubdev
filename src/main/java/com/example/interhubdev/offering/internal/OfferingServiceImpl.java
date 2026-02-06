@@ -94,8 +94,10 @@ class OfferingServiceImpl implements OfferingApi {
 
     @Override
     @Transactional
-    public OfferingSlotDto addOfferingSlot(UUID offeringId, UUID timeslotId, String lessonType, UUID roomId, UUID teacherId) {
-        return slotService.add(offeringId, timeslotId, lessonType, roomId, teacherId);
+    public OfferingSlotDto addOfferingSlot(UUID offeringId, UUID timeslotId, Integer dayOfWeek,
+                                          java.time.LocalTime startTime, java.time.LocalTime endTime,
+                                          String lessonType, UUID roomId, UUID teacherId) {
+        return slotService.add(offeringId, timeslotId, dayOfWeek, startTime, endTime, lessonType, roomId, teacherId);
     }
 
     @Override

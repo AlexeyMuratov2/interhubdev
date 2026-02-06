@@ -1,6 +1,7 @@
 package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.schedule.internal.ScheduleErrors;
 import com.example.interhubdev.schedule.TimeslotDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/** CRUD for timeslots (time templates for UI). */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -48,10 +50,21 @@ class ScheduleTimeslotService {
     }
 
     @Transactional
+    List<TimeslotDto> createBulk(List<TimeslotBulkItem> items) {
+        List<TimeslotDto> result = new java.util.ArrayList<>(items.size());
+        for (TimeslotBulkItem item : items) {
+            result.add(create(item.dayOfWeek(), item.startTime(), item.endTime()));
+        }
+        return result;
+    }
+
+    @Transactional
     void delete(UUID id) {
         if (!timeslotRepository.existsById(id)) {
-            throw Errors.notFound("Timeslot not found: " + id);
+            throw ScheduleErrors.timeslotNotFound(id);
         }
         timeslotRepository.deleteById(id);
     }
+
+    record TimeslotBulkItem(int dayOfWeek, LocalTime startTime, LocalTime endTime) {}
 }

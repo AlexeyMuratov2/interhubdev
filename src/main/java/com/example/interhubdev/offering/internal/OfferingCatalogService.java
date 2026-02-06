@@ -58,16 +58,16 @@ class OfferingCatalogService implements OfferingExistsPort {
             throw Errors.badRequest("Curriculum subject id is required");
         }
         if (groupApi.findGroupById(groupId).isEmpty()) {
-            throw Errors.notFound("Group not found: " + groupId);
+            throw Errors.notFound("Group not found");
         }
         if (programApi.findCurriculumSubjectById(curriculumSubjectId).isEmpty()) {
-            throw Errors.notFound("Curriculum subject not found: " + curriculumSubjectId);
+            throw Errors.notFound("Curriculum subject not found");
         }
         if (teacherId != null && teacherApi.findById(teacherId).isEmpty()) {
-            throw Errors.notFound("Teacher not found: " + teacherId);
+            throw Errors.notFound("Teacher not found");
         }
         if (roomId != null && !roomLookupPort.existsById(roomId)) {
-            throw Errors.notFound("Room not found: " + roomId);
+            throw Errors.notFound("Room not found");
         }
         String normalizedFormat = (format == null || format.isBlank()) ? null : OfferingValidation.normalizeFormat(format);
         if (offeringRepository.existsByGroupIdAndCurriculumSubjectId(groupId, curriculumSubjectId)) {
@@ -87,12 +87,12 @@ class OfferingCatalogService implements OfferingExistsPort {
     @Transactional
     GroupSubjectOfferingDto update(UUID id, UUID teacherId, UUID roomId, String format, String notes) {
         GroupSubjectOffering entity = offeringRepository.findById(id)
-                .orElseThrow(() -> Errors.notFound("Offering not found: " + id));
+                .orElseThrow(() -> OfferingErrors.offeringNotFound(id));
         if (teacherId != null && teacherApi.findById(teacherId).isEmpty()) {
-            throw Errors.notFound("Teacher not found: " + teacherId);
+            throw Errors.notFound("Teacher not found");
         }
         if (roomId != null && !roomLookupPort.existsById(roomId)) {
-            throw Errors.notFound("Room not found: " + roomId);
+            throw Errors.notFound("Room not found");
         }
         String normalizedFormat = format != null && !format.isBlank() ? OfferingValidation.normalizeFormat(format) : null;
         entity.setTeacherId(teacherId);
@@ -108,7 +108,7 @@ class OfferingCatalogService implements OfferingExistsPort {
     @Transactional
     void delete(UUID id) {
         if (!offeringRepository.existsById(id)) {
-            throw Errors.notFound("Offering not found: " + id);
+            throw OfferingErrors.offeringNotFound(id);
         }
         offeringRepository.deleteById(id);
     }

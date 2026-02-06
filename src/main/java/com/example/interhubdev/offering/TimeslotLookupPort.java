@@ -1,38 +1,23 @@
 package com.example.interhubdev.offering;
 
+import java.time.LocalTime;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
  * Port for looking up timeslot information from the Schedule module.
- * Used by the Offering module to get day-of-week data for lesson generation
- * and to validate timeslot existence when creating offering slots.
+ * Used to validate timeslot existence and to copy time (day, start, end) when creating offering slot from a slot.
  * <p>
  * Implemented by an adapter in the adapter package using ScheduleApi.
  */
 public interface TimeslotLookupPort {
 
     /**
-     * Minimal timeslot information needed for lesson date calculation.
-     *
-     * @param id timeslot ID
-     * @param dayOfWeek day of week (1 = Monday ... 7 = Sunday)
+     * Timeslot info for copying day and time when creating an offering slot from a timeslot.
      */
-    record TimeslotInfo(UUID id, int dayOfWeek) {}
+    record TimeslotInfo(UUID id, int dayOfWeek, LocalTime startTime, LocalTime endTime) {}
 
-    /**
-     * Find timeslot info by ID.
-     *
-     * @param timeslotId timeslot ID
-     * @return timeslot info if found
-     */
     Optional<TimeslotInfo> findById(UUID timeslotId);
 
-    /**
-     * Check if timeslot exists.
-     *
-     * @param timeslotId timeslot ID
-     * @return true if timeslot exists
-     */
     boolean existsById(UUID timeslotId);
 }
