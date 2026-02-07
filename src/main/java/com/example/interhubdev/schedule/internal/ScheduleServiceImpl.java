@@ -189,6 +189,12 @@ class ScheduleServiceImpl implements ScheduleApi {
 
     @Override
     @Transactional
+    public void deleteLessonsByOfferingIdAndDateRange(UUID offeringId, LocalDate startInclusive, LocalDate endInclusive) {
+        lessonService.deleteByOfferingIdAndDateBetween(offeringId, startInclusive, endInclusive);
+    }
+
+    @Override
+    @Transactional
     public void deleteLessonsByOfferingSlotId(UUID offeringSlotId) {
         lessonService.deleteByOfferingSlotId(offeringSlotId);
     }

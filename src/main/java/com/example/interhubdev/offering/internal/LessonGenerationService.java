@@ -105,8 +105,12 @@ class LessonGenerationService {
         if (!offeringRepository.existsById(offeringId)) {
             throw OfferingErrors.offeringNotFound(offeringId);
         }
-        lessonCreationPort.deleteLessonsByOfferingId(offeringId);
-        log.info("Deleted existing lessons for offering {} before regeneration", offeringId);
+        SemesterDto semester = academicApi.findSemesterById(semesterId)
+                .orElseThrow(() -> OfferingErrors.semesterNotFound(semesterId));
+        lessonCreationPort.deleteLessonsByOfferingIdAndDateRange(
+                offeringId, semester.startDate(), semester.endDate());
+        log.info("Deleted lessons for offering {} in semester date range [{}..{}] before regeneration",
+                offeringId, semester.startDate(), semester.endDate());
         return generateForOffering(offeringId, semesterId);
     }
 

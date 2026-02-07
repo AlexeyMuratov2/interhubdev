@@ -21,6 +21,14 @@ interface LessonRepository extends JpaRepository<Lesson, UUID> {
 
     void deleteByOfferingId(UUID offeringId);
 
+    /**
+     * Delete lessons for an offering whose date is within the given range (inclusive).
+     * Used when regenerating lessons for a single semester so other semesters are not affected.
+     */
+    @Modifying
+    @Query("DELETE FROM Lesson l WHERE l.offeringId = :offeringId AND l.date >= :start AND l.date <= :end")
+    int deleteByOfferingIdAndDateBetween(UUID offeringId, LocalDate start, LocalDate end);
+
     void deleteByOfferingSlotId(UUID offeringSlotId);
 
     /**

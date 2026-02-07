@@ -42,6 +42,16 @@ public interface LessonCreationPort {
     void deleteLessonsByOfferingId(UUID offeringId);
 
     /**
+     * Delete lessons for an offering whose date is within the given range (inclusive).
+     * Used when regenerating lessons for a single semester so lessons of other semesters are preserved.
+     *
+     * @param offeringId offering ID
+     * @param startInclusive semester start date (inclusive)
+     * @param endInclusive semester end date (inclusive)
+     */
+    void deleteLessonsByOfferingIdAndDateRange(UUID offeringId, LocalDate startInclusive, LocalDate endInclusive);
+
+    /**
      * Delete all lessons that reference the given offering slot (generated from that slot).
      * Used when removing an offering slot.
      *

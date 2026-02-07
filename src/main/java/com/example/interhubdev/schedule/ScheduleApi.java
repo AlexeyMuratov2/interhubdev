@@ -247,6 +247,16 @@ public interface ScheduleApi {
     void deleteLessonsByOfferingId(UUID offeringId);
 
     /**
+     * Delete lessons for an offering whose date is within the given range (inclusive).
+     * Used when regenerating lessons for a single semester so lessons of other semesters are preserved.
+     *
+     * @param offeringId offering ID
+     * @param startInclusive start date (inclusive)
+     * @param endInclusive end date (inclusive)
+     */
+    void deleteLessonsByOfferingIdAndDateRange(UUID offeringId, java.time.LocalDate startInclusive, java.time.LocalDate endInclusive);
+
+    /**
      * Delete all lessons that reference the given offering slot (generated from that slot).
      * Used when an offering slot is removed.
      *

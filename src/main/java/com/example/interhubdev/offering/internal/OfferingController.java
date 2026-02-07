@@ -154,10 +154,10 @@ class OfferingController {
     @PostMapping("/{offeringId}/generate-lessons")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Generate lessons for a single offering",
-            description = "Creates lessons for each weekly slot across the semester duration")
+            description = "Creates lessons for the given semester only: dates are within semester start/end. Requires semesterId.")
     public ResponseEntity<LessonGenerationResponse> generateLessonsForOffering(
             @PathVariable UUID offeringId,
-            @RequestParam UUID semesterId
+            @RequestParam(name = "semesterId", required = true) UUID semesterId
     ) {
         int count = offeringApi.generateLessonsForOffering(offeringId, semesterId);
         return ResponseEntity.status(HttpStatus.CREATED).body(new LessonGenerationResponse(count));
@@ -166,10 +166,10 @@ class OfferingController {
     @PostMapping("/group/{groupId}/generate-lessons")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Generate lessons for all offerings of a group",
-            description = "Creates lessons for all offerings of the group across the semester")
+            description = "Creates lessons for the given semester only for all offerings of the group. Requires semesterId.")
     public ResponseEntity<LessonGenerationResponse> generateLessonsForGroup(
             @PathVariable UUID groupId,
-            @RequestParam UUID semesterId
+            @RequestParam(name = "semesterId", required = true) UUID semesterId
     ) {
         int count = offeringApi.generateLessonsForGroup(groupId, semesterId);
         return ResponseEntity.status(HttpStatus.CREATED).body(new LessonGenerationResponse(count));
@@ -178,10 +178,10 @@ class OfferingController {
     @PostMapping("/{offeringId}/regenerate-lessons")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Delete existing lessons and regenerate for offering",
-            description = "Deletes all existing lessons for the offering and creates new ones")
+            description = "Deletes only lessons of the given semester (by date range) for the offering, then creates new ones for that semester.")
     public ResponseEntity<LessonGenerationResponse> regenerateLessonsForOffering(
             @PathVariable UUID offeringId,
-            @RequestParam UUID semesterId
+            @RequestParam(name = "semesterId", required = true) UUID semesterId
     ) {
         int count = offeringApi.regenerateLessonsForOffering(offeringId, semesterId);
         return ResponseEntity.status(HttpStatus.CREATED).body(new LessonGenerationResponse(count));

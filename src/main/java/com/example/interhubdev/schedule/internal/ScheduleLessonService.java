@@ -169,6 +169,15 @@ class ScheduleLessonService {
         lessonRepository.deleteByOfferingId(offeringId);
     }
 
+    /**
+     * Delete lessons for an offering whose date is within the given range (inclusive).
+     * Used when regenerating lessons for a single semester.
+     */
+    @Transactional
+    void deleteByOfferingIdAndDateBetween(UUID offeringId, LocalDate startInclusive, LocalDate endInclusive) {
+        lessonRepository.deleteByOfferingIdAndDateBetween(offeringId, startInclusive, endInclusive);
+    }
+
     @Transactional
     void deleteByOfferingSlotId(UUID offeringSlotId) {
         lessonRepository.deleteByOfferingSlotId(offeringSlotId);

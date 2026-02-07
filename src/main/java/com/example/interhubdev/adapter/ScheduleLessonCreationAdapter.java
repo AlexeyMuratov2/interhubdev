@@ -6,6 +6,7 @@ import com.example.interhubdev.schedule.ScheduleApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -38,6 +39,11 @@ public class ScheduleLessonCreationAdapter implements LessonCreationPort {
     @Override
     public void deleteLessonsByOfferingId(java.util.UUID offeringId) {
         scheduleApi.deleteLessonsByOfferingId(offeringId);
+    }
+
+    @Override
+    public void deleteLessonsByOfferingIdAndDateRange(java.util.UUID offeringId, LocalDate startInclusive, LocalDate endInclusive) {
+        scheduleApi.deleteLessonsByOfferingIdAndDateRange(offeringId, startInclusive, endInclusive);
     }
 
     @Override
