@@ -146,7 +146,7 @@ class LessonGenerationService {
                         slot.getEndTime(),
                         slot.getTimeslotId(),
                         effectiveRoom,
-                        "planned"
+                        "PLANNED"
                 ));
             }
         }

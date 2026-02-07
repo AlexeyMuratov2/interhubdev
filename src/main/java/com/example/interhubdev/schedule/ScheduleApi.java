@@ -184,12 +184,42 @@ public interface ScheduleApi {
     List<LessonDto> findLessonsByOfferingId(UUID offeringId);
 
     /**
-     * List lessons by date (ordered by startTime).
+     * List lessons by date with full context for schedule UI (offering, slot, teachers). Ordered by startTime.
      *
      * @param date date
-     * @return list of lesson DTOs
+     * @return list of lesson with offering summary, slot summary and teachers (batch-loaded, no N+1)
      */
-    List<LessonDto> findLessonsByDate(LocalDate date);
+    List<LessonForScheduleDto> findLessonsByDate(LocalDate date);
+
+    /**
+     * List lessons for the week containing the given date (ISO week: Monday–Sunday) with full context (offering, slot, teachers).
+     * Same structure as findLessonsByDate; ordered by date then startTime. Batch-loaded, no N+1.
+     *
+     * @param date any date in the week (used to compute week bounds)
+     * @return list of lesson with offering summary, slot summary and teachers for the whole week
+     */
+    List<LessonForScheduleDto> findLessonsByWeek(LocalDate date);
+
+    /**
+     * List lessons for the week containing the given date for the given group, with full context (offering, slot, teachers).
+     * Same structure as findLessonsByWeek; ordered by date then startTime. Returns empty list if group has no offerings or no lessons in the week.
+     *
+     * @param date    any date in the week (used to compute week bounds)
+     * @param groupId group ID (404 if group does not exist)
+     * @return list of lesson with offering summary, slot summary and teachers for the group's week
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if group does not exist (ScheduleErrors.groupNotFound)
+     */
+    List<LessonForScheduleDto> findLessonsByWeekAndGroupId(LocalDate date, UUID groupId);
+
+    /**
+     * List lessons on the given date for the given group with full context (offering, slot, teachers). Ordered by startTime.
+     * Returns empty list if group has no offerings or does not exist.
+     *
+     * @param date    date
+     * @param groupId group ID
+     * @return list of lesson with offering summary, slot summary and teachers (batch-loaded, no N+1)
+     */
+    List<LessonForScheduleDto> findLessonsByDateAndGroupId(LocalDate date, UUID groupId);
 
     /**
      * Create a lesson. Date and times are passed as strings and parsed (date: yyyy-MM-dd, time: HH:mm or HH:mm:ss).
@@ -201,7 +231,7 @@ public interface ScheduleApi {
      * @param timeslotId optional timeslot ID (UI hint)
      * @param roomId     optional room ID
      * @param topic      optional topic
-     * @param status     optional status (planned/cancelled/done, default planned)
+     * @param status     optional status (PLANNED/CANCELLED/DONE, default PLANNED)
      * @return created lesson DTO
      * @throws com.example.interhubdev.error.AppException BAD_REQUEST if date/time invalid or endTime not after startTime; NOT_FOUND if offering/timeslot/room not found; CONFLICT if lesson already exists for same offering+date+time
      */
@@ -216,7 +246,7 @@ public interface ScheduleApi {
      * @param endTime   optional end time string
      * @param roomId    optional room ID
      * @param topic     optional topic
-     * @param status    optional status (planned/cancelled/done)
+     * @param status    optional status (PLANNED/CANCELLED/DONE)
      * @return updated lesson DTO
      * @throws com.example.interhubdev.error.AppException NOT_FOUND if lesson or room not found; BAD_REQUEST if time format invalid or endTime not after startTime
      */

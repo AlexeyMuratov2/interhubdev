@@ -15,7 +15,10 @@
  * <ul>
  *   <li>{@link com.example.interhubdev.adapter.OfferingLookupAdapter} - implements Schedule's
  *       {@link com.example.interhubdev.schedule.OfferingLookupPort} using Offering's
- *       {@link com.example.interhubdev.offering.OfferingExistsPort}.</li>
+ *       {@link com.example.interhubdev.offering.OfferingLookupDataPort} (minimal, repo-only; avoids cycle).</li>
+ *   <li>{@link com.example.interhubdev.adapter.GroupLookupAdapter} - implements Schedule's
+ *       {@link com.example.interhubdev.schedule.GroupLookupPort} using {@link com.example.interhubdev.group.GroupApi}
+ *       (so GET /lessons/group/{id} returns 404 when group does not exist).</li>
  *   <li>{@link com.example.interhubdev.adapter.ScheduleRoomLookupAdapter} - implements Offering's
  *       {@link com.example.interhubdev.offering.RoomLookupPort} using Schedule's
  *       {@link com.example.interhubdev.schedule.RoomExistsPort}.</li>
@@ -25,6 +28,9 @@
  *   <li>{@link com.example.interhubdev.adapter.ScheduleLessonCreationAdapter} - implements Offering's
  *       {@link com.example.interhubdev.offering.LessonCreationPort} using Schedule's
  *       {@link com.example.interhubdev.schedule.ScheduleApi}.</li>
+ *   <li>{@link com.example.interhubdev.adapter.LessonEnrichmentAdapter} - implements Schedule's
+ *       {@link com.example.interhubdev.schedule.LessonEnrichmentPort} using Offering's
+ *       {@link com.example.interhubdev.offering.LessonEnrichmentDataPort}.</li>
  * </ul>
  *
  * <h2>Dependencies</h2>

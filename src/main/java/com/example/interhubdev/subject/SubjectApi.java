@@ -36,6 +36,14 @@ public interface SubjectApi {
     List<SubjectDto> findAllSubjects();
 
     /**
+     * Find subjects by ids (batch). Missing ids are skipped; order is not guaranteed.
+     *
+     * @param ids subject ids (must not be null)
+     * @return list of subject DTOs found (never null, may be empty)
+     */
+    List<SubjectDto> findSubjectsByIds(List<UUID> ids);
+
+    /**
      * Creates a new subject. Code and chineseName are required; departmentId is optional but validated if set.
      *
      * @param code        required, trimmed

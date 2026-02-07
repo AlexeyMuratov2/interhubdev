@@ -9,8 +9,9 @@ import java.util.List;
 
 final class ScheduleValidation {
 
-    static final List<String> VALID_LESSON_STATUSES = List.of("planned", "cancelled", "done");
-    static final String DEFAULT_LESSON_STATUS = "planned";
+    /** UPPER_CASE for consistency with lessonType (LECTURE, PRACTICE, LAB). */
+    static final List<String> VALID_LESSON_STATUSES = List.of("PLANNED", "CANCELLED", "DONE");
+    static final String DEFAULT_LESSON_STATUS = "PLANNED";
 
     private ScheduleValidation() {
     }
@@ -58,16 +59,16 @@ final class ScheduleValidation {
     }
 
     /**
-     * Returns normalized lesson status (trimmed, lowercased) or default "planned" if null/blank.
+     * Returns normalized lesson status (trimmed, uppercased) or default "PLANNED" if null/blank.
      * Throws BAD_REQUEST if non-null and invalid.
      */
     static String normalizeLessonStatus(String status) {
         if (status == null || status.isBlank()) {
             return DEFAULT_LESSON_STATUS;
         }
-        String normalized = status.trim().toLowerCase();
+        String normalized = status.trim().toUpperCase();
         if (!VALID_LESSON_STATUSES.contains(normalized)) {
-            throw Errors.badRequest("Status must be planned, cancelled, or done");
+            throw Errors.badRequest("Status must be PLANNED, CANCELLED, or DONE");
         }
         return normalized;
     }

@@ -2,6 +2,7 @@ package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.schedule.BuildingDto;
 import com.example.interhubdev.schedule.LessonDto;
+import com.example.interhubdev.schedule.LessonForScheduleDto;
 import com.example.interhubdev.schedule.RoomCreateRequest;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.ScheduleApi;
@@ -178,16 +179,39 @@ class ScheduleController {
     }
 
     @GetMapping("/lessons")
-    @Operation(summary = "Get lessons by date")
-    public ResponseEntity<List<LessonDto>> findLessonsByDate(
+    @Operation(summary = "Get lessons by date with offering, slot and teachers for schedule UI")
+    public ResponseEntity<List<LessonForScheduleDto>> findLessonsByDate(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(scheduleApi.findLessonsByDate(date));
+    }
+
+    @GetMapping("/lessons/week")
+    @Operation(summary = "Get lessons for the week containing the date (Mon–Sun) with full context", description = "Returns all lessons in the ISO week (Monday to Sunday) that contains the given date. Same response structure as GET /lessons?date= (LessonForScheduleDto). Ordered by date, then startTime. Batch-loaded, no N+1.")
+    public ResponseEntity<List<LessonForScheduleDto>> findLessonsByWeek(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(scheduleApi.findLessonsByWeek(date));
+    }
+
+    @GetMapping("/lessons/week/group/{groupId}")
+    @Operation(summary = "Get lessons for the week for a group with full context", description = "Returns lessons in the ISO week that contains the given date, filtered by group (offerings of the group). Same response structure as GET /lessons/week. 404 if group does not exist; empty list if group has no offerings or no lessons in the week. Batch-loaded, no N+1.")
+    public ResponseEntity<List<LessonForScheduleDto>> findLessonsByWeekAndGroupId(
+            @PathVariable UUID groupId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(scheduleApi.findLessonsByWeekAndGroupId(date, groupId));
     }
 
     @GetMapping("/lessons/offering/{offeringId}")
     @Operation(summary = "Get lessons by offering ID")
     public ResponseEntity<List<LessonDto>> findLessonsByOfferingId(@PathVariable UUID offeringId) {
         return ResponseEntity.ok(scheduleApi.findLessonsByOfferingId(offeringId));
+    }
+
+    @GetMapping("/lessons/group/{groupId}")
+    @Operation(summary = "Get lessons by date for a group with offering, slot and teachers", description = "Returns lessons on the given date for all offerings of the group with full context for schedule UI.")
+    public ResponseEntity<List<LessonForScheduleDto>> findLessonsByDateAndGroupId(
+            @PathVariable UUID groupId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(scheduleApi.findLessonsByDateAndGroupId(date, groupId));
     }
 
     @GetMapping("/lessons/{id}")

@@ -35,6 +35,21 @@ class SubjectCatalogService {
     }
 
     /**
+     * Find subjects by ids (batch). Missing ids are skipped.
+     *
+     * @param ids subject ids (must not be null)
+     * @return list of subject DTOs found (never null)
+     */
+    List<SubjectDto> findByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return subjectRepository.findAllById(ids).stream()
+                .map(SubjectMappers::toSubjectDto)
+                .toList();
+    }
+
+    /**
      * Finds a subject by its unique code (case-sensitive after trim).
      *
      * @param code subject code (may be null; empty optional returned if null/blank)

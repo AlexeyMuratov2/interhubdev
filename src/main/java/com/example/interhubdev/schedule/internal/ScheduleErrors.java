@@ -17,6 +17,8 @@ public final class ScheduleErrors {
     public static final String CODE_TIMESLOT_NOT_FOUND = "SCHEDULE_TIMESLOT_NOT_FOUND";
     public static final String CODE_LESSON_NOT_FOUND = "SCHEDULE_LESSON_NOT_FOUND";
     public static final String CODE_OFFERING_NOT_FOUND = "SCHEDULE_OFFERING_NOT_FOUND";
+    /** Group not found (e.g. GET /lessons/group/{groupId} with non-existent group). */
+    public static final String CODE_GROUP_NOT_FOUND = "SCHEDULE_GROUP_NOT_FOUND";
     public static final String CODE_BUILDING_HAS_ROOMS = "SCHEDULE_BUILDING_HAS_ROOMS";
     public static final String CODE_LESSON_ALREADY_EXISTS = "SCHEDULE_LESSON_ALREADY_EXISTS";
 
@@ -41,6 +43,10 @@ public final class ScheduleErrors {
 
     public static AppException offeringNotFound(UUID id) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_OFFERING_NOT_FOUND, "Offering not found: " + id);
+    }
+
+    public static AppException groupNotFound(UUID id) {
+        return Errors.of(HttpStatus.NOT_FOUND, CODE_GROUP_NOT_FOUND, "Group not found: " + id);
     }
 
     public static AppException buildingHasRooms(UUID id) {

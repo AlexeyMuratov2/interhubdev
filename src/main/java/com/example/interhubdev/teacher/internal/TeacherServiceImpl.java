@@ -54,6 +54,14 @@ class TeacherServiceImpl implements TeacherApi {
     }
 
     @Override
+    public List<TeacherDto> findByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return teacherRepository.findAllById(ids).stream().map(this::toDto).toList();
+    }
+
+    @Override
     public List<TeacherDto> findAll() {
         return teacherRepository.findAll().stream()
                 .map(this::toDto)

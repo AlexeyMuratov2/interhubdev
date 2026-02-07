@@ -10,8 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +26,37 @@ class CurriculumSubjectService {
 
     Optional<CurriculumSubjectDto> findCurriculumSubjectById(UUID id) {
         return curriculumSubjectRepository.findById(id).map(ProgramMappers::toCurriculumSubjectDto);
+    }
+
+    /**
+     * Batch load subject display names by curriculum subject ids. Name: englishName or chineseName or code.
+     */
+    Map<UUID, String> getSubjectNamesByCurriculumSubjectIds(List<UUID> curriculumSubjectIds) {
+        if (curriculumSubjectIds == null || curriculumSubjectIds.isEmpty()) {
+            return Map.of();
+        }
+        List<CurriculumSubject> curriculumSubjects = curriculumSubjectRepository.findAllById(curriculumSubjectIds);
+        if (curriculumSubjects.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> subjectIds = curriculumSubjects.stream().map(CurriculumSubject::getSubjectId).distinct().toList();
+        List<com.example.interhubdev.subject.SubjectDto> subjects = subjectApi.findSubjectsByIds(subjectIds);
+        Map<UUID, String> subjectIdToName = subjects.stream()
+                .collect(Collectors.toMap(
+                        com.example.interhubdev.subject.SubjectDto::id,
+                        s -> subjectDisplayName(s)
+                ));
+        return curriculumSubjects.stream()
+                .collect(Collectors.toMap(
+                        CurriculumSubject::getId,
+                        cs -> subjectIdToName.getOrDefault(cs.getSubjectId(), "")
+                ));
+    }
+
+    private static String subjectDisplayName(com.example.interhubdev.subject.SubjectDto s) {
+        if (s.englishName() != null && !s.englishName().isBlank()) return s.englishName();
+        if (s.chineseName() != null && !s.chineseName().isBlank()) return s.chineseName();
+        return s.code() != null ? s.code() : "";
     }
 
     List<CurriculumSubjectDto> findCurriculumSubjectsByCurriculumId(UUID curriculumId) {

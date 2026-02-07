@@ -2,20 +2,31 @@ package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.schedule.LessonBulkCreateRequest;
-import com.example.interhubdev.schedule.internal.ScheduleErrors;
 import com.example.interhubdev.schedule.LessonDto;
+import com.example.interhubdev.schedule.LessonEnrichmentData;
+import com.example.interhubdev.schedule.LessonEnrichmentPort;
+import com.example.interhubdev.schedule.LessonEnrichmentRequest;
+import com.example.interhubdev.schedule.LessonForScheduleDto;
+import com.example.interhubdev.schedule.GroupLookupPort;
 import com.example.interhubdev.schedule.OfferingLookupPort;
+import com.example.interhubdev.schedule.RoomSummaryDto;
+import com.example.interhubdev.schedule.TeacherLookupPort;
+import com.example.interhubdev.schedule.TeacherSummaryDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** CRUD for lessons; validates offering via OfferingLookupPort. */
 @Service
@@ -26,7 +37,11 @@ class ScheduleLessonService {
     private final LessonRepository lessonRepository;
     private final RoomRepository roomRepository;
     private final TimeslotRepository timeslotRepository;
+    private final GroupLookupPort groupLookupPort;
     private final OfferingLookupPort offeringLookupPort;
+    private final LessonEnrichmentPort lessonEnrichmentPort;
+    private final ScheduleRoomService scheduleRoomService;
+    private final TeacherLookupPort teacherLookupPort;
 
     Optional<LessonDto> findById(UUID id) {
         return lessonRepository.findById(id).map(ScheduleMappers::toLessonDto);
@@ -42,6 +57,129 @@ class ScheduleLessonService {
         return lessonRepository.findByDateOrderByStartTimeAsc(date).stream()
                 .map(ScheduleMappers::toLessonDto)
                 .toList();
+    }
+
+    /**
+     * Lessons on the given date with enrichment (offering, slot, teachers). Batch load, no N+1.
+     */
+    List<LessonForScheduleDto> findByDateEnriched(LocalDate date) {
+        List<LessonDto> lessons = findByDate(date);
+        return enrichLessons(lessons);
+    }
+
+    /**
+     * Lessons in the week containing the given date (ISO week: Monday–Sunday) with full enrichment.
+     * Single query for lessons in [weekStart, weekEnd], then batch enrichment — no N+1.
+     */
+    List<LessonForScheduleDto> findByWeekEnriched(LocalDate date) {
+        LocalDate weekStart = date.with(DayOfWeek.MONDAY);
+        LocalDate weekEnd = weekStart.plusDays(6);
+        List<LessonDto> lessons = lessonRepository
+                .findByDateBetweenOrderByDateAscStartTimeAsc(weekStart, weekEnd).stream()
+                .map(ScheduleMappers::toLessonDto)
+                .toList();
+        return enrichLessons(lessons);
+    }
+
+    /**
+     * Lessons in the week containing the given date for the given group, with full enrichment.
+     * Throws GROUP_NOT_FOUND (404) if the group does not exist; returns empty list if group has no offerings or no lessons in the week.
+     * Single query for lessons in [weekStart, weekEnd] and offeringId in group's offerings, then batch enrichment — no N+1.
+     */
+    List<LessonForScheduleDto> findByWeekAndGroupIdEnriched(LocalDate date, UUID groupId) {
+        if (!groupLookupPort.existsById(groupId)) {
+            throw ScheduleErrors.groupNotFound(groupId);
+        }
+        List<UUID> offeringIds = offeringLookupPort.findOfferingIdsByGroupId(groupId);
+        if (offeringIds.isEmpty()) {
+            return List.of();
+        }
+        LocalDate weekStart = date.with(DayOfWeek.MONDAY);
+        LocalDate weekEnd = weekStart.plusDays(6);
+        List<LessonDto> lessons = lessonRepository
+                .findByDateBetweenAndOfferingIdInOrderByDateAscStartTimeAsc(weekStart, weekEnd, offeringIds).stream()
+                .map(ScheduleMappers::toLessonDto)
+                .toList();
+        return enrichLessons(lessons);
+    }
+
+    /**
+     * Lessons on the given date for the given group with enrichment (offering, slot, teachers). Batch load, no N+1.
+     * Throws GROUP_NOT_FOUND (404) if the group does not exist; returns empty list if group exists but has no lessons.
+     */
+    List<LessonForScheduleDto> findByDateAndGroupIdEnriched(LocalDate date, UUID groupId) {
+        if (!groupLookupPort.existsById(groupId)) {
+            throw ScheduleErrors.groupNotFound(groupId);
+        }
+        List<UUID> offeringIds = offeringLookupPort.findOfferingIdsByGroupId(groupId);
+        if (offeringIds.isEmpty()) {
+            return List.of();
+        }
+        List<LessonDto> lessons = lessonRepository.findByDateAndOfferingIdInOrderByStartTimeAsc(date, offeringIds).stream()
+                .map(ScheduleMappers::toLessonDto)
+                .toList();
+        return enrichLessons(lessons);
+    }
+
+    /**
+     * Lessons on the given date for the given group (all offerings of the group). Ordered by startTime.
+     */
+    List<LessonDto> findByDateAndGroupId(LocalDate date, UUID groupId) {
+        List<UUID> offeringIds = offeringLookupPort.findOfferingIdsByGroupId(groupId);
+        if (offeringIds.isEmpty()) {
+            return List.of();
+        }
+        return lessonRepository.findByDateAndOfferingIdInOrderByStartTimeAsc(date, offeringIds).stream()
+                .map(ScheduleMappers::toLessonDto)
+                .toList();
+    }
+
+    private List<LessonForScheduleDto> enrichLessons(List<LessonDto> lessons) {
+        if (lessons.isEmpty()) {
+            return List.of();
+        }
+        List<LessonEnrichmentRequest> requests = lessons.stream()
+                .map(l -> new LessonEnrichmentRequest(l.offeringId(), l.offeringSlotId()))
+                .toList();
+        List<LessonEnrichmentData> enrichment = lessonEnrichmentPort.getEnrichment(requests);
+        if (enrichment.size() != lessons.size()) {
+            throw new IllegalStateException("Enrichment size " + enrichment.size() + " != lessons size " + lessons.size());
+        }
+        Set<UUID> roomIds = new java.util.HashSet<>();
+        List<UUID> teacherIds = new ArrayList<>();
+        for (int i = 0; i < lessons.size(); i++) {
+            LessonDto l = lessons.get(i);
+            LessonEnrichmentData e = enrichment.get(i);
+            if (l.roomId() != null) roomIds.add(l.roomId());
+            if (e.slot() != null && e.slot().roomId() != null) roomIds.add(e.slot().roomId());
+            if (e.slot() != null && e.slot().teacherId() != null) teacherIds.add(e.slot().teacherId());
+            if (e.offering() != null && e.offering().teacherId() != null) teacherIds.add(e.offering().teacherId());
+            e.teachers().stream().map(t -> t.teacherId()).filter(id -> id != null).forEach(teacherIds::add);
+        }
+        Map<UUID, RoomSummaryDto> roomMap = scheduleRoomService.findByIdIn(roomIds).stream()
+                .collect(Collectors.toMap(RoomSummaryDto::id, r -> r));
+        Map<UUID, TeacherSummaryDto> teacherMap = teacherLookupPort.getTeacherSummaries(teacherIds.stream().distinct().toList());
+
+        List<LessonForScheduleDto> result = new ArrayList<>(lessons.size());
+        for (int i = 0; i < lessons.size(); i++) {
+            LessonDto l = lessons.get(i);
+            LessonEnrichmentData e = enrichment.get(i);
+            RoomSummaryDto room = l.roomId() != null ? roomMap.get(l.roomId())
+                    : (e.slot() != null && e.slot().roomId() != null ? roomMap.get(e.slot().roomId()) : null);
+            UUID mainTeacherId = e.slot() != null && e.slot().teacherId() != null ? e.slot().teacherId()
+                    : (e.offering() != null && e.offering().teacherId() != null ? e.offering().teacherId() : null);
+            TeacherSummaryDto mainTeacher = mainTeacherId != null ? teacherMap.get(mainTeacherId) : null;
+            result.add(new LessonForScheduleDto(
+                    l,
+                    e.offering(),
+                    e.slot(),
+                    e.teachers(),
+                    room,
+                    mainTeacher,
+                    e.subjectName()
+            ));
+        }
+        return result;
     }
 
     /**

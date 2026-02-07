@@ -556,15 +556,66 @@ Query: `cursor`, `limit` (по умолчанию 30, макс. 30). Ответ:
 
 ---
 
-### 9.6 Семестры (академический модуль)
+### 9.6 Учебный год и семестр (модуль Academic)
+
+Эндпоинты для получения учебных годов и семестров. **semesterId** из ответа подставляется в query при генерации уроков (POST /api/offerings/{offeringId}/generate-lessons?semesterId=…). Даты семестра (startDate, endDate) задают границы дат сгенерированных уроков.
+
+**Роли:** GET — любая аутентифицированная роль; создание/изменение/удаление — MODERATOR, ADMIN, SUPER_ADMIN (удаление года/семестра — только ADMIN, SUPER_ADMIN).
+
+#### Модели данных (Academic)
+
+**AcademicYearDto** — учебный год:
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `id` | UUID | Идентификатор учебного года |
+| `name` | string | Название (например, «2024/2025») |
+| `startDate` | string | Дата начала (yyyy-MM-dd) |
+| `endDate` | string | Дата окончания (yyyy-MM-dd) |
+| `isCurrent` | boolean | Признак текущего учебного года |
+| `createdAt` | string | Дата и время создания (ISO-8601) |
+
+**SemesterDto** — семестр:
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `id` | UUID | Идентификатор семестра (**semesterId** для генерации уроков) |
+| `academicYearId` | UUID | Id учебного года |
+| `number` | integer | Номер семестра (1, 2, …) |
+| `name` | string \| null | Название семестра |
+| `startDate` | string | Дата начала (yyyy-MM-dd) |
+| `endDate` | string | Дата окончания (yyyy-MM-dd) |
+| `examStartDate` | string \| null | Начало экзаменационной сессии |
+| `examEndDate` | string \| null | Конец экзаменационной сессии |
+| `weekCount` | integer \| null | Количество учебных недель (1–52) |
+| `isCurrent` | boolean | Признак текущего семестра |
+| `createdAt` | string | Дата и время создания (ISO-8601) |
+
+#### Эндпоинты: получение данных по учебному году и семестру
 
 | Метод и путь | Назначение |
 |--------------|------------|
-| `GET /api/academic/semesters/current` | Текущий семестр (удобно подставить в **semesterId** при генерации уроков). |
-| `GET /api/academic/semesters/{id}` | Семестр по id |
-| `GET /api/academic/years/{academicYearId}/semesters` | Список семестров учебного года. Для выбора семестра в UI генерации уроков. |
+| `GET /api/academic/years` | Список всех учебных годов (для выбора года и перехода к семестрам). Ответ: массив **AcademicYearDto**. |
+| `GET /api/academic/years/current` | Текущий учебный год. Ответ: один **AcademicYearDto** или `404 Not Found` (тела нет), если текущий год не задан. |
+| `GET /api/academic/years/{id}` | Учебный год по id. Ответ: один **AcademicYearDto** или `404 Not Found`, если не найден. |
+| `GET /api/academic/years/{academicYearId}/semesters` | Список семестров учебного года. Для выбора **semesterId** в UI генерации уроков. Ответ: массив **SemesterDto**. Параметр пути: `academicYearId` — UUID учебного года. |
+| `GET /api/academic/semesters/current` | Текущий семестр (удобно подставить в **semesterId** при генерации уроков). Ответ: один **SemesterDto** или `404 Not Found`, если текущий семестр не задан. |
+| `GET /api/academic/semesters/{id}` | Семестр по id. Ответ: один **SemesterDto** или `404 Not Found**. |
 
-**Структура SemesterDto:** id, academicYearId, number, name, startDate, endDate, examStartDate, examEndDate, weekCount, isCurrent, createdAt. В генерации уроков используются startDate и endDate семестра.
+**Ошибки (при вызовах создания/обновления/удаления из этого модуля):** `400 Bad Request` — неверные даты (endDate раньше startDate, даты семестра вне границ года и т.п.), дубликат номера семестра в году; `404 Not Found` — учебный год или семестр не найден; `409 Conflict` — учебный год с таким именем уже существует или семестр с таким номером уже есть в этом году. Роли: при отсутствии прав — `403 Forbidden`, при невалидном JWT — `401 Unauthorized`.
+
+#### Эндпоинты: создание и изменение (для настройки календаря)
+
+| Метод и путь | Назначение |
+|--------------|------------|
+| `POST /api/academic/years` | Создать учебный год. Тело: `name` (обязательно), `startDate`, `endDate` (обязательно), `isCurrent` (опционально). Ответ: `201 Created` — **AcademicYearDto**. |
+| `PUT /api/academic/years/{id}` | Обновить учебный год. Тело: `name`, `startDate`, `endDate`, `isCurrent` (все опционально). Ответ: `200 OK` — **AcademicYearDto**. |
+| `DELETE /api/academic/years/{id}` | Удалить учебный год. Ответ: `204 No Content`. Роли: только ADMIN, SUPER_ADMIN. |
+| `POST /api/academic/years/{academicYearId}/semesters` | Создать семестр в учебном году. Тело: `number` (обязательно, ≥ 1), `name`, `startDate`, `endDate` (обязательно), `examStartDate`, `examEndDate`, `weekCount` (1–52), `isCurrent`. Ответ: `201 Created` — **SemesterDto**. |
+| `PUT /api/academic/semesters/{id}` | Обновить семестр. Тело: `name`, `startDate`, `endDate`, `examStartDate`, `examEndDate`, `weekCount`, `isCurrent` (все опционально). Ответ: `200 OK` — **SemesterDto**. |
+| `DELETE /api/academic/semesters/{id}` | Удалить семестр. Ответ: `204 No Content`. Роли: только ADMIN, SUPER_ADMIN. |
+
+В генерации уроков используются **startDate** и **endDate** семестра: даты созданных уроков лежат в этом диапазоне.
 
 ---
 

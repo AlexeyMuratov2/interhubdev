@@ -28,6 +28,14 @@ public interface AcademicApi {
 
     Optional<SemesterDto> findCurrentSemester();
 
+    /**
+     * Find semester that contains the given date (startDate <= date <= endDate).
+     *
+     * @param date date to check
+     * @return optional semester DTO if a semester exists for that date
+     */
+    Optional<SemesterDto> findSemesterByDate(LocalDate date);
+
     List<SemesterDto> findSemestersByAcademicYearId(UUID academicYearId);
 
     SemesterDto createSemester(

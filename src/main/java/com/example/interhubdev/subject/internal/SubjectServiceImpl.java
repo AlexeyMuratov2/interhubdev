@@ -50,6 +50,11 @@ class SubjectServiceImpl implements SubjectApi {
         return subjectCatalogService.findAll();
     }
 
+    @Override
+    public List<SubjectDto> findSubjectsByIds(List<UUID> ids) {
+        return subjectCatalogService.findByIds(ids);
+    }
+
     /**
      * {@inheritDoc}
      * Delegates to {@link SubjectCatalogService#create(String, String, String, String, UUID)}.

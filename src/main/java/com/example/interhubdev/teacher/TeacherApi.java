@@ -51,6 +51,14 @@ public interface TeacherApi {
     Optional<TeacherDto> findById(UUID id);
 
     /**
+     * Find teachers by ids (batch). Missing ids are skipped; order is not guaranteed.
+     *
+     * @param ids teacher entity ids (must not be null)
+     * @return list of teacher DTOs found (never null)
+     */
+    List<TeacherDto> findByIds(List<UUID> ids);
+
+    /**
      * Get all teachers.
      *
      * @return list of all teacher profiles

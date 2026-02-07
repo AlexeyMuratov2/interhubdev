@@ -3,6 +3,7 @@ package com.example.interhubdev.schedule.internal;
 import com.example.interhubdev.schedule.BuildingDto;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.RoomDto;
+import com.example.interhubdev.schedule.RoomSummaryDto;
 import com.example.interhubdev.schedule.TimeslotDto;
 
 /** Entity to DTO mapping for schedule module. Do not instantiate. */
@@ -35,6 +36,11 @@ final class ScheduleMappers {
         );
     }
 
+    static RoomSummaryDto toRoomSummaryDto(Room e) {
+        Building b = e.getBuilding();
+        return new RoomSummaryDto(e.getId(), e.getNumber(), b != null ? b.getName() : null);
+    }
+
     static TimeslotDto toTimeslotDto(Timeslot e) {
         return new TimeslotDto(
                 e.getId(),
@@ -45,6 +51,8 @@ final class ScheduleMappers {
     }
 
     static LessonDto toLessonDto(Lesson e) {
+        String status = e.getStatus();
+        status = status != null && !status.isBlank() ? status.trim().toUpperCase() : ScheduleValidation.DEFAULT_LESSON_STATUS;
         return new LessonDto(
                 e.getId(),
                 e.getOfferingId(),
@@ -55,7 +63,7 @@ final class ScheduleMappers {
                 e.getTimeslotId(),
                 e.getRoomId(),
                 e.getTopic(),
-                e.getStatus(),
+                status,
                 e.getCreatedAt(),
                 e.getUpdatedAt()
         );

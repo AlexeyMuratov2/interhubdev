@@ -1,4 +1,4 @@
-package com.example.interhubdev.offering;
+package com.example.interhubdev.schedule;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -7,9 +7,9 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 /**
- * DTO for offering weekly slot. Slot owns day and time; timeslotId is optional (UI hint).
+ * Minimal offering slot data for schedule display (day, time, type, room, teacher).
  */
-public record OfferingSlotDto(
+public record SlotSummaryDto(
     UUID id,
     UUID offeringId,
     int dayOfWeek,

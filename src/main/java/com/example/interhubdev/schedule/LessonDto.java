@@ -1,5 +1,7 @@
 package com.example.interhubdev.schedule;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -15,8 +17,8 @@ public record LessonDto(
     UUID offeringId,
     UUID offeringSlotId,
     LocalDate date,
-    LocalTime startTime,
-    LocalTime endTime,
+    @JsonFormat(pattern = "HH:mm:ss") LocalTime startTime,
+    @JsonFormat(pattern = "HH:mm:ss") LocalTime endTime,
     UUID timeslotId,
     UUID roomId,
     String topic,

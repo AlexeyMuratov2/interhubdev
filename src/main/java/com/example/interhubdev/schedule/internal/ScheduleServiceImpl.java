@@ -3,6 +3,7 @@ package com.example.interhubdev.schedule.internal;
 import com.example.interhubdev.schedule.BuildingDto;
 import com.example.interhubdev.schedule.LessonBulkCreateRequest;
 import com.example.interhubdev.schedule.LessonDto;
+import com.example.interhubdev.schedule.LessonForScheduleDto;
 import com.example.interhubdev.schedule.RoomCreateRequest;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.ScheduleApi;
@@ -152,8 +153,23 @@ class ScheduleServiceImpl implements ScheduleApi {
     }
 
     @Override
-    public List<LessonDto> findLessonsByDate(LocalDate date) {
-        return lessonService.findByDate(date);
+    public List<LessonForScheduleDto> findLessonsByDate(LocalDate date) {
+        return lessonService.findByDateEnriched(date);
+    }
+
+    @Override
+    public List<LessonForScheduleDto> findLessonsByWeek(LocalDate date) {
+        return lessonService.findByWeekEnriched(date);
+    }
+
+    @Override
+    public List<LessonForScheduleDto> findLessonsByWeekAndGroupId(LocalDate date, UUID groupId) {
+        return lessonService.findByWeekAndGroupIdEnriched(date, groupId);
+    }
+
+    @Override
+    public List<LessonForScheduleDto> findLessonsByDateAndGroupId(LocalDate date, UUID groupId) {
+        return lessonService.findByDateAndGroupIdEnriched(date, groupId);
     }
 
     @Override

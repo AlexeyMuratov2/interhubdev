@@ -117,6 +117,15 @@ class AcademicServiceImpl implements AcademicApi {
     }
 
     @Override
+    public Optional<SemesterDto> findSemesterByDate(LocalDate date) {
+        if (date == null) {
+            return Optional.empty();
+        }
+        return semesterRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqual(date, date)
+                .map(this::toSemesterDto);
+    }
+
+    @Override
     public List<SemesterDto> findSemestersByAcademicYearId(UUID academicYearId) {
         return semesterRepository.findByAcademicYearIdOrderByNumberAsc(academicYearId).stream()
                 .map(this::toSemesterDto)

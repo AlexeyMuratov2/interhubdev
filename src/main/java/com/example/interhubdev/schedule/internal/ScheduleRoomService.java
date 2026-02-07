@@ -11,7 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
+import com.example.interhubdev.schedule.RoomSummaryDto;
 
 /** CRUD for rooms; implements RoomExistsPort for other modules. */
 @Service
@@ -29,6 +33,18 @@ class ScheduleRoomService implements RoomExistsPort {
 
     Optional<RoomDto> findById(UUID id) {
         return roomRepository.findById(id).map(ScheduleMappers::toRoomDto);
+    }
+
+    /**
+     * Batch load rooms by ids with building (for schedule display). Missing ids are skipped.
+     */
+    List<RoomSummaryDto> findByIdIn(Set<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return roomRepository.findAllByIdInWithBuilding(ids).stream()
+                .map(ScheduleMappers::toRoomSummaryDto)
+                .collect(Collectors.toList());
     }
 
     List<RoomDto> findAll() {

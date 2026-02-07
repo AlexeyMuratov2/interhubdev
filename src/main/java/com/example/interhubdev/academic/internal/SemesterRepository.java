@@ -2,6 +2,7 @@ package com.example.interhubdev.academic.internal;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +15,9 @@ interface SemesterRepository extends JpaRepository<Semester, UUID> {
     List<Semester> findByAcademicYearIdOrderByNumberAsc(UUID academicYearId);
 
     Optional<Semester> findByIsCurrent(boolean isCurrent);
+
+    /** Semester that contains the given date (startDate <= date <= endDate). */
+    Optional<Semester> findByStartDateLessThanEqualAndEndDateGreaterThanEqual(LocalDate date, LocalDate sameDate);
 
     boolean existsByAcademicYearIdAndNumber(UUID academicYearId, int number);
 }

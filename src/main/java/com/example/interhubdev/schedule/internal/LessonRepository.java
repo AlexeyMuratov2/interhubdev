@@ -15,7 +15,20 @@ interface LessonRepository extends JpaRepository<Lesson, UUID> {
 
     List<Lesson> findByDateOrderByStartTimeAsc(LocalDate date);
 
+    /**
+     * Lessons whose date is in [start, end] (inclusive). For week schedule: one query, no N+1.
+     */
+    List<Lesson> findByDateBetweenOrderByDateAscStartTimeAsc(LocalDate start, LocalDate end);
+
+    /**
+     * Lessons in [start, end] for given offerings. For week schedule by group: one query, no N+1.
+     * Call only when offeringIds is non-empty (empty IN clause may be invalid in some DBs).
+     */
+    List<Lesson> findByDateBetweenAndOfferingIdInOrderByDateAscStartTimeAsc(LocalDate start, LocalDate end, List<UUID> offeringIds);
+
     List<Lesson> findByOfferingIdAndDate(UUID offeringId, LocalDate date);
+
+    List<Lesson> findByDateAndOfferingIdInOrderByStartTimeAsc(LocalDate date, List<UUID> offeringIds);
 
     boolean existsByOfferingIdAndDateAndStartTimeAndEndTime(UUID offeringId, LocalDate date, LocalTime startTime, LocalTime endTime);
 

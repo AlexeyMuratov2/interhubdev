@@ -1,5 +1,7 @@
 package com.example.interhubdev.schedule;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -9,7 +11,7 @@ import java.util.UUID;
 public record TimeslotDto(
     UUID id,
     int dayOfWeek,
-    LocalTime startTime,
-    LocalTime endTime
+    @JsonFormat(pattern = "HH:mm:ss") LocalTime startTime,
+    @JsonFormat(pattern = "HH:mm:ss") LocalTime endTime
 ) {
 }

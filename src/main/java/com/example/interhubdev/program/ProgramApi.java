@@ -1,6 +1,7 @@
 package com.example.interhubdev.program;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +38,15 @@ public interface ProgramApi {
 
     // --- Curriculum subject ---
     Optional<CurriculumSubjectDto> findCurriculumSubjectById(UUID id);
+
+    /**
+     * Get subject display names by curriculum subject ids (batch). Name is englishName or chineseName or code.
+     *
+     * @param curriculumSubjectIds curriculum subject ids (must not be null)
+     * @return map curriculumSubjectId -> subject display name; missing ids are absent from map
+     */
+    Map<UUID, String> getSubjectNamesByCurriculumSubjectIds(List<UUID> curriculumSubjectIds);
+
 
     List<CurriculumSubjectDto> findCurriculumSubjectsByCurriculumId(UUID curriculumId);
 

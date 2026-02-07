@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -99,6 +100,11 @@ class ProgramServiceImpl implements ProgramApi {
     @Override
     public Optional<CurriculumSubjectDto> findCurriculumSubjectById(UUID id) {
         return curriculumSubjectService.findCurriculumSubjectById(id);
+    }
+
+    @Override
+    public Map<UUID, String> getSubjectNamesByCurriculumSubjectIds(List<UUID> curriculumSubjectIds) {
+        return curriculumSubjectService.getSubjectNamesByCurriculumSubjectIds(curriculumSubjectIds);
     }
 
     @Override

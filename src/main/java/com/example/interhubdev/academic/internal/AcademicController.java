@@ -104,6 +104,14 @@ class AcademicController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/semesters/by-date")
+    @Operation(summary = "Get semester by date", description = "Returns the semester that contains the given date (startDate <= date <= endDate)")
+    public ResponseEntity<SemesterDto> findSemesterByDate(@RequestParam @NotNull LocalDate date) {
+        return academicApi.findSemesterByDate(date)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/semesters/{id}")
     @Operation(summary = "Get semester by ID")
     public ResponseEntity<SemesterDto> findSemesterById(@PathVariable UUID id) {

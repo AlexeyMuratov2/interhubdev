@@ -9,6 +9,8 @@ interface OfferingTeacherRepository extends JpaRepository<OfferingTeacher, UUID>
 
     List<OfferingTeacher> findByOfferingIdOrderByRoleAscCreatedAtAsc(UUID offeringId);
 
+    List<OfferingTeacher> findByOfferingIdInOrderByRoleAscCreatedAtAsc(List<UUID> offeringIds);
+
     boolean existsByOfferingIdAndTeacherIdAndRole(UUID offeringId, UUID teacherId, String role);
 
     void deleteByOfferingId(UUID offeringId);

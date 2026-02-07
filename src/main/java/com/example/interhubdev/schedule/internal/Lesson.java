@@ -61,7 +61,7 @@ class Lesson {
 
     @Column(name = "status", nullable = false, length = 50)
     @Builder.Default
-    private String status = "planned";
+    private String status = "PLANNED";
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
