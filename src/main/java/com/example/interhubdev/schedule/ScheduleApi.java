@@ -153,12 +153,17 @@ public interface ScheduleApi {
     List<TimeslotDto> createTimeslotsInBulk(List<TimeslotCreateRequest> requests);
 
     /**
-     * Delete a timeslot.
+     * Delete a timeslot. Lessons that referenced this timeslot are not deleted; their timeslotId is set to null.
      *
      * @param id timeslot ID
      * @throws com.example.interhubdev.error.AppException NOT_FOUND if timeslot not found
      */
     void deleteTimeslot(UUID id);
+
+    /**
+     * Delete all timeslots. Lessons that referenced any timeslot are not deleted; their timeslotId is set to null.
+     */
+    void deleteAllTimeslots();
 
     // --- Lesson (owns date and time) ---
 

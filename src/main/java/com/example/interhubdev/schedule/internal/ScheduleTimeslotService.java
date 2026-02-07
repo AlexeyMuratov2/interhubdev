@@ -1,7 +1,6 @@
 package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
-import com.example.interhubdev.schedule.internal.ScheduleErrors;
 import com.example.interhubdev.schedule.TimeslotDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +18,7 @@ import java.util.UUID;
 class ScheduleTimeslotService {
 
     private final TimeslotRepository timeslotRepository;
+    private final LessonRepository lessonRepository;
 
     Optional<TimeslotDto> findById(UUID id) {
         return timeslotRepository.findById(id).map(ScheduleMappers::toTimeslotDto);
@@ -63,7 +63,15 @@ class ScheduleTimeslotService {
         if (!timeslotRepository.existsById(id)) {
             throw ScheduleErrors.timeslotNotFound(id);
         }
+        lessonRepository.clearTimeslotReference(id);
         timeslotRepository.deleteById(id);
+    }
+
+    /** Deletes all timeslots. Lessons that referenced a timeslot keep their data but have timeslotId set to null. */
+    @Transactional
+    void deleteAll() {
+        lessonRepository.clearAllTimeslotReferences();
+        timeslotRepository.deleteAll();
     }
 
     record TimeslotBulkItem(int dayOfWeek, LocalTime startTime, LocalTime endTime) {}

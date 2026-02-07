@@ -163,9 +163,17 @@ class ScheduleController {
 
     @DeleteMapping("/timeslots/{id}")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Delete timeslot", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete timeslots")
+    @Operation(summary = "Delete timeslot", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can delete timeslots; lessons keep data, timeslotId set to null")
     public ResponseEntity<Void> deleteTimeslot(@PathVariable UUID id) {
         scheduleApi.deleteTimeslot(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/timeslots")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
+    @Operation(summary = "Delete all timeslots", description = "Deletes all timeslots; lessons that referenced a slot are kept with timeslotId set to null")
+    public ResponseEntity<Void> deleteAllTimeslots() {
+        scheduleApi.deleteAllTimeslots();
         return ResponseEntity.noContent().build();
     }
 

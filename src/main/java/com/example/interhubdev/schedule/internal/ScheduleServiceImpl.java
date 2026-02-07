@@ -136,6 +136,12 @@ class ScheduleServiceImpl implements ScheduleApi {
     }
 
     @Override
+    @Transactional
+    public void deleteAllTimeslots() {
+        timeslotService.deleteAll();
+    }
+
+    @Override
     public Optional<LessonDto> findLessonById(UUID id) {
         return lessonService.findById(id);
     }
