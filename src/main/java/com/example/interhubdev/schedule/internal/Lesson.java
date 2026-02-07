@@ -20,6 +20,7 @@ import java.util.UUID;
 /**
  * JPA entity: lesson — single scheduled occurrence. Owns date and time (start_time, end_time).
  * timeslot_id is optional, used as UI hint when lesson was created from a slot.
+ * offering_slot_id references the offering slot this lesson was generated from (for lesson type and teacher resolution).
  */
 @Entity
 @Table(name = "lesson")
@@ -36,6 +37,9 @@ class Lesson {
 
     @Column(name = "offering_id", nullable = false)
     private UUID offeringId;
+
+    @Column(name = "offering_slot_id")
+    private UUID offeringSlotId;
 
     @Column(name = "date", nullable = false)
     private LocalDate date;

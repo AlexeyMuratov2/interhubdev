@@ -21,6 +21,8 @@ interface LessonRepository extends JpaRepository<Lesson, UUID> {
 
     void deleteByOfferingId(UUID offeringId);
 
+    void deleteByOfferingSlotId(UUID offeringSlotId);
+
     /**
      * Sets timeslotId to null for all lessons that reference the given timeslot (so slot can be deleted without removing lessons).
      */

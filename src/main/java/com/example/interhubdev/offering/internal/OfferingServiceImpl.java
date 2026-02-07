@@ -22,6 +22,7 @@ class OfferingServiceImpl implements OfferingApi {
     private final OfferingTeacherService teacherService;
     private final OfferingSlotService slotService;
     private final LessonGenerationService lessonGenerationService;
+    private final LessonCreationPort lessonCreationPort;
 
     // --- Offering CRUD ---
 
@@ -63,6 +64,7 @@ class OfferingServiceImpl implements OfferingApi {
     @Override
     @Transactional
     public void deleteOffering(UUID id) {
+        lessonCreationPort.deleteLessonsByOfferingId(id);
         catalogService.delete(id);
     }
 

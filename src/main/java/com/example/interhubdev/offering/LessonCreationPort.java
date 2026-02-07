@@ -15,10 +15,11 @@ public interface LessonCreationPort {
 
     /**
      * Command to create a single lesson. Lesson owns time (startTime, endTime).
-     * timeslotId is optional (UI hint).
+     * timeslotId is optional (UI hint). offeringSlotId references the offering slot this lesson was generated from.
      */
     record LessonCreateCommand(
             UUID offeringId,
+            UUID offeringSlotId,
             LocalDate date,
             LocalTime startTime,
             LocalTime endTime,
@@ -39,4 +40,24 @@ public interface LessonCreationPort {
      * Delete all lessons belonging to a specific offering.
      */
     void deleteLessonsByOfferingId(UUID offeringId);
+
+    /**
+     * Delete all lessons that reference the given offering slot (generated from that slot).
+     * Used when removing an offering slot.
+     *
+     * @param offeringSlotId offering slot ID
+     */
+    void deleteLessonsByOfferingSlotId(UUID offeringSlotId);
+
+    /**
+     * Delete lessons for an offering that match the given weekly slot (day of week and time).
+     * Used when removing an offering slot (for legacy lessons without offeringSlotId).
+     *
+     * @param offeringId offering ID
+     * @param dayOfWeek  day of week (1–7, Monday=1)
+     * @param startTime  slot start time
+     * @param endTime    slot end time
+     */
+    void deleteLessonsByOfferingIdAndDayOfWeekAndStartTimeAndEndTime(
+            UUID offeringId, int dayOfWeek, java.time.LocalTime startTime, java.time.LocalTime endTime);
 }

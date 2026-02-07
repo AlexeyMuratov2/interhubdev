@@ -245,4 +245,24 @@ public interface ScheduleApi {
      * @param offeringId offering ID
      */
     void deleteLessonsByOfferingId(UUID offeringId);
+
+    /**
+     * Delete all lessons that reference the given offering slot (generated from that slot).
+     * Used when an offering slot is removed.
+     *
+     * @param offeringSlotId offering slot ID
+     */
+    void deleteLessonsByOfferingSlotId(UUID offeringSlotId);
+
+    /**
+     * Delete lessons for an offering that match the given weekly slot (day of week and time).
+     * Used when an offering slot is removed (for legacy lessons without offeringSlotId).
+     *
+     * @param offeringId offering ID
+     * @param dayOfWeek  day of week (1–7, Monday=1)
+     * @param startTime  slot start time
+     * @param endTime    slot end time
+     */
+    void deleteLessonsByOfferingIdAndDayOfWeekAndStartTimeAndEndTime(
+            UUID offeringId, int dayOfWeek, java.time.LocalTime startTime, java.time.LocalTime endTime);
 }

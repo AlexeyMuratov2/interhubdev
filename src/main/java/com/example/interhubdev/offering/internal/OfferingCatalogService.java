@@ -22,6 +22,8 @@ import java.util.UUID;
 class OfferingCatalogService implements OfferingExistsPort {
 
     private final GroupSubjectOfferingRepository offeringRepository;
+    private final OfferingSlotRepository slotRepository;
+    private final OfferingTeacherRepository offeringTeacherRepository;
     private final GroupApi groupApi;
     private final ProgramApi programApi;
     private final TeacherApi teacherApi;
@@ -110,6 +112,8 @@ class OfferingCatalogService implements OfferingExistsPort {
         if (!offeringRepository.existsById(id)) {
             throw OfferingErrors.offeringNotFound(id);
         }
+        slotRepository.deleteByOfferingId(id);
+        offeringTeacherRepository.deleteByOfferingId(id);
         offeringRepository.deleteById(id);
     }
 }

@@ -136,6 +136,7 @@ class LessonGenerationService {
                 }
                 commands.add(new LessonCreateCommand(
                         offering.getId(),
+                        slot.getId(),
                         lessonDate,
                         slot.getStartTime(),
                         slot.getEndTime(),

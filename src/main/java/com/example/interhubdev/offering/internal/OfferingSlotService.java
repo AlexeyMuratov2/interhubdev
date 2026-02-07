@@ -1,6 +1,7 @@
 package com.example.interhubdev.offering.internal;
 
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.offering.LessonCreationPort;
 import com.example.interhubdev.offering.OfferingSlotDto;
 import com.example.interhubdev.offering.TimeslotLookupPort;
 import com.example.interhubdev.teacher.TeacherApi;
@@ -24,6 +25,7 @@ class OfferingSlotService {
     private final GroupSubjectOfferingRepository offeringRepository;
     private final TimeslotLookupPort timeslotLookupPort;
     private final TeacherApi teacherApi;
+    private final LessonCreationPort lessonCreationPort;
 
     List<OfferingSlotDto> findByOfferingId(UUID offeringId) {
         return slotRepository.findByOfferingIdOrderByDayOfWeekAscStartTimeAsc(offeringId).stream()
@@ -90,9 +92,14 @@ class OfferingSlotService {
 
     @Transactional
     void remove(UUID id) {
-        if (!slotRepository.existsById(id)) {
-            throw Errors.notFound("Offering slot not found");
-        }
+        OfferingSlot slot = slotRepository.findById(id)
+                .orElseThrow(() -> Errors.notFound("Offering slot not found"));
+        lessonCreationPort.deleteLessonsByOfferingSlotId(slot.getId());
+        lessonCreationPort.deleteLessonsByOfferingIdAndDayOfWeekAndStartTimeAndEndTime(
+                slot.getOfferingId(),
+                slot.getDayOfWeek(),
+                slot.getStartTime(),
+                slot.getEndTime());
         slotRepository.deleteById(id);
     }
 }

@@ -186,4 +186,18 @@ class ScheduleServiceImpl implements ScheduleApi {
     public void deleteLessonsByOfferingId(UUID offeringId) {
         lessonService.deleteByOfferingId(offeringId);
     }
+
+    @Override
+    @Transactional
+    public void deleteLessonsByOfferingSlotId(UUID offeringSlotId) {
+        lessonService.deleteByOfferingSlotId(offeringSlotId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteLessonsByOfferingIdAndDayOfWeekAndStartTimeAndEndTime(
+            UUID offeringId, int dayOfWeek, java.time.LocalTime startTime, java.time.LocalTime endTime) {
+        lessonService.deleteByOfferingIdAndDayOfWeekAndStartTimeAndEndTime(
+                offeringId, dayOfWeek, startTime, endTime);
+    }
 }

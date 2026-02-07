@@ -53,11 +53,11 @@ class ScheduleLessonService {
         LocalDate date = ScheduleValidation.parseDate(dateStr, "date");
         LocalTime startTime = ScheduleValidation.parseTime(startTimeStr, "startTime");
         LocalTime endTime = ScheduleValidation.parseTime(endTimeStr, "endTime");
-        return create(offeringId, date, startTime, endTime, timeslotId, roomId, topic, status);
+        return create(offeringId, null, date, startTime, endTime, timeslotId, roomId, topic, status);
     }
 
     @Transactional
-    LessonDto create(UUID offeringId, LocalDate date, LocalTime startTime, LocalTime endTime,
+    LessonDto create(UUID offeringId, UUID offeringSlotId, LocalDate date, LocalTime startTime, LocalTime endTime,
                      UUID timeslotId, UUID roomId, String topic, String status) {
         if (offeringId == null) {
             throw Errors.badRequest("Offering id is required");
@@ -86,6 +86,7 @@ class ScheduleLessonService {
         String normalizedStatus = ScheduleValidation.normalizeLessonStatus(status);
         Lesson entity = Lesson.builder()
                 .offeringId(offeringId)
+                .offeringSlotId(offeringSlotId)
                 .date(date)
                 .startTime(startTime)
                 .endTime(endTime)
@@ -149,6 +150,7 @@ class ScheduleLessonService {
             String normalizedStatus = ScheduleValidation.normalizeLessonStatus(req.status());
             entities.add(Lesson.builder()
                     .offeringId(req.offeringId())
+                    .offeringSlotId(req.offeringSlotId())
                     .date(req.date())
                     .startTime(req.startTime())
                     .endTime(req.endTime())
@@ -165,5 +167,25 @@ class ScheduleLessonService {
     @Transactional
     void deleteByOfferingId(UUID offeringId) {
         lessonRepository.deleteByOfferingId(offeringId);
+    }
+
+    @Transactional
+    void deleteByOfferingSlotId(UUID offeringSlotId) {
+        lessonRepository.deleteByOfferingSlotId(offeringSlotId);
+    }
+
+    /**
+     * Delete lessons for an offering that match the given weekly slot (day of week and time).
+     * Used when an offering slot is removed (for legacy lessons without offeringSlotId).
+     */
+    @Transactional
+    void deleteByOfferingIdAndDayOfWeekAndStartTimeAndEndTime(
+            UUID offeringId, int dayOfWeek, LocalTime startTime, LocalTime endTime) {
+        List<Lesson> lessons = lessonRepository.findByOfferingIdOrderByDateAscStartTimeAsc(offeringId).stream()
+                .filter(l -> l.getDate().getDayOfWeek().getValue() == dayOfWeek
+                        && l.getStartTime().equals(startTime)
+                        && l.getEndTime().equals(endTime))
+                .toList();
+        lessonRepository.deleteAll(lessons);
     }
 }

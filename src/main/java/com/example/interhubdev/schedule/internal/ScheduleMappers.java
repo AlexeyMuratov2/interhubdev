@@ -48,6 +48,7 @@ final class ScheduleMappers {
         return new LessonDto(
                 e.getId(),
                 e.getOfferingId(),
+                e.getOfferingSlotId(),
                 e.getDate(),
                 e.getStartTime(),
                 e.getEndTime(),

@@ -8,10 +8,12 @@ import java.util.UUID;
 /**
  * DTO for lesson. Lesson owns date and time (startTime, endTime).
  * timeslotId is optional (UI hint when created from a slot).
+ * offeringSlotId references the offering slot this lesson was generated from (for lesson type and teacher on UI).
  */
 public record LessonDto(
     UUID id,
     UUID offeringId,
+    UUID offeringSlotId,
     LocalDate date,
     LocalTime startTime,
     LocalTime endTime,
