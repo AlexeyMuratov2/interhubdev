@@ -221,7 +221,7 @@ class ScheduleLessonService {
         if (lessonRepository.existsByOfferingIdAndDateAndStartTimeAndEndTime(offeringId, date, startTime, endTime)) {
             throw ScheduleErrors.lessonAlreadyExists();
         }
-        String normalizedStatus = ScheduleValidation.normalizeLessonStatus(status);
+        String statusForStorage = ScheduleValidation.normalizeLessonStatusForStorage(status);
         Lesson entity = Lesson.builder()
                 .offeringId(offeringId)
                 .offeringSlotId(offeringSlotId)
@@ -231,7 +231,7 @@ class ScheduleLessonService {
                 .timeslotId(timeslotId)
                 .roomId(roomId)
                 .topic(topic != null ? topic.trim() : null)
-                .status(normalizedStatus)
+                .status(statusForStorage)
                 .build();
         return ScheduleMappers.toLessonDto(lessonRepository.save(entity));
     }
@@ -263,7 +263,7 @@ class ScheduleLessonService {
         if (topic != null) entity.setTopic(topic.trim());
         entity.setRoomId(roomId);
         if (status != null) {
-            entity.setStatus(ScheduleValidation.normalizeLessonStatus(status));
+            entity.setStatus(ScheduleValidation.normalizeLessonStatusForStorage(status));
         }
         entity.setUpdatedAt(LocalDateTime.now());
         return ScheduleMappers.toLessonDto(lessonRepository.save(entity));
@@ -285,7 +285,7 @@ class ScheduleLessonService {
                     req.offeringId(), req.date(), req.startTime(), req.endTime())) {
                 continue;
             }
-            String normalizedStatus = ScheduleValidation.normalizeLessonStatus(req.status());
+            String statusForStorage = ScheduleValidation.normalizeLessonStatusForStorage(req.status());
             entities.add(Lesson.builder()
                     .offeringId(req.offeringId())
                     .offeringSlotId(req.offeringSlotId())
@@ -294,7 +294,7 @@ class ScheduleLessonService {
                     .endTime(req.endTime())
                     .timeslotId(req.timeslotId())
                     .roomId(req.roomId())
-                    .status(normalizedStatus)
+                    .status(statusForStorage)
                     .build());
         }
         return lessonRepository.saveAll(entities).stream()

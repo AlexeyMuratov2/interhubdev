@@ -61,6 +61,7 @@ final class ScheduleValidation {
     /**
      * Returns normalized lesson status (trimmed, uppercased) or default "PLANNED" if null/blank.
      * Throws BAD_REQUEST if non-null and invalid.
+     * Use for API validation and DTO exposure.
      */
     static String normalizeLessonStatus(String status) {
         if (status == null || status.isBlank()) {
@@ -71,5 +72,14 @@ final class ScheduleValidation {
             throw Errors.badRequest("Status must be PLANNED, CANCELLED, or DONE");
         }
         return normalized;
+    }
+
+    /**
+     * Returns lesson status in storage form (lowercase) for DB persistence.
+     * DB constraint chk_lesson_status allows only 'planned', 'cancelled', 'done'.
+     * Validates same as {@link #normalizeLessonStatus(String)} then returns lowercase.
+     */
+    static String normalizeLessonStatusForStorage(String status) {
+        return normalizeLessonStatus(status).toLowerCase();
     }
 }
