@@ -3,6 +3,7 @@ package com.example.interhubdev.document;
 import com.example.interhubdev.error.AppException;
 
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,15 +18,18 @@ public interface DocumentApi {
      * Upload a file to storage and persist metadata. Atomic: on DB failure after S3 upload,
      * the file is removed from S3 and exception is thrown.
      *
-     * @param fileStream      file content stream
+     * <p>Caller must provide a temp file path; content is read for security scan (antivirus, magic bytes)
+     * and upload. Caller is responsible for deleting the temp file after the call.
+     *
+     * @param tempFile        path to temp file (must exist, readable; caller deletes after)
      * @param originalFilename original file name
      * @param contentType     MIME type
      * @param size            file size in bytes
      * @param uploadedBy      user id of uploader
      * @return created stored file DTO
-     * @throws AppException e.g. FILE_TOO_LARGE, INVALID_FILE_TYPE, bad request on validation failure
+     * @throws AppException e.g. FILE_TOO_LARGE, FORBIDDEN_FILE_TYPE, MALWARE_DETECTED, etc.
      */
-    StoredFileDto uploadFile(InputStream fileStream, String originalFilename, String contentType, long size, UUID uploadedBy);
+    StoredFileDto uploadFile(Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy);
 
     /**
      * Get stored file metadata by id.

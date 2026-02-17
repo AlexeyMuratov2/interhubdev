@@ -116,6 +116,13 @@
 			<version>8.5.7</version>
 		</dependency>
 
+		<!-- ClamAV (antivirus) -->
+		<dependency>
+			<groupId>fi.solita.clamav</groupId>
+			<artifactId>clamav-client</artifactId>
+			<version>1.0.1</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-docker-compose</artifactId>

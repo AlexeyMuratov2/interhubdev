@@ -2,7 +2,6 @@ package com.example.interhubdev.document.internal.storedFile;
 
 import com.example.interhubdev.document.StoragePort;
 import com.example.interhubdev.document.UploadResult;
-import com.example.interhubdev.error.Errors;
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
 import io.minio.GetPresignedObjectUrlArgs;
@@ -75,7 +74,7 @@ class MinioStorageAdapter implements StoragePort {
             );
         } catch (Exception e) {
             log.error("Failed to download file from storage: {}", path, e);
-            throw Errors.notFound("File not found in storage: " + path);
+            throw DocumentErrors.fileNotFoundInStorage();
         }
     }
     

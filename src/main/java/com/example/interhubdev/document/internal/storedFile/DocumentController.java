@@ -6,6 +6,9 @@ import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.error.AppException;
 import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 
@@ -45,10 +50,10 @@ class DocumentController {
      * upload(@RequestPart(value = "meta", required = false) UploadMetaDto meta,
      *        @RequestPart("file") MultipartFile file, HttpServletRequest request)
      */
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload file", description = "Upload a file; returns stored file metadata. Requires authentication.")
     public ResponseEntity<StoredFileDto> upload(
-            @RequestPart("file") MultipartFile file,
+            @RequestPart("file") @Parameter(description = "File to upload", content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE, schema = @Schema(type = "string", format = "binary"))) MultipartFile file,
             HttpServletRequest request
     ) {
         UUID uploadedBy = authApi.getCurrentUser(request)
@@ -58,25 +63,34 @@ class DocumentController {
             throw Errors.badRequest("File is empty");
         }
         String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
-        StoredFileDto dto;
-        try (InputStream stream = file.getInputStream()) {
-            dto = documentApi.uploadFile(
-                    stream,
-                    file.getOriginalFilename() != null ? file.getOriginalFilename() : "file",
+        String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+        Path tempFile = null;
+        try {
+            tempFile = Files.createTempFile("upload-", null);
+            file.transferTo(tempFile.toFile());
+            StoredFileDto dto = documentApi.uploadFile(
+                    tempFile,
+                    originalFilename,
                     contentType,
                     file.getSize(),
                     uploadedBy
             );
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
         } catch (AppException e) {
-            // Re-throw AppException as-is (already properly formatted)
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error during file upload", e);
-            // Don't expose internal error details
             throw Errors.of(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
                 "Failed to upload file. Please try again.");
+        } finally {
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (Exception e) {
+                    log.warn("Failed to delete temp file: {}", tempFile, e);
+                }
+            }
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
     @GetMapping("/stored/{id}")

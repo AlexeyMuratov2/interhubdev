@@ -2,7 +2,6 @@ package com.example.interhubdev.document;
 
 import com.example.interhubdev.error.AppException;
 
-import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,34 +27,6 @@ public interface CourseMaterialApi {
      *                      BAD_REQUEST on validation failure
      */
     CourseMaterialDto createMaterial(UUID subjectId, UUID storedFileId, String title, String description, UUID authorId);
-
-    /**
-     * Upload a file and create a course material in one operation (convenience method).
-     * Atomic: on DB failure after S3 upload, the file is removed from S3.
-     * Requires permission: TEACHER or ADMIN role.
-     *
-     * @param subjectId      subject UUID
-     * @param fileStream     file content stream
-     * @param originalName   original file name
-     * @param contentType    MIME type
-     * @param size           file size in bytes
-     * @param title          material title
-     * @param description    optional description
-     * @param authorId       user uploading the material (must match current user or be ADMIN)
-     * @return created course material DTO
-     * @throws AppException BAD_REQUEST on validation failure, FORBIDDEN if permission denied,
-     *                      INTERNAL_ERROR if upload fails
-     */
-    CourseMaterialDto uploadMaterial(
-        UUID subjectId,
-        InputStream fileStream,
-        String originalName,
-        String contentType,
-        long size,
-        String title,
-        String description,
-        UUID authorId
-    );
 
     /**
      * List all course materials for a subject.

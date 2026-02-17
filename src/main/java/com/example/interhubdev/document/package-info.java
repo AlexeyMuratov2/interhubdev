@@ -8,6 +8,8 @@
  *   <li>{@link com.example.interhubdev.document.StoredFileDto} - stored file metadata DTO</li>
  *   <li>{@link com.example.interhubdev.document.CourseMaterialDto} - course material DTO (includes StoredFileDto)</li>
  *   <li>{@link com.example.interhubdev.document.StoragePort} - storage port (S3-compatible)</li>
+ *   <li>{@link com.example.interhubdev.document.UploadSecurityPort} - upload security (allowed types, malicious file checks)</li>
+ *   <li>{@link com.example.interhubdev.document.UploadContext} - context for upload security check</li>
  *   <li>{@link com.example.interhubdev.document.UploadResult} - upload result from storage port</li>
  * </ul>
  * 

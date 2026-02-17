@@ -3,26 +3,26 @@ package com.example.interhubdev.document.internal.courseMaterial;
 import com.example.interhubdev.document.CourseMaterialApi;
 import com.example.interhubdev.document.CourseMaterialDto;
 import com.example.interhubdev.document.DocumentApi;
-import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
 import com.example.interhubdev.document.internal.storedFile.StoredFile;
 import com.example.interhubdev.document.internal.storedFile.StoredFileRepository;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
+import jakarta.persistence.PersistenceException;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Implementation of {@link CourseMaterialApi}: create, upload, list, get, delete course materials.
+ * Implementation of {@link CourseMaterialApi}: create (attach stored file), list, get, delete course materials.
  */
 @Service
 @RequiredArgsConstructor
@@ -52,7 +52,7 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
             .filter(m -> m.getStoredFile().getId().equals(storedFileId))
             .findFirst()
             .ifPresent(m -> {
-                throw Errors.conflict("Course material with this file already exists for subject: " + subjectId);
+                throw CourseMaterialErrors.materialAlreadyExists(subjectId);
             });
 
         // Create course material
@@ -64,60 +64,13 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
             .authorId(authorId)
             .build();
 
-        CourseMaterial saved = courseMaterialRepository.save(material);
-        return CourseMaterialMappers.toDto(saved);
-    }
-
-    @Override
-    @Transactional
-    public CourseMaterialDto uploadMaterial(
-        UUID subjectId,
-        InputStream fileStream,
-        String originalName,
-        String contentType,
-        long size,
-        String title,
-        String description,
-        UUID authorId
-    ) {
-        // Validate title
-        validateTitle(title);
-
-        // Check permission: TEACHER or ADMIN
-        checkCreatePermission(authorId);
-
-        // Upload file using existing DocumentApi (handles S3 upload + DB save atomically)
-        StoredFileDto storedFileDto = documentApi.uploadFile(fileStream, originalName, contentType, size, authorId);
-
-        // Get stored file entity
-        StoredFile storedFile = storedFileRepository.findById(storedFileDto.id())
-            .orElseThrow(() -> DocumentErrors.storedFileNotFound(storedFileDto.id()));
-
-        // Check if material with same subject+file already exists
-        courseMaterialRepository.findBySubjectIdOrderByUploadedAtDesc(subjectId).stream()
-            .filter(m -> m.getStoredFile().getId().equals(storedFileDto.id()))
-            .findFirst()
-            .ifPresent(m -> {
-                // If duplicate, delete the uploaded file and throw error
-                try {
-                    documentApi.deleteStoredFile(storedFileDto.id(), authorId);
-                } catch (Exception e) {
-                    log.warn("Failed to delete duplicate stored file after upload: {}", storedFileDto.id(), e);
-                }
-                throw Errors.conflict("Course material with this file already exists for subject: " + subjectId);
-            });
-
-        // Create course material
-        CourseMaterial material = CourseMaterial.builder()
-            .subjectId(subjectId)
-            .storedFile(storedFile)
-            .title(title)
-            .description(description)
-            .authorId(authorId)
-            .build();
-
-        CourseMaterial saved = courseMaterialRepository.save(material);
-        return CourseMaterialMappers.toDto(saved);
+        try {
+            CourseMaterial saved = courseMaterialRepository.save(material);
+            return CourseMaterialMappers.toDto(saved);
+        } catch (PersistenceException | DataIntegrityViolationException e) {
+            log.warn("Failed to save course material (subjectId={}, storedFileId={}): {}", subjectId, storedFileId, e.getMessage());
+            throw CourseMaterialErrors.saveFailed();
+        }
     }
 
     @Override

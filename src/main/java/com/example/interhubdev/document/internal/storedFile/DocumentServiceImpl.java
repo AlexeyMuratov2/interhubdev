@@ -3,7 +3,9 @@ package com.example.interhubdev.document.internal.storedFile;
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.document.StoragePort;
+import com.example.interhubdev.document.UploadContext;
 import com.example.interhubdev.document.UploadResult;
+import com.example.interhubdev.document.UploadSecurityPort;
 import com.example.interhubdev.document.internal.courseMaterial.CourseMaterialRepository;
 import com.example.interhubdev.error.AppException;
 import com.example.interhubdev.user.Role;
@@ -19,6 +21,8 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.Optional;
@@ -32,6 +36,7 @@ import java.util.UUID;
 @Slf4j
 class DocumentServiceImpl implements DocumentApi {
 
+    private final UploadSecurityPort uploadSecurityPort;
     private final StoragePort storagePort;
     private final StoredFileRepository storedFileRepository;
     private final FileValidation fileValidation;
@@ -43,7 +48,8 @@ class DocumentServiceImpl implements DocumentApi {
 
     @Override
     @Transactional
-    public StoredFileDto uploadFile(InputStream fileStream, String originalFilename, String contentType, long size, UUID uploadedBy) {
+    public StoredFileDto uploadFile(Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy) {
+        uploadSecurityPort.ensureUploadAllowed(UploadContext.of(uploadedBy, contentType, size, originalFilename), tempFile);
         fileValidation.validateUpload(size, contentType, originalFilename);
         String sanitizedName = sanitizeFilename(originalFilename);
         UUID id = UUID.randomUUID();
@@ -51,8 +57,8 @@ class DocumentServiceImpl implements DocumentApi {
         String path = "files/" + now.getYear() + "/" + now.getMonthValue() + "/" + id + "_" + sanitizedName;
 
         UploadResult uploadResult;
-        try {
-            uploadResult = storagePort.upload(path, fileStream, contentType, size);
+        try (InputStream stream = Files.newInputStream(tempFile)) {
+            uploadResult = storagePort.upload(path, stream, contentType, size);
         } catch (Exception e) {
             if (e instanceof AppException appEx) {
                 throw appEx;
@@ -83,7 +89,10 @@ class DocumentServiceImpl implements DocumentApi {
             } catch (Exception deleteEx) {
                 log.error("Failed to delete file from storage during compensation: {}", path, deleteEx);
             }
-            throw e;
+            if (e instanceof AppException appEx) {
+                throw appEx;
+            }
+            throw DocumentErrors.saveFailed();
         }
     }
 
@@ -122,7 +131,11 @@ class DocumentServiceImpl implements DocumentApi {
         }
         StoredFile entity = opt.get();
         checkAccessPermission(entity, currentUserId);
-        return storagePort.generatePreviewUrl(entity.getStoragePath(), expiresSeconds);
+        Optional<String> url = storagePort.generatePreviewUrl(entity.getStoragePath(), expiresSeconds);
+        if (url.isEmpty()) {
+            throw DocumentErrors.fileNotFoundInStorage();
+        }
+        return url;
     }
 
     @Override
@@ -134,7 +147,11 @@ class DocumentServiceImpl implements DocumentApi {
         }
         StoredFile entity = opt.get();
         checkAccessPermission(entity, currentUserId);
-        return storagePort.generatePreviewUrl(entity.getStoragePath(), expiresSeconds);
+        Optional<String> url = storagePort.generatePreviewUrl(entity.getStoragePath(), expiresSeconds);
+        if (url.isEmpty()) {
+            throw DocumentErrors.fileNotFoundInStorage();
+        }
+        return url;
     }
 
     @Override

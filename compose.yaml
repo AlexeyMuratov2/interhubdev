@@ -34,6 +34,22 @@ services:
       timeout: 20s
       retries: 3
 
+  # ClamAV: antivirus daemon (clamd) on port 3310. Uses ~1.5 GiB RAM; prefer 4 GiB for production.
+  clamav:
+    image: clamav/clamav:latest
+    container_name: interhubdev-clamav
+    ports:
+      - "3310:3310"  # clamd
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
 volumes:
   postgres_data:
   minio_data:
+  clamav_data:

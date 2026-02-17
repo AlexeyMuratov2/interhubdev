@@ -31,6 +31,10 @@ public final class DocumentErrors {
     public static final String CODE_ACCESS_DENIED = "ACCESS_DENIED";
     /** Used when trying to delete a file that is in use (referenced by Document). */
     public static final String CODE_FILE_IN_USE = "FILE_IN_USE";
+    /** Used when file metadata exists but file is missing in storage (e.g. deleted externally). */
+    public static final String CODE_FILE_NOT_IN_STORAGE = "FILE_NOT_IN_STORAGE";
+    /** Used when DB save fails after successful storage upload (e.g. constraint violation). */
+    public static final String CODE_SAVE_FAILED = "SAVE_FAILED";
 
     public static AppException storedFileNotFound(UUID id) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_STORED_FILE_NOT_FOUND, "Stored file not found: " + id);
@@ -65,5 +69,15 @@ public final class DocumentErrors {
 
     public static AppException fileInUse() {
         return Errors.of(HttpStatus.CONFLICT, CODE_FILE_IN_USE, "Cannot delete file: file is currently in use");
+    }
+
+    public static AppException fileNotFoundInStorage() {
+        return Errors.of(HttpStatus.NOT_FOUND, CODE_FILE_NOT_IN_STORAGE,
+            "File not found in storage. It may have been removed.");
+    }
+
+    public static AppException saveFailed() {
+        return Errors.of(HttpStatus.INTERNAL_SERVER_ERROR, CODE_SAVE_FAILED,
+            "Failed to save file metadata. Please try again.");
     }
 }
