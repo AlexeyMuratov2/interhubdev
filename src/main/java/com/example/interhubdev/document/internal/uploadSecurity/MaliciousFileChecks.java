@@ -20,6 +20,8 @@ class MaliciousFileChecks {
     private static final Pattern PATH_TRAVERSAL = Pattern.compile(".*[\\.]{2}[/\\\\].*|[/\\\\].*");
     private static final Pattern CONTROL_CHARS = Pattern.compile(".*[\\x00-\\x1F\\x7F].*");
     private static final String NULL_BYTE = "\u0000";
+    /** Right-to-left override (U+202E) used to mask extensions (e.g. photo\u202Egpj.exe shows as photoexe.jpg). */
+    private static final char RTL_OVERRIDE = '\u202E';
     private static final Set<String> DANGEROUS_EXTENSIONS = Set.of(
         "exe", "bat", "cmd", "com", "msi", "scr", "vbs", "js", "jse", "ws", "wsf", "wsc", "wsh",
         "ps1", "ps1xml", "ps2", "ps2xml", "psc1", "psc2", "msh", "msh1", "msh2", "mshxml", "msh1xml", "msh2xml",
@@ -43,6 +45,12 @@ class MaliciousFileChecks {
         }
         if (originalFilename.contains(NULL_BYTE)) {
             throw UploadSecurityErrors.suspiciousFilename("File name contains invalid characters");
+        }
+        if (originalFilename.indexOf(RTL_OVERRIDE) >= 0) {
+            throw UploadSecurityErrors.suspiciousFilename("File name contains invalid characters");
+        }
+        if (originalFilename.contains("..")) {
+            throw UploadSecurityErrors.suspiciousFilename("File name must not contain consecutive dots");
         }
         if (CONTROL_CHARS.matcher(originalFilename).matches()) {
             throw UploadSecurityErrors.suspiciousFilename("File name contains invalid characters");

@@ -29,6 +29,12 @@ public final class UploadSecurityErrors {
     public static final String CODE_AV_UNAVAILABLE = "UPLOAD_AV_UNAVAILABLE";
     /** User not authorized to upload in this context. */
     public static final String CODE_FORBIDDEN_UPLOAD = "UPLOAD_FORBIDDEN_UPLOAD";
+    /** File is empty (zero or negative size). */
+    public static final String CODE_EMPTY_FILE = "UPLOAD_EMPTY_FILE";
+
+    public static AppException emptyFile(String message) {
+        return Errors.of(HttpStatus.BAD_REQUEST, CODE_EMPTY_FILE, message);
+    }
 
     public static AppException forbiddenFileType(String message) {
         return Errors.of(HttpStatus.BAD_REQUEST, CODE_FORBIDDEN_FILE_TYPE, message);

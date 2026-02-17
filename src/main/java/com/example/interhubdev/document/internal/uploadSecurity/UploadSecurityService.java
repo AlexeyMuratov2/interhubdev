@@ -32,7 +32,7 @@ class UploadSecurityService implements UploadSecurityPort {
     public void ensureUploadAllowed(UploadContext context, Path contentPath) {
         // 1. File size
         if (context.size() <= 0) {
-            throw UploadSecurityErrors.forbiddenFileType("File size must be positive");
+            throw UploadSecurityErrors.emptyFile("File size must be positive");
         }
         if (context.size() > maxFileSizeBytes) {
             logSecurityEvent(context, "FILE_TOO_LARGE", null);
@@ -58,7 +58,13 @@ class UploadSecurityService implements UploadSecurityPort {
 
         // 5. Antivirus scan — when content available
         if (contentPath != null) {
-            AntivirusPort.ScanResult result = antivirusPort.scan(contentPath, context.originalFilename(), context.contentType());
+            AntivirusPort.ScanResult result;
+            try {
+                result = antivirusPort.scan(contentPath, context.originalFilename(), context.contentType());
+            } catch (Exception e) {
+                logSecurityEvent(context, "AV_UNAVAILABLE", null);
+                throw UploadSecurityErrors.avUnavailable("Antivirus service is temporarily unavailable. Please try again later.");
+            }
             switch (result.status()) {
                 case INFECTED -> {
                     logSecurityEvent(context, "MALWARE_DETECTED", result.signatureName());

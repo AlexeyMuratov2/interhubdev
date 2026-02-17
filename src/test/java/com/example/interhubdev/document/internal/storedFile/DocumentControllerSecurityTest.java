@@ -2,6 +2,7 @@ package com.example.interhubdev.document.internal.storedFile;
 
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.document.DocumentApi;
+import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.document.internal.uploadSecurity.UploadSecurityErrors;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserDto;
@@ -9,10 +10,12 @@ import com.example.interhubdev.user.UserStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,7 +26,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -60,6 +65,71 @@ class DocumentControllerSecurityTest {
     @Nested
     @DisplayName("POST /api/documents/upload")
     class Upload {
+
+        @Test
+        @DisplayName("happy path: returns 201 and DTO with id/originalName/contentType/size; uploadFile called with correct multipart args")
+        void uploadHappyPath() throws Exception {
+            byte[] pdfContent = "%PDF-1.4 content".getBytes();
+            UUID fileId = UUID.randomUUID();
+            StoredFileDto dto = new StoredFileDto(
+                    fileId,
+                    pdfContent.length,
+                    "application/pdf",
+                    "a.pdf",
+                    LocalDateTime.now(),
+                    USER_ID
+            );
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+            when(documentApi.uploadFile(any(), any(), any(), anyLong(), any())).thenReturn(dto);
+
+            MockMultipartFile file = new MockMultipartFile("file", "a.pdf", "application/pdf", pdfContent);
+
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload").file(file))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.id").value(fileId.toString()))
+                    .andExpect(jsonPath("$.originalName").value("a.pdf"))
+                    .andExpect(jsonPath("$.contentType").value("application/pdf"))
+                    .andExpect(jsonPath("$.size").value(pdfContent.length));
+
+            ArgumentCaptor<String> filenameCaptor = ArgumentCaptor.forClass(String.class);
+            ArgumentCaptor<String> contentTypeCaptor = ArgumentCaptor.forClass(String.class);
+            ArgumentCaptor<Long> sizeCaptor = ArgumentCaptor.forClass(Long.class);
+            verify(documentApi).uploadFile(any(), filenameCaptor.capture(), contentTypeCaptor.capture(), sizeCaptor.capture(), eq(USER_ID));
+            assertThat(filenameCaptor.getValue()).isEqualTo("a.pdf");
+            assertThat(contentTypeCaptor.getValue()).isEqualTo("application/pdf");
+            assertThat(sizeCaptor.getValue()).isEqualTo((long) pdfContent.length);
+        }
+
+        @Test
+        @DisplayName("when contentType missing in multipart, controller passes application/octet-stream to API")
+        void contentTypeMissingUsesOctetStream() throws Exception {
+            byte[] content = "data".getBytes();
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+            when(documentApi.uploadFile(any(), any(), any(), anyLong(), any()))
+                    .thenThrow(UploadSecurityErrors.forbiddenFileType("Content type not allowed"));
+
+            MockMultipartFile file = new MockMultipartFile("file", "a.pdf", null, content);
+
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload").file(file))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(UploadSecurityErrors.CODE_FORBIDDEN_FILE_TYPE));
+
+            ArgumentCaptor<String> contentTypeCaptor = ArgumentCaptor.forClass(String.class);
+            verify(documentApi).uploadFile(any(), eq("a.pdf"), contentTypeCaptor.capture(), eq((long) content.length), eq(USER_ID));
+            assertThat(contentTypeCaptor.getValue()).isEqualTo("application/octet-stream");
+        }
+
+        @Test
+        @DisplayName("returns 400 when file content is empty (zero bytes)")
+        void emptyFileContent() throws Exception {
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+
+            MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
+
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload").file(file))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("File is empty"));
+        }
 
         @Test
         @DisplayName("returns 413 and UPLOAD_FILE_TOO_LARGE when file exceeds max size")

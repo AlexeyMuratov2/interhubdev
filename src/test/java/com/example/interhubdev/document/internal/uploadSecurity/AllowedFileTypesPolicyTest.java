@@ -177,6 +177,20 @@ class AllowedFileTypesPolicyTest {
         }
 
         @Test
+        @DisplayName("accepts application/pdf with parameters (e.g. charset=binary)")
+        void contentTypeWithParamsNonText() {
+            assertThatCode(() -> policy.checkAllowed("application/pdf; charset=binary", "a.pdf"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("accepts image/jpeg with extra parameters")
+        void contentTypeWithParamsImage() {
+            assertThatCode(() -> policy.checkAllowed("image/jpeg; something=value", "photo.jpg"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
         @DisplayName("accepts filename without extension (no extension check)")
         void noExtension() {
             assertThatCode(() -> policy.checkAllowed("application/pdf", "document"))

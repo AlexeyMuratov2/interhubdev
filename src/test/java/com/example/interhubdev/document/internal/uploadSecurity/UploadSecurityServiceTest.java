@@ -56,7 +56,7 @@ class UploadSecurityServiceTest {
     class FileSize {
 
         @Test
-        @DisplayName("rejects zero size")
+        @DisplayName("rejects zero size with UPLOAD_EMPTY_FILE")
         void zeroSize() {
             UploadContext ctx = UploadContext.of(USER_ID, "application/pdf", 0, "doc.pdf");
 
@@ -64,21 +64,21 @@ class UploadSecurityServiceTest {
                     .isInstanceOf(AppException.class)
                     .satisfies(ex -> {
                         AppException e = (AppException) ex;
-                        assertThat(e.getCode()).isEqualTo(UploadSecurityErrors.CODE_FORBIDDEN_FILE_TYPE);
+                        assertThat(e.getCode()).isEqualTo(UploadSecurityErrors.CODE_EMPTY_FILE);
                         assertThat(e.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
                     });
             verify(maliciousFileChecks, never()).checkFilename(any());
         }
 
         @Test
-        @DisplayName("rejects negative size")
+        @DisplayName("rejects negative size with UPLOAD_EMPTY_FILE")
         void negativeSize() {
             UploadContext ctx = UploadContext.of(USER_ID, "application/pdf", -1, "doc.pdf");
 
             assertThatThrownBy(() -> uploadSecurityService.ensureUploadAllowed(ctx, null))
                     .isInstanceOf(AppException.class)
                     .satisfies(ex -> assertThat(((AppException) ex).getCode())
-                            .isEqualTo(UploadSecurityErrors.CODE_FORBIDDEN_FILE_TYPE));
+                            .isEqualTo(UploadSecurityErrors.CODE_EMPTY_FILE));
         }
 
         @Test
@@ -308,6 +308,117 @@ class UploadSecurityServiceTest {
 
             verify(contentSniffer, never()).detectMimeFromContent(any());
             verify(antivirusPort, never()).scan(any(), any(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Call order and short-circuit")
+    class CallOrderAndShortCircuit {
+
+        @Test
+        @DisplayName("when content path provided, calls maliciousFileChecks then allowedFileTypes then sniffer then antivirus")
+        void orderOfCallsWhenContentPresent() throws Exception {
+            Path tempFile = java.nio.file.Files.createTempFile("upload-", ".pdf");
+            try {
+                java.nio.file.Files.write(tempFile, "%PDF-1.4".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1));
+                UploadContext ctx = UploadContext.of(USER_ID, "application/pdf", 8, "doc.pdf");
+                doNothing().when(maliciousFileChecks).checkFilename(any());
+                doNothing().when(allowedFileTypesPolicy).checkAllowed(any(), any());
+                when(contentSniffer.detectMimeFromContent(tempFile)).thenReturn(Optional.of("application/pdf"));
+                when(antivirusPort.scan(any(), any(), any())).thenReturn(AntivirusPort.ScanResult.clean());
+
+                uploadSecurityService.ensureUploadAllowed(ctx, tempFile);
+
+                var inOrder = org.mockito.Mockito.inOrder(maliciousFileChecks, allowedFileTypesPolicy, contentSniffer, antivirusPort);
+                inOrder.verify(maliciousFileChecks).checkFilename("doc.pdf");
+                inOrder.verify(allowedFileTypesPolicy).checkAllowed("application/pdf", "doc.pdf");
+                inOrder.verify(contentSniffer).detectMimeFromContent(tempFile);
+                inOrder.verify(antivirusPort).scan(eq(tempFile), eq("doc.pdf"), eq("application/pdf"));
+            } finally {
+                java.nio.file.Files.deleteIfExists(tempFile);
+            }
+        }
+
+        @Test
+        @DisplayName("when filename is suspicious, allowed types / sniffer / antivirus are not called")
+        void suspiciousFilenameShortCircuit() {
+            UploadContext ctx = UploadContext.of(USER_ID, "application/pdf", 100, "../../etc/passwd");
+            doThrow(UploadSecurityErrors.suspiciousFilename("path traversal"))
+                    .when(maliciousFileChecks).checkFilename("../../etc/passwd");
+
+            assertThatThrownBy(() -> uploadSecurityService.ensureUploadAllowed(ctx, null))
+                    .isInstanceOf(AppException.class);
+
+            verify(allowedFileTypesPolicy, never()).checkAllowed(any(), any());
+            verify(contentSniffer, never()).detectMimeFromContent(any());
+            verify(antivirusPort, never()).scan(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("when MIME forbidden, sniffer and antivirus are not called")
+        void forbiddenMimeShortCircuit() {
+            UploadContext ctx = UploadContext.of(USER_ID, "application/x-executable", 100, "virus.exe");
+            doNothing().when(maliciousFileChecks).checkFilename(any());
+            doThrow(UploadSecurityErrors.forbiddenFileType("not allowed"))
+                    .when(allowedFileTypesPolicy).checkAllowed(eq("application/x-executable"), eq("virus.exe"));
+
+            assertThatThrownBy(() -> uploadSecurityService.ensureUploadAllowed(ctx, null))
+                    .isInstanceOf(AppException.class);
+
+            verify(contentSniffer, never()).detectMimeFromContent(any());
+            verify(antivirusPort, never()).scan(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("when sniffing mismatch, antivirus is not called")
+        void sniffingMismatchShortCircuit() throws Exception {
+            Path tempFile = java.nio.file.Files.createTempFile("upload-", ".bin");
+            try {
+                java.nio.file.Files.write(tempFile, new byte[]{0x50, 0x4B, 0x03, 0x04});
+                UploadContext ctx = UploadContext.of(USER_ID, "application/pdf", 4, "doc.pdf");
+                doNothing().when(maliciousFileChecks).checkFilename(any());
+                doNothing().when(allowedFileTypesPolicy).checkAllowed(any(), any());
+                when(contentSniffer.detectMimeFromContent(tempFile)).thenReturn(Optional.of("application/zip"));
+
+                assertThatThrownBy(() -> uploadSecurityService.ensureUploadAllowed(ctx, tempFile))
+                        .isInstanceOf(AppException.class)
+                        .satisfies(ex -> assertThat(((AppException) ex).getCode())
+                                .isEqualTo(UploadSecurityErrors.CODE_CONTENT_TYPE_MISMATCH));
+
+                verify(antivirusPort, never()).scan(any(), any(), any());
+            } finally {
+                java.nio.file.Files.deleteIfExists(tempFile);
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("Antivirus exception")
+    class AntivirusException {
+
+        @Test
+        @DisplayName("when antivirus throws (e.g. connect refused), maps to AV_UNAVAILABLE")
+        void antivirusThrowsMapsToUnavailable() throws Exception {
+            Path tempFile = java.nio.file.Files.createTempFile("upload-", ".pdf");
+            try {
+                java.nio.file.Files.write(tempFile, "%PDF-1.4".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1));
+                UploadContext ctx = UploadContext.of(USER_ID, "application/pdf", 8, "doc.pdf");
+                doNothing().when(maliciousFileChecks).checkFilename(any());
+                doNothing().when(allowedFileTypesPolicy).checkAllowed(any(), any());
+                when(contentSniffer.detectMimeFromContent(tempFile)).thenReturn(Optional.of("application/pdf"));
+                when(antivirusPort.scan(any(), any(), any()))
+                        .thenThrow(new RuntimeException("Connection refused"));
+
+                assertThatThrownBy(() -> uploadSecurityService.ensureUploadAllowed(ctx, tempFile))
+                        .isInstanceOf(AppException.class)
+                        .satisfies(ex -> {
+                            AppException e = (AppException) ex;
+                            assertThat(e.getCode()).isEqualTo(UploadSecurityErrors.CODE_AV_UNAVAILABLE);
+                            assertThat(e.getStatus()).isEqualTo(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE);
+                        });
+            } finally {
+                java.nio.file.Files.deleteIfExists(tempFile);
+            }
         }
     }
 }

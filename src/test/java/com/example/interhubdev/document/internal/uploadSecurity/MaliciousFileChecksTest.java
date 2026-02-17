@@ -90,9 +90,42 @@ class MaliciousFileChecksTest {
         }
 
         @Test
+        @DisplayName("rejects null byte before extension (doc.pdf\\u0000.png)")
+        void nullByteBeforeExtension() {
+            assertThatThrownBy(() -> maliciousFileChecks.checkFilename("doc.pdf\u0000.png"))
+                    .isInstanceOf(AppException.class)
+                    .satisfies(ex -> assertThat(((AppException) ex).getCode())
+                            .isEqualTo(UploadSecurityErrors.CODE_SUSPICIOUS_FILENAME));
+        }
+
+        @Test
         @DisplayName("rejects control characters in filename")
         void controlChars() {
             assertThatThrownBy(() -> maliciousFileChecks.checkFilename("doc\u0001.pdf"))
+                    .isInstanceOf(AppException.class)
+                    .satisfies(ex -> assertThat(((AppException) ex).getCode())
+                            .isEqualTo(UploadSecurityErrors.CODE_SUSPICIOUS_FILENAME));
+        }
+
+        @Test
+        @DisplayName("rejects right-to-left override (RLO U+202E) used to mask extension")
+        void rightToLeftOverride() {
+            // Visually "photoexe.jpg" but actually photo + RLO + gpj.exe
+            assertThatThrownBy(() -> maliciousFileChecks.checkFilename("photo\u202Egpj.exe"))
+                    .isInstanceOf(AppException.class)
+                    .satisfies(ex -> assertThat(((AppException) ex).getCode())
+                            .isEqualTo(UploadSecurityErrors.CODE_SUSPICIOUS_FILENAME));
+        }
+    }
+
+    @Nested
+    @DisplayName("Consecutive dots")
+    class ConsecutiveDots {
+
+        @Test
+        @DisplayName("rejects two dots in a row (doc..pdf)")
+        void consecutiveDots() {
+            assertThatThrownBy(() -> maliciousFileChecks.checkFilename("doc..pdf"))
                     .isInstanceOf(AppException.class)
                     .satisfies(ex -> assertThat(((AppException) ex).getCode())
                             .isEqualTo(UploadSecurityErrors.CODE_SUSPICIOUS_FILENAME));
