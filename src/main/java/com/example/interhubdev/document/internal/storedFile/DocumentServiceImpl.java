@@ -7,6 +7,7 @@ import com.example.interhubdev.document.UploadContext;
 import com.example.interhubdev.document.UploadResult;
 import com.example.interhubdev.document.UploadSecurityPort;
 import com.example.interhubdev.document.internal.courseMaterial.CourseMaterialRepository;
+import com.example.interhubdev.document.internal.homework.HomeworkRepository;
 import com.example.interhubdev.error.AppException;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
@@ -42,6 +43,7 @@ class DocumentServiceImpl implements DocumentApi {
     private final FileValidation fileValidation;
     private final UserApi userApi;
     private final CourseMaterialRepository courseMaterialRepository;
+    private final HomeworkRepository homeworkRepository;
 
     @Value("${app.storage.preview-url-expires-seconds:3600}")
     private int previewUrlExpiresSeconds;
@@ -204,14 +206,16 @@ class DocumentServiceImpl implements DocumentApi {
     }
 
     /**
-     * Check if file is currently in use (referenced by CourseMaterial or other business entities).
-     * Prevents deletion of files that are still referenced by course materials.
+     * Check if file is currently in use (referenced by CourseMaterial, Homework, or other business entities).
+     * Prevents deletion of files that are still referenced.
      */
     private void checkFileNotInUse(UUID storedFileId) {
         if (courseMaterialRepository.existsByStoredFileId(storedFileId)) {
             throw DocumentErrors.fileInUse();
         }
-        // Future: check if any other Document entity references this storedFileId
+        if (homeworkRepository.existsByStoredFileId(storedFileId)) {
+            throw DocumentErrors.fileInUse();
+        }
     }
 
     /**

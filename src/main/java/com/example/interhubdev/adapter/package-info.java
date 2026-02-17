@@ -31,6 +31,9 @@
  *   <li>{@link com.example.interhubdev.adapter.LessonEnrichmentAdapter} - implements Schedule's
  *       {@link com.example.interhubdev.schedule.LessonEnrichmentPort} using Offering's
  *       {@link com.example.interhubdev.offering.LessonEnrichmentDataPort}.</li>
+ *   <li>{@link com.example.interhubdev.adapter.LessonLookupAdapter} - implements Document's
+ *       {@link com.example.interhubdev.document.LessonLookupPort} using Schedule's
+ *       {@link com.example.interhubdev.schedule.ScheduleApi} (for homework lesson validation).</li>
  * </ul>
  *
  * <h2>Dependencies</h2>

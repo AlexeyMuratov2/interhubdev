@@ -5,8 +5,11 @@
  * <ul>
  *   <li>{@link com.example.interhubdev.document.DocumentApi} - file operations (stored files layer)</li>
  *   <li>{@link com.example.interhubdev.document.CourseMaterialApi} - course materials operations (business layer)</li>
+ *   <li>{@link com.example.interhubdev.document.HomeworkApi} - homework assignments linked to lessons</li>
  *   <li>{@link com.example.interhubdev.document.StoredFileDto} - stored file metadata DTO</li>
  *   <li>{@link com.example.interhubdev.document.CourseMaterialDto} - course material DTO (includes StoredFileDto)</li>
+ *   <li>{@link com.example.interhubdev.document.HomeworkDto} - homework DTO</li>
+ *   <li>{@link com.example.interhubdev.document.LessonLookupPort} - port to check lesson existence (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.document.StoragePort} - storage port (S3-compatible)</li>
  *   <li>{@link com.example.interhubdev.document.UploadSecurityPort} - upload security (allowed types, malicious file checks)</li>
  *   <li>{@link com.example.interhubdev.document.UploadContext} - context for upload security check</li>
@@ -38,6 +41,9 @@
  * - Delete: Requires material author or ADMIN/MODERATOR/SUPER_ADMIN role.
  * <p>
  * File deletion safety: Cannot delete a stored file if it is referenced by any course material.
+ * <p>
+ * Homework: assignments linked to lessons (optional file). Clearing file reference does not delete the file.
+ * Lesson existence is validated via {@link com.example.interhubdev.document.LessonLookupPort} (adapter → schedule).
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Document",
