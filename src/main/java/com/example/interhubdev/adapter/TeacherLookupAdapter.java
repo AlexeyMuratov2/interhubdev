@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,6 +30,11 @@ public class TeacherLookupAdapter implements TeacherLookupPort {
         List<TeacherDto> teachers = teacherApi.findByIds(teacherIds);
         return teachers.stream()
                 .collect(Collectors.toMap(TeacherDto::id, dto -> new TeacherSummaryDto(dto.id(), displayName(dto))));
+    }
+
+    @Override
+    public Optional<UUID> getTeacherIdByUserId(UUID userId) {
+        return teacherApi.findByUserId(userId).map(TeacherDto::id);
     }
 
     private static String displayName(TeacherDto dto) {

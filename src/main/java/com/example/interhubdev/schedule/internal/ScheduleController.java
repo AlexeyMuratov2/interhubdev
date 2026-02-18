@@ -1,13 +1,16 @@
 package com.example.interhubdev.schedule.internal;
 
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.schedule.BuildingDto;
 import com.example.interhubdev.schedule.LessonDto;
+import com.example.interhubdev.schedule.internal.ScheduleErrors;
 import com.example.interhubdev.schedule.LessonForScheduleDto;
 import com.example.interhubdev.schedule.RoomCreateRequest;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.schedule.TimeslotCreateRequest;
 import com.example.interhubdev.schedule.TimeslotDto;
+import com.example.interhubdev.schedule.TeacherLookupPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,6 +22,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -33,6 +38,7 @@ import java.util.UUID;
 class ScheduleController {
 
     private final ScheduleApi scheduleApi;
+    private final TeacherLookupPort teacherLookupPort;
 
     @GetMapping("/buildings")
     @Operation(summary = "Get all buildings")
@@ -198,6 +204,30 @@ class ScheduleController {
             @PathVariable UUID groupId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(scheduleApi.findLessonsByWeekAndGroupId(date, groupId));
+    }
+
+    @GetMapping("/lessons/week/teacher")
+    @Operation(summary = "Get lessons for the week for current authenticated teacher with full context", description = "Returns lessons in the ISO week that contains the given date, filtered by current authenticated teacher (offerings where teacher is assigned). Same response structure as GET /lessons/week/group/{groupId} but includes group information. Empty list if teacher has no offerings or no lessons in the week. Batch-loaded, no N+1. Requires authentication.")
+    public ResponseEntity<List<LessonForScheduleDto>> findLessonsByWeekAndTeacher(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            jakarta.servlet.http.HttpServletRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw Errors.unauthorized("Authentication required");
+        }
+        // Extract userId from TokenClaims stored in SecurityContext
+        Object principal = authentication.getPrincipal();
+        UUID userId;
+        try {
+            // TokenClaims is a record with userId field
+            java.lang.reflect.Method getUserIdMethod = principal.getClass().getMethod("userId");
+            userId = (UUID) getUserIdMethod.invoke(principal);
+        } catch (Exception e) {
+            throw Errors.unauthorized("Invalid authentication token");
+        }
+        UUID teacherId = teacherLookupPort.getTeacherIdByUserId(userId)
+                .orElseThrow(() -> ScheduleErrors.teacherProfileNotFound());
+        return ResponseEntity.ok(scheduleApi.findLessonsByWeekAndTeacherId(date, teacherId));
     }
 
     @GetMapping("/lessons/offering/{offeringId}")

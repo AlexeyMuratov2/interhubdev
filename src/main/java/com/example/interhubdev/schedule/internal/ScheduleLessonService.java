@@ -8,6 +8,7 @@ import com.example.interhubdev.schedule.LessonEnrichmentPort;
 import com.example.interhubdev.schedule.LessonEnrichmentRequest;
 import com.example.interhubdev.schedule.LessonForScheduleDto;
 import com.example.interhubdev.schedule.GroupLookupPort;
+import com.example.interhubdev.schedule.GroupSummaryDto;
 import com.example.interhubdev.schedule.OfferingLookupPort;
 import com.example.interhubdev.schedule.RoomSummaryDto;
 import com.example.interhubdev.schedule.TeacherLookupPort;
@@ -134,6 +135,25 @@ class ScheduleLessonService {
                 .toList();
     }
 
+    /**
+     * Lessons in the week containing the given date for the given teacher, with full enrichment.
+     * Returns empty list if teacher has no offerings or no lessons in the week.
+     * Single query for lessons in [weekStart, weekEnd] and offeringId in teacher's offerings, then batch enrichment — no N+1.
+     */
+    List<LessonForScheduleDto> findByWeekAndTeacherIdEnriched(LocalDate date, UUID teacherId) {
+        List<UUID> offeringIds = offeringLookupPort.findOfferingIdsByTeacherId(teacherId);
+        if (offeringIds.isEmpty()) {
+            return List.of();
+        }
+        LocalDate weekStart = date.with(DayOfWeek.MONDAY);
+        LocalDate weekEnd = weekStart.plusDays(6);
+        List<LessonDto> lessons = lessonRepository
+                .findByDateBetweenAndOfferingIdInOrderByDateAscStartTimeAsc(weekStart, weekEnd, offeringIds).stream()
+                .map(ScheduleMappers::toLessonDto)
+                .toList();
+        return enrichLessons(lessons);
+    }
+
     private List<LessonForScheduleDto> enrichLessons(List<LessonDto> lessons) {
         if (lessons.isEmpty()) {
             return List.of();
@@ -147,6 +167,7 @@ class ScheduleLessonService {
         }
         Set<UUID> roomIds = new java.util.HashSet<>();
         List<UUID> teacherIds = new ArrayList<>();
+        Set<UUID> groupIds = new java.util.HashSet<>();
         for (int i = 0; i < lessons.size(); i++) {
             LessonDto l = lessons.get(i);
             LessonEnrichmentData e = enrichment.get(i);
@@ -155,10 +176,14 @@ class ScheduleLessonService {
             if (e.slot() != null && e.slot().teacherId() != null) teacherIds.add(e.slot().teacherId());
             if (e.offering() != null && e.offering().teacherId() != null) teacherIds.add(e.offering().teacherId());
             e.teachers().stream().map(t -> t.teacherId()).filter(id -> id != null).forEach(teacherIds::add);
+            if (e.offering() != null && e.offering().groupId() != null) {
+                groupIds.add(e.offering().groupId());
+            }
         }
         Map<UUID, RoomSummaryDto> roomMap = scheduleRoomService.findByIdIn(roomIds).stream()
                 .collect(Collectors.toMap(RoomSummaryDto::id, r -> r));
         Map<UUID, TeacherSummaryDto> teacherMap = teacherLookupPort.getTeacherSummaries(teacherIds.stream().distinct().toList());
+        Map<UUID, GroupSummaryDto> groupMap = groupLookupPort.getGroupSummaries(groupIds.stream().distinct().toList());
 
         List<LessonForScheduleDto> result = new ArrayList<>(lessons.size());
         for (int i = 0; i < lessons.size(); i++) {
@@ -169,6 +194,8 @@ class ScheduleLessonService {
             UUID mainTeacherId = e.slot() != null && e.slot().teacherId() != null ? e.slot().teacherId()
                     : (e.offering() != null && e.offering().teacherId() != null ? e.offering().teacherId() : null);
             TeacherSummaryDto mainTeacher = mainTeacherId != null ? teacherMap.get(mainTeacherId) : null;
+            GroupSummaryDto group = e.offering() != null && e.offering().groupId() != null
+                    ? groupMap.get(e.offering().groupId()) : null;
             result.add(new LessonForScheduleDto(
                     l,
                     e.offering(),
@@ -176,7 +203,8 @@ class ScheduleLessonService {
                     e.teachers(),
                     room,
                     mainTeacher,
-                    e.subjectName()
+                    e.subjectName(),
+                    group
             ));
         }
         return result;

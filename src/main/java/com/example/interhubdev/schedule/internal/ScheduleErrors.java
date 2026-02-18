@@ -21,6 +21,8 @@ public final class ScheduleErrors {
     public static final String CODE_GROUP_NOT_FOUND = "SCHEDULE_GROUP_NOT_FOUND";
     public static final String CODE_BUILDING_HAS_ROOMS = "SCHEDULE_BUILDING_HAS_ROOMS";
     public static final String CODE_LESSON_ALREADY_EXISTS = "SCHEDULE_LESSON_ALREADY_EXISTS";
+    /** User does not have a teacher profile (e.g. GET /lessons/week/teacher by non-teacher user). */
+    public static final String CODE_TEACHER_PROFILE_NOT_FOUND = "SCHEDULE_TEACHER_PROFILE_NOT_FOUND";
 
     private ScheduleErrors() {
     }
@@ -55,5 +57,9 @@ public final class ScheduleErrors {
 
     public static AppException lessonAlreadyExists() {
         return Errors.of(HttpStatus.CONFLICT, CODE_LESSON_ALREADY_EXISTS, "Lesson already exists for this offering, date and time");
+    }
+
+    public static AppException teacherProfileNotFound() {
+        return Errors.of(HttpStatus.FORBIDDEN, CODE_TEACHER_PROFILE_NOT_FOUND, "User does not have a teacher profile");
     }
 }

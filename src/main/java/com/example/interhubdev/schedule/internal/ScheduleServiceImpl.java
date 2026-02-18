@@ -173,6 +173,11 @@ class ScheduleServiceImpl implements ScheduleApi {
     }
 
     @Override
+    public List<LessonForScheduleDto> findLessonsByWeekAndTeacherId(LocalDate date, UUID teacherId) {
+        return lessonService.findByWeekAndTeacherIdEnriched(date, teacherId);
+    }
+
+    @Override
     @Transactional
     public LessonDto createLesson(UUID offeringId, String date, String startTime, String endTime,
                                   UUID timeslotId, UUID roomId, String topic, String status) {

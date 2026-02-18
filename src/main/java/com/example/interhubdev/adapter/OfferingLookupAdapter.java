@@ -27,4 +27,9 @@ public class OfferingLookupAdapter implements OfferingLookupPort {
     public List<UUID> findOfferingIdsByGroupId(UUID groupId) {
         return offeringLookupDataPort.findOfferingIdsByGroupId(groupId);
     }
+
+    @Override
+    public List<UUID> findOfferingIdsByTeacherId(UUID teacherId) {
+        return offeringLookupDataPort.findOfferingIdsByTeacherId(teacherId);
+    }
 }

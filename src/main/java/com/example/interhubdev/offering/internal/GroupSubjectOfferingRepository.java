@@ -13,4 +13,6 @@ interface GroupSubjectOfferingRepository extends JpaRepository<GroupSubjectOffer
     Optional<GroupSubjectOffering> findByGroupIdAndCurriculumSubjectId(UUID groupId, UUID curriculumSubjectId);
 
     boolean existsByGroupIdAndCurriculumSubjectId(UUID groupId, UUID curriculumSubjectId);
+
+    List<GroupSubjectOffering> findByTeacherId(UUID teacherId);
 }

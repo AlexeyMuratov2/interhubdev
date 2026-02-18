@@ -222,6 +222,16 @@ public interface ScheduleApi {
     List<LessonForScheduleDto> findLessonsByDateAndGroupId(LocalDate date, UUID groupId);
 
     /**
+     * List lessons for the week containing the given date for the current authenticated teacher, with full context (offering, slot, teachers, group).
+     * Same structure as findLessonsByWeek; ordered by date then startTime. Returns empty list if teacher has no offerings or no lessons in the week.
+     *
+     * @param date any date in the week (used to compute week bounds)
+     * @param teacherId teacher entity ID
+     * @return list of lesson with offering summary, slot summary, teachers and group for the teacher's week
+     */
+    List<LessonForScheduleDto> findLessonsByWeekAndTeacherId(LocalDate date, UUID teacherId);
+
+    /**
      * Create a lesson. Date and times are passed as strings and parsed (date: yyyy-MM-dd, time: HH:mm or HH:mm:ss).
      *
      * @param offeringId offering ID (required)

@@ -8,7 +8,8 @@
  *       {@link com.example.interhubdev.schedule.TimeslotDto}, {@link com.example.interhubdev.schedule.LessonDto} - DTOs</li>
  *   <li>{@link com.example.interhubdev.schedule.LessonForScheduleDto}, {@link com.example.interhubdev.schedule.OfferingSummaryDto},
  *       {@link com.example.interhubdev.schedule.SlotSummaryDto}, {@link com.example.interhubdev.schedule.TeacherRoleDto},
- *       {@link com.example.interhubdev.schedule.RoomSummaryDto}, {@link com.example.interhubdev.schedule.TeacherSummaryDto} - schedule display DTOs</li>
+ *       {@link com.example.interhubdev.schedule.RoomSummaryDto}, {@link com.example.interhubdev.schedule.TeacherSummaryDto},
+ *       {@link com.example.interhubdev.schedule.GroupSummaryDto} - schedule display DTOs</li>
  *   <li>{@link com.example.interhubdev.schedule.RoomCreateRequest} - request for single or bulk room creation</li>
  *   <li>{@link com.example.interhubdev.schedule.TimeslotCreateRequest} - request for single or bulk timeslot creation</li>
  *   <li>{@link com.example.interhubdev.schedule.LessonBulkCreateRequest} - request item for bulk lesson creation</li>
@@ -42,6 +43,7 @@
  * <ul>
  *   <li>SCHEDULE_BUILDING_NOT_FOUND, SCHEDULE_ROOM_NOT_FOUND, SCHEDULE_TIMESLOT_NOT_FOUND, SCHEDULE_LESSON_NOT_FOUND, SCHEDULE_OFFERING_NOT_FOUND, SCHEDULE_GROUP_NOT_FOUND (404)</li>
  *   <li>SCHEDULE_BUILDING_HAS_ROOMS, SCHEDULE_LESSON_ALREADY_EXISTS (409)</li>
+ *   <li>SCHEDULE_TEACHER_PROFILE_NOT_FOUND (403) - user does not have a teacher profile</li>
  *   <li>BAD_REQUEST (400) - building name/room number required; capacity &lt; 0; dayOfWeek not 1..7; invalid date/time format; status not PLANNED/CANCELLED/DONE; endTime not after startTime</li>
  *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create/update)</li>
  *   <li>FORBIDDEN (403) - user has no MODERATOR/ADMIN/SUPER_ADMIN role for write operations</li>

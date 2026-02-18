@@ -14,4 +14,6 @@ interface OfferingSlotRepository extends JpaRepository<OfferingSlot, UUID> {
             UUID offeringId, int dayOfWeek, LocalTime startTime, LocalTime endTime, String lessonType);
 
     void deleteByOfferingId(UUID offeringId);
+
+    List<OfferingSlot> findByTeacherId(UUID teacherId);
 }

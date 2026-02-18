@@ -2,6 +2,7 @@ package com.example.interhubdev.schedule;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -17,4 +18,12 @@ public interface TeacherLookupPort {
      * @return map teacherId -> TeacherSummaryDto
      */
     Map<UUID, TeacherSummaryDto> getTeacherSummaries(List<UUID> teacherIds);
+
+    /**
+     * Get teacher entity ID by user ID.
+     *
+     * @param userId user ID
+     * @return teacher entity ID if user has a teacher profile
+     */
+    Optional<UUID> getTeacherIdByUserId(UUID userId);
 }
