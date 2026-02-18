@@ -2,6 +2,7 @@ package com.example.interhubdev.document.internal.storedFile;
 
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.StoredFileDto;
+import com.example.interhubdev.document.StoredFileUsagePort;
 import com.example.interhubdev.document.StoragePort;
 import com.example.interhubdev.document.UploadContext;
 import com.example.interhubdev.document.UploadResult;
@@ -26,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,6 +46,7 @@ class DocumentServiceImpl implements DocumentApi {
     private final UserApi userApi;
     private final CourseMaterialRepository courseMaterialRepository;
     private final HomeworkRepository homeworkRepository;
+    private final List<StoredFileUsagePort> storedFileUsagePorts;
 
     @Value("${app.storage.preview-url-expires-seconds:3600}")
     private int previewUrlExpiresSeconds;
@@ -215,6 +218,11 @@ class DocumentServiceImpl implements DocumentApi {
         }
         if (homeworkRepository.existsByStoredFileId(storedFileId)) {
             throw DocumentErrors.fileInUse();
+        }
+        for (StoredFileUsagePort port : storedFileUsagePorts) {
+            if (port.isStoredFileInUse(storedFileId)) {
+                throw DocumentErrors.fileInUse();
+            }
         }
     }
 

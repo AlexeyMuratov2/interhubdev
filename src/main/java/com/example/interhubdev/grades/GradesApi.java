@@ -1,0 +1,161 @@
+package com.example.interhubdev.grades;
+
+import com.example.interhubdev.error.AppException;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Public API for Grades (Progress) module: ledger of point allocations per student per offering.
+ * All errors are thrown as {@link AppException} and handled by global exception handler.
+ * Only users with TEACHER or ADMIN/MODERATOR/SUPER_ADMIN can create, update, or void entries.
+ */
+public interface GradesApi {
+
+    /**
+     * Create a single grade entry.
+     *
+     * @param studentId            student profile id (required)
+     * @param offeringId            offering id (required)
+     * @param points                points to allocate (required)
+     * @param typeCode              allocation type (required); CUSTOM requires typeLabel
+     * @param typeLabel             required when typeCode is CUSTOM, must be null otherwise
+     * @param description           optional comment
+     * @param lessonSessionId       optional link to lesson
+     * @param homeworkSubmissionId  optional link to submission (primary when present)
+     * @param gradedAt              optional; if null, current time is used
+     * @param gradedBy              user id who creates the entry (required)
+     * @return created entry DTO
+     * @throws AppException NOT_FOUND (offering/student), BAD_REQUEST (validation), FORBIDDEN
+     */
+    GradeEntryDto create(
+            UUID studentId,
+            UUID offeringId,
+            BigDecimal points,
+            GradeTypeCode typeCode,
+            String typeLabel,
+            String description,
+            UUID lessonSessionId,
+            UUID homeworkSubmissionId,
+            LocalDateTime gradedAt,
+            UUID gradedBy
+    );
+
+    /**
+     * Bulk create grade entries for an offering (same type/description/lesson; per-item studentId and points).
+     * All-or-nothing transaction: if any item fails validation, entire batch is rolled back.
+     *
+     * @param offeringId            offering id (required)
+     * @param typeCode              allocation type (required)
+     * @param typeLabel             required when typeCode is CUSTOM
+     * @param description           optional
+     * @param lessonSessionId       optional
+     * @param gradedAt              optional; null = current time
+     * @param items                 list of {studentId, points, optional homeworkSubmissionId}
+     * @param gradedBy              user id (required)
+     * @return list of created entry DTOs
+     * @throws AppException NOT_FOUND, BAD_REQUEST, FORBIDDEN
+     */
+    List<GradeEntryDto> createBulk(
+            UUID offeringId,
+            GradeTypeCode typeCode,
+            String typeLabel,
+            String description,
+            UUID lessonSessionId,
+            LocalDateTime gradedAt,
+            List<BulkGradeItem> items,
+            UUID gradedBy
+    );
+
+    /**
+     * Update an existing grade entry (points, type, description, links, gradedAt).
+     * Entry must be ACTIVE. gradedBy is not changed on update (audit can be extended later).
+     *
+     * @param id                    entry id
+     * @param points                optional new points
+     * @param typeCode              optional new type
+     * @param typeLabel             optional (required when typeCode is CUSTOM)
+     * @param description           optional
+     * @param lessonSessionId       optional
+     * @param homeworkSubmissionId  optional
+     * @param gradedAt              optional
+     * @param requesterId           current user (must have permission to manage grades)
+     * @return updated entry DTO
+     * @throws AppException NOT_FOUND, BAD_REQUEST (e.g. CUSTOM without typeLabel), FORBIDDEN
+     */
+    GradeEntryDto update(
+            UUID id,
+            BigDecimal points,
+            GradeTypeCode typeCode,
+            String typeLabel,
+            String description,
+            UUID lessonSessionId,
+            UUID homeworkSubmissionId,
+            LocalDateTime gradedAt,
+            UUID requesterId
+    );
+
+    /**
+     * Soft-delete (void) a grade entry. Entry status becomes VOIDED and is excluded from totals.
+     *
+     * @param id       entry id
+     * @param gradedBy user id performing the void (must have permission to manage grades)
+     * @throws AppException NOT_FOUND, FORBIDDEN
+     */
+    void voidEntry(UUID id, UUID gradedBy);
+
+    /**
+     * Get grade entry by id.
+     *
+     * @param id          entry id
+     * @param requesterId current user (must have permission to view grades)
+     * @return optional entry DTO
+     */
+    Optional<GradeEntryDto> getById(UUID id, UUID requesterId);
+
+    /**
+     * Get all grade entries for a student in an offering, plus total and breakdown by type.
+     *
+     * @param studentId     student profile id
+     * @param offeringId    offering id
+     * @param from          optional filter: gradedAt >= from
+     * @param to            optional filter: gradedAt <= to
+     * @param includeVoided if true, include VOIDED entries in list (they are never counted in total/breakdown)
+     * @param requesterId   current user (must have permission to view grades)
+     * @return entries, totalPoints, breakdownByType
+     * @throws AppException NOT_FOUND if offering missing, FORBIDDEN if requester cannot view grades
+     */
+    StudentOfferingGradesDto getStudentOfferingGrades(
+            UUID studentId,
+            UUID offeringId,
+            LocalDateTime from,
+            LocalDateTime to,
+            boolean includeVoided,
+            UUID requesterId
+    );
+
+    /**
+     * Get summary of grades for all students in a group for one offering.
+     * Roster is obtained via Student API (students in group). Only ACTIVE entries count in totals.
+     *
+     * @param groupId       student group id
+     * @param offeringId    offering id (must belong to this group)
+     * @param from          optional filter by gradedAt
+     * @param to            optional filter by gradedAt
+     * @param includeVoided if true, include VOIDED in per-student entry lists (not in totals)
+     * @param requesterId   current user (must have permission to view grades)
+     * @return list of rows: studentId, totalPoints, breakdownByType
+     * @throws AppException NOT_FOUND (group or offering), BAD_REQUEST if offering not for this group, FORBIDDEN
+     */
+    GroupOfferingSummaryDto getGroupOfferingSummary(
+            UUID groupId,
+            UUID offeringId,
+            LocalDateTime from,
+            LocalDateTime to,
+            boolean includeVoided,
+            UUID requesterId
+    );
+}

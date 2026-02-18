@@ -11,6 +11,7 @@
  *   <li>{@link com.example.interhubdev.document.HomeworkDto} - homework DTO</li>
  *   <li>{@link com.example.interhubdev.document.LessonLookupPort} - port to check lesson existence (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.document.OfferingLookupPort} - port to check offering existence (implemented by adapter)</li>
+ *   <li>{@link com.example.interhubdev.document.StoredFileUsagePort} - port to check if stored file is in use by other modules (e.g. submissions)</li>
  *   <li>{@link com.example.interhubdev.document.StoragePort} - storage port (S3-compatible)</li>
  *   <li>{@link com.example.interhubdev.document.UploadSecurityPort} - upload security (allowed types, malicious file checks)</li>
  *   <li>{@link com.example.interhubdev.document.UploadContext} - context for upload security check</li>

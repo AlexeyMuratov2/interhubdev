@@ -41,6 +41,9 @@
  *   <li>{@link com.example.interhubdev.adapter.OfferingLookupAdapterForDocument} - implements Document's
  *       {@link com.example.interhubdev.document.OfferingLookupPort} using Offering's
  *       {@link com.example.interhubdev.offering.OfferingExistsPort} (for course material offering validation).</li>
+ *   <li>{@link com.example.interhubdev.adapter.StoredFileUsageAdapterForDocument} - implements Document's
+ *       {@link com.example.interhubdev.document.StoredFileUsagePort} using Submission's
+ *       {@link com.example.interhubdev.submission.SubmissionApi#isStoredFileInUse} (prevents deleting files attached to submissions).</li>
  *   <li>{@link com.example.interhubdev.adapter.CurriculumSubjectLookupAdapter} - implements Offering's
  *       {@link com.example.interhubdev.offering.CurriculumSubjectLookupPort} using Program's
  *       {@link com.example.interhubdev.program.ProgramApi} (to avoid circular dependency between offering and program).</li>
@@ -50,7 +53,7 @@
  * </ul>
  *
  * <h2>Dependencies</h2>
- * This package depends on {@code schedule}, {@code offering}, {@code group}, {@code document}, {@code subject}, and {@code program}
+ * This package depends on {@code schedule}, {@code offering}, {@code group}, {@code document}, {@code subject}, {@code program}, and {@code submission}
  * (only their port interfaces and types used in method signatures). The modules themselves do not depend on each other.
  * 
  * <p>This package is not a Spring Modulith module - it's an adapter layer that connects modules
@@ -58,6 +61,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Adapter",
-    allowedDependencies = {"schedule", "offering", "group", "document", "subject", "program", "error"}
+    allowedDependencies = {"schedule", "offering", "group", "document", "subject", "program", "submission", "error"}
 )
 package com.example.interhubdev.adapter;
