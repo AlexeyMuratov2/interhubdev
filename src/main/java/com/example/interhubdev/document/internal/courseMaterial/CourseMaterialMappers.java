@@ -16,7 +16,7 @@ final class CourseMaterialMappers {
         StoredFileDto fileDto = StoredFileMappers.toDto(entity.getStoredFile());
         return new CourseMaterialDto(
             entity.getId(),
-            entity.getSubjectId(),
+            entity.getOfferingId(),
             entity.getTitle(),
             entity.getDescription(),
             entity.getAuthorId(),

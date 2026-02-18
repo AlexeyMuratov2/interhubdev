@@ -12,7 +12,24 @@ import java.util.UUID;
  */
 public interface HomeworkRepository extends JpaRepository<Homework, UUID> {
 
-    List<Homework> findByLessonIdOrderByCreatedAtDesc(UUID lessonId);
+    /**
+     * Find all homework for a given lesson (via junction table).
+     * Uses JOIN FETCH to eagerly load lessonHomework relationship.
+     *
+     * @param lessonId lesson UUID
+     * @return list of homework entities ordered by creation date descending
+     */
+    @Query("SELECT DISTINCT h FROM Homework h JOIN FETCH h.lessonHomework lh WHERE lh.lessonId = :lessonId ORDER BY h.createdAt DESC")
+    List<Homework> findByLessonIdOrderByCreatedAtDesc(@Param("lessonId") UUID lessonId);
+    
+    /**
+     * Find homework by ID with lessonHomework relationship loaded.
+     *
+     * @param homeworkId homework UUID
+     * @return optional homework entity with lessonHomework loaded
+     */
+    @Query("SELECT h FROM Homework h LEFT JOIN FETCH h.lessonHomework WHERE h.id = :homeworkId")
+    java.util.Optional<Homework> findByIdWithLesson(@Param("homeworkId") UUID homeworkId);
 
     /** Whether any homework references the given stored file (for delete-stored-file guard). */
     @Query("SELECT COUNT(h) > 0 FROM Homework h WHERE h.storedFile.id = :storedFileId")

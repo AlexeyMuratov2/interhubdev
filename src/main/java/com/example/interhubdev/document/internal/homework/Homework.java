@@ -1,6 +1,7 @@
 package com.example.interhubdev.document.internal.homework;
 
 import com.example.interhubdev.document.internal.storedFile.StoredFile;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -9,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,7 +22,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * JPA entity for homework assignment linked to a lesson.
+ * JPA entity for homework assignment linked to a lesson via junction table.
  * Optional file reference: when removed we only clear the reference, we do not delete the file.
  */
 @Entity
@@ -36,9 +38,6 @@ class Homework {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "lesson_id", nullable = false)
-    private UUID lessonId;
-
     @Column(name = "title", nullable = false, length = 500)
     private String title;
 
@@ -51,6 +50,9 @@ class Homework {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stored_file_id")
     private StoredFile storedFile;
+
+    @OneToOne(mappedBy = "homework", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private LessonHomework lessonHomework;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

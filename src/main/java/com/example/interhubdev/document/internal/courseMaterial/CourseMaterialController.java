@@ -18,29 +18,29 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * REST controller for course materials (attach stored file to subject, list).
+ * REST controller for course materials (attach stored file to offering, list).
  * File must be uploaded first via {@code POST /api/documents/upload}; then use this endpoint to attach by stored file id.
  * Delegates to {@link CourseMaterialApi}.
  */
 @RestController
-@RequestMapping("/api/subjects")
+@RequestMapping("/api/offerings")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Course Materials", description = "Course materials management (files linked to subjects)")
+@Tag(name = "Course Materials", description = "Course materials management (files linked to group_subject_offering)")
 class CourseMaterialController {
 
     private final CourseMaterialApi courseMaterialApi;
     private final AuthApi authApi;
 
     /**
-     * Attach an already-uploaded file to the subject as a course material.
+     * Attach an already-uploaded file to the offering as a course material.
      * File must be uploaded first via POST /api/documents/upload; pass the returned stored file id here.
      * Requires TEACHER or ADMIN role.
      */
-    @PostMapping("/{subjectId}/materials")
-    @Operation(summary = "Add course material", description = "Attach an already-uploaded file (by stored file id) to the subject. Upload file first via POST /api/documents/upload. Requires TEACHER or ADMIN role.")
+    @PostMapping("/{offeringId}/materials")
+    @Operation(summary = "Add course material", description = "Attach an already-uploaded file (by stored file id) to the offering. Upload file first via POST /api/documents/upload. Requires TEACHER or ADMIN role.")
     public ResponseEntity<CourseMaterialDto> addMaterial(
-            @PathVariable UUID subjectId,
+            @PathVariable UUID offeringId,
             @Valid @RequestBody AddCourseMaterialRequest body,
             HttpServletRequest request
     ) {
@@ -49,7 +49,7 @@ class CourseMaterialController {
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         CourseMaterialDto dto = courseMaterialApi.createMaterial(
-                subjectId,
+                offeringId,
                 body.storedFileId(),
                 body.title(),
                 body.description(),
@@ -59,20 +59,20 @@ class CourseMaterialController {
     }
 
     /**
-     * List all course materials for a subject.
+     * List all course materials for an offering.
      * Requires authentication.
      */
-    @GetMapping("/{subjectId}/materials")
-    @Operation(summary = "List course materials", description = "Get all course materials for a subject. Requires authentication.")
+    @GetMapping("/{offeringId}/materials")
+    @Operation(summary = "List course materials", description = "Get all course materials for an offering. Requires authentication.")
     public ResponseEntity<List<CourseMaterialDto>> listMaterials(
-            @PathVariable UUID subjectId,
+            @PathVariable UUID offeringId,
             HttpServletRequest request
     ) {
         UUID requesterId = authApi.getCurrentUser(request)
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        List<CourseMaterialDto> materials = courseMaterialApi.listBySubject(subjectId, requesterId);
+        List<CourseMaterialDto> materials = courseMaterialApi.listByOffering(offeringId, requesterId);
         return ResponseEntity.ok(materials);
     }
 }

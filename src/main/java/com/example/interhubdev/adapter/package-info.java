@@ -34,10 +34,20 @@
  *   <li>{@link com.example.interhubdev.adapter.LessonLookupAdapter} - implements Document's
  *       {@link com.example.interhubdev.document.LessonLookupPort} using Schedule's
  *       {@link com.example.interhubdev.schedule.ScheduleApi} (for homework lesson validation).</li>
+ *   <li>{@link com.example.interhubdev.adapter.OfferingLookupAdapterForDocument} - implements Document's
+ *       {@link com.example.interhubdev.document.OfferingLookupPort} using Offering's
+ *       {@link com.example.interhubdev.offering.OfferingExistsPort} (for course material offering validation).</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
  * This package depends on both {@code schedule} and {@code offering} (only their port interfaces
  * and types used in method signatures). The modules themselves do not depend on each other.
+ * 
+ * <p>This package is not a Spring Modulith module - it's an adapter layer that connects modules
+ * without creating circular dependencies. It uses only public APIs (ports, DTOs) from the modules.
  */
+@org.springframework.modulith.ApplicationModule(
+    displayName = "Adapter",
+    allowedDependencies = {"schedule", "offering", "group", "document", "error"}
+)
 package com.example.interhubdev.adapter;

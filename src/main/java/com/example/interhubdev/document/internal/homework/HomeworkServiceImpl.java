@@ -31,6 +31,7 @@ import java.util.UUID;
 class HomeworkServiceImpl implements HomeworkApi {
 
     private final HomeworkRepository homeworkRepository;
+    private final LessonHomeworkRepository lessonHomeworkRepository;
     private final StoredFileRepository storedFileRepository;
     private final LessonLookupPort lessonLookupPort;
     private final UserApi userApi;
@@ -55,7 +56,6 @@ class HomeworkServiceImpl implements HomeworkApi {
         }
 
         Homework homework = Homework.builder()
-            .lessonId(lessonId)
             .title(title)
             .description(description)
             .points(points)
@@ -64,6 +64,14 @@ class HomeworkServiceImpl implements HomeworkApi {
 
         try {
             Homework saved = homeworkRepository.save(homework);
+            
+            // Create junction table entry
+            LessonHomework lessonHomework = new LessonHomework(lessonId, saved.getId(), saved);
+            lessonHomeworkRepository.save(lessonHomework);
+            
+            // Set the relationship for proper mapping
+            saved.setLessonHomework(lessonHomework);
+            
             return HomeworkMappers.toDto(saved);
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save homework (lessonId={}): {}", lessonId, e.getMessage());
@@ -86,7 +94,8 @@ class HomeworkServiceImpl implements HomeworkApi {
     @Transactional(readOnly = true)
     public Optional<HomeworkDto> get(UUID homeworkId, UUID requesterId) {
         validateRequester(requesterId);
-        return homeworkRepository.findById(homeworkId).map(HomeworkMappers::toDto);
+        return homeworkRepository.findByIdWithLesson(homeworkId)
+            .map(HomeworkMappers::toDto);
     }
 
     @Override
@@ -138,6 +147,7 @@ class HomeworkServiceImpl implements HomeworkApi {
         Homework homework = homeworkRepository.findById(homeworkId)
             .orElseThrow(() -> HomeworkErrors.homeworkNotFound(homeworkId));
         homeworkRepository.delete(homework);
+        // Junction table entry is deleted via CASCADE in database
         // We do not delete the stored file when homework is deleted
     }
 

@@ -10,6 +10,7 @@
  *   <li>{@link com.example.interhubdev.document.CourseMaterialDto} - course material DTO (includes StoredFileDto)</li>
  *   <li>{@link com.example.interhubdev.document.HomeworkDto} - homework DTO</li>
  *   <li>{@link com.example.interhubdev.document.LessonLookupPort} - port to check lesson existence (implemented by adapter)</li>
+ *   <li>{@link com.example.interhubdev.document.OfferingLookupPort} - port to check offering existence (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.document.StoragePort} - storage port (S3-compatible)</li>
  *   <li>{@link com.example.interhubdev.document.UploadSecurityPort} - upload security (allowed types, malicious file checks)</li>
  *   <li>{@link com.example.interhubdev.document.UploadContext} - context for upload security check</li>
@@ -42,8 +43,15 @@
  * <p>
  * File deletion safety: Cannot delete a stored file if it is referenced by any course material.
  * <p>
- * Homework: assignments linked to lessons (optional file). Clearing file reference does not delete the file.
+ * Course materials: linked to {@code group_subject_offering} (specific delivery of subject to group with teacher).
+ * This allows each teacher to have their own materials for the same subject in different groups.
+ * Offering existence is validated via {@link com.example.interhubdev.document.OfferingLookupPort} (adapter → offering).
+ * Database-level FK ensures referential integrity between course materials and offerings.
+ * <p>
+ * Homework: assignments linked to lessons via junction table {@code lesson_homework} with FK constraints.
+ * Optional file reference: clearing file reference does not delete the file.
  * Lesson existence is validated via {@link com.example.interhubdev.document.LessonLookupPort} (adapter → schedule).
+ * Database-level FK ensures referential integrity between homework and lessons.
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Document",

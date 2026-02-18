@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -14,9 +13,12 @@ import java.util.UUID;
 public interface CourseMaterialRepository extends JpaRepository<CourseMaterial, UUID> {
 
     /**
-     * Find all course materials for a subject, ordered by uploaded_at descending.
+     * Find all course materials for an offering, ordered by uploaded_at descending.
+     *
+     * @param offeringId group subject offering UUID
+     * @return list of course materials ordered by uploaded_at descending
      */
-    List<CourseMaterial> findBySubjectIdOrderByUploadedAtDesc(UUID subjectId);
+    List<CourseMaterial> findByOfferingIdOrderByUploadedAtDesc(UUID offeringId);
 
     /**
      * Check if any course material uses the given stored file.

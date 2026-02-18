@@ -21,8 +21,10 @@ import java.util.UUID;
 import com.example.interhubdev.document.internal.storedFile.StoredFile;
 
 /**
- * JPA entity for course material (business entity linking subject to stored file).
+ * JPA entity for course material (business entity linking group_subject_offering to stored file).
  * CourseMaterial is separate from StoredFile to keep file storage generic.
+ * Materials belong to a specific offering (group + curriculum_subject + teacher), allowing each teacher
+ * to have their own materials for the same subject.
  */
 @Entity
 @Table(name = "course_material")
@@ -37,8 +39,8 @@ class CourseMaterial {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "subject_id", nullable = false)
-    private UUID subjectId;
+    @Column(name = "offering_id", nullable = false)
+    private UUID offeringId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stored_file_id", nullable = false)
