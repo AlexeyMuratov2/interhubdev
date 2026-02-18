@@ -1,6 +1,5 @@
 package com.example.interhubdev.adapter;
 
-import com.example.interhubdev.document.OfferingLookupPort;
 import com.example.interhubdev.offering.OfferingExistsPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,7 +12,7 @@ import java.util.UUID;
  */
 @Component
 @RequiredArgsConstructor
-public class OfferingLookupAdapterForDocument implements OfferingLookupPort {
+public class OfferingLookupAdapterForDocument implements com.example.interhubdev.document.OfferingLookupPort {
 
     private final OfferingExistsPort offeringExistsPort;
 

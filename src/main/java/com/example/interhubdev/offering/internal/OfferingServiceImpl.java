@@ -37,6 +37,11 @@ class OfferingServiceImpl implements OfferingApi {
     }
 
     @Override
+    public List<GroupSubjectOfferingDto> findOfferingsByTeacherId(UUID teacherId) {
+        return catalogService.findByTeacherId(teacherId);
+    }
+
+    @Override
     @Transactional
     public GroupSubjectOfferingDto createOffering(
             UUID groupId,

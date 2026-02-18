@@ -59,6 +59,23 @@ class BootstrapServiceImpl implements BootstrapApi {
     @Transactional
     public boolean executeBootstrap() {
         String email = properties.getEmail();
+        String password = properties.getPassword();
+
+        // Validate password
+        if (password == null || password.isBlank()) {
+            log.warn("Bootstrap skipped: ADMIN_PASSWORD is not set. Set ADMIN_PASSWORD environment variable to enable bootstrap.");
+            status.set(BootstrapStatus.FAILED);
+            return false;
+        }
+        if (password.length() < 8) {
+            log.error("Bootstrap failed: ADMIN_PASSWORD must be at least 8 characters. Current length: {}", password.length());
+            status.set(BootstrapStatus.FAILED);
+            return false;
+        }
+        // Warn if using default password
+        if ("change-me-in-production-min-8-chars".equals(password)) {
+            log.warn("WARNING: Using default ADMIN_PASSWORD! Set ADMIN_PASSWORD environment variable with a secure password before production deployment.");
+        }
 
         try {
             if (userApi.existsByEmail(email)) {
@@ -66,7 +83,7 @@ class BootstrapServiceImpl implements BootstrapApi {
                 adminCreatedOnStartup = false;
             } else {
                 log.info("Creating bootstrap SUPER_ADMIN: {}", email);
-                createSuperAdmin(email);
+                createSuperAdmin(email, password);
                 adminCreatedOnStartup = true;
                 log.info("Bootstrap SUPER_ADMIN created successfully: {}", email);
             }
@@ -81,7 +98,7 @@ class BootstrapServiceImpl implements BootstrapApi {
         }
     }
 
-    private void createSuperAdmin(String email) {
+    private void createSuperAdmin(String email, String password) {
         UserDto user = userApi.createUser(
                 email,
                 Set.of(Role.SUPER_ADMIN),
@@ -90,6 +107,6 @@ class BootstrapServiceImpl implements BootstrapApi {
         );
 
         // activateUser handles password encoding internally
-        userApi.activateUser(user.id(), properties.getPassword());
+        userApi.activateUser(user.id(), password);
     }
 }

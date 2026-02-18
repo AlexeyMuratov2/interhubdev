@@ -137,4 +137,30 @@ public interface SubjectApi {
      * @throws com.example.interhubdev.error.AppException NOT_FOUND if assessment type does not exist
      */
     void deleteAssessmentType(UUID id);
+
+    // --- Teacher subjects ---
+
+    /**
+     * Get list of teacher subjects (shortened view) filtered by semester.
+     * Returns all subjects where teacher is assigned (as main teacher, slot teacher, or offering teacher).
+     *
+     * @param teacherId teacher entity ID (must not be null)
+     * @param semesterNo optional semester number filter (1..N); if null, returns all semesters
+     * @return list of teacher subject items (never null, may be empty)
+     * @throws com.example.interhubdev.error.AppException if teacher not found
+     */
+    List<TeacherSubjectListItemDto> findTeacherSubjects(UUID teacherId, Integer semesterNo);
+
+    /**
+     * Get full detail of a teacher subject.
+     * Returns subject data, curriculum subject data, assessments, and all offerings with materials.
+     *
+     * @param curriculumSubjectId curriculum subject ID (must not be null)
+     * @param teacherId teacher entity ID (must not be null)
+     * @param requesterId current authenticated user ID (for access control)
+     * @return teacher subject detail DTO
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if curriculum subject not found,
+     *         FORBIDDEN if teacher does not have access to this curriculum subject
+     */
+    TeacherSubjectDetailDto findTeacherSubjectDetail(UUID curriculumSubjectId, UUID teacherId, UUID requesterId);
 }

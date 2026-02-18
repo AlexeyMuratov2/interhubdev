@@ -2,10 +2,10 @@ package com.example.interhubdev.offering.internal;
 
 import com.example.interhubdev.academic.AcademicApi;
 import com.example.interhubdev.academic.SemesterDto;
+import com.example.interhubdev.offering.CurriculumSubjectLookupPort;
 import com.example.interhubdev.offering.LessonCreationPort;
 import com.example.interhubdev.offering.LessonCreationPort.LessonCreateCommand;
 import com.example.interhubdev.program.CurriculumSubjectDto;
-import com.example.interhubdev.program.ProgramApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ class LessonGenerationService {
 
     private final GroupSubjectOfferingRepository offeringRepository;
     private final OfferingSlotRepository slotRepository;
-    private final ProgramApi programApi;
+    private final CurriculumSubjectLookupPort curriculumSubjectLookupPort;
     private final AcademicApi academicApi;
     private final LessonCreationPort lessonCreationPort;
 
@@ -42,7 +42,7 @@ class LessonGenerationService {
         SemesterDto semester = academicApi.findSemesterById(semesterId)
                 .orElseThrow(() -> OfferingErrors.semesterNotFound(semesterId));
 
-        CurriculumSubjectDto currSubject = programApi.findCurriculumSubjectById(offering.getCurriculumSubjectId())
+        CurriculumSubjectDto currSubject = curriculumSubjectLookupPort.findById(offering.getCurriculumSubjectId())
                 .orElseThrow(() -> OfferingErrors.curriculumSubjectNotFound(offering.getCurriculumSubjectId()));
 
         List<OfferingSlot> slots = slotRepository.findByOfferingIdOrderByDayOfWeekAscStartTimeAsc(offeringId);
@@ -78,8 +78,8 @@ class LessonGenerationService {
                 continue;
             }
 
-            CurriculumSubjectDto currSubject = programApi
-                    .findCurriculumSubjectById(offering.getCurriculumSubjectId())
+            CurriculumSubjectDto currSubject = curriculumSubjectLookupPort
+                    .findById(offering.getCurriculumSubjectId())
                     .orElse(null);
             if (currSubject == null) {
                 log.warn("Curriculum subject {} not found for offering {}, skipping",

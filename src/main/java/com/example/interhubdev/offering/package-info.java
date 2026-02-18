@@ -7,8 +7,10 @@
  *   <li>{@link com.example.interhubdev.offering.OfferingApi} - offerings, teachers, slots, and lesson generation (facade)</li>
  *   <li>{@link com.example.interhubdev.offering.GroupSubjectOfferingDto}, {@link com.example.interhubdev.offering.OfferingTeacherDto},
  *       {@link com.example.interhubdev.offering.OfferingSlotDto} - DTOs</li>
+ *   <li>{@link com.example.interhubdev.offering.GroupLookupPort} - port for group lookup (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.offering.TimeslotLookupPort} - port for timeslot info (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.offering.LessonCreationPort} - port for lesson creation (implemented by adapter)</li>
+ *   <li>{@link com.example.interhubdev.offering.CurriculumSubjectLookupPort} - port for curriculum subject lookup (implemented by adapter)</li>
  * </ul>
  *
  * <h2>Internal structure</h2>
@@ -28,13 +30,12 @@
  *
  * <h2>Dependencies</h2>
  * <ul>
- *   <li>group - offerings belong to a group</li>
- *   <li>program - offerings reference curriculum subject (durationWeeks for lesson generation)</li>
+ *   <li>program - offerings reference curriculum subject DTOs (via CurriculumSubjectLookupPort to avoid circular dependency)</li>
  *   <li>teacher - offerings and offering teachers reference teachers</li>
  *   <li>academic - lesson generation uses semester dates</li>
  *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors}</li>
  * </ul>
- * Rooms, timeslots and lesson creation are accessed via ports (implemented by adapters depending on schedule).
+ * Groups, rooms, timeslots, curriculum subjects and lesson creation are accessed via ports (implemented by adapters).
  *
  * <h2>Error codes (via {@link com.example.interhubdev.error.Errors})</h2>
  * <ul>
@@ -47,6 +48,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Offering",
-    allowedDependencies = {"group", "program", "teacher", "academic", "error"}
+    allowedDependencies = {"program", "teacher", "academic", "error"}
 )
 package com.example.interhubdev.offering;

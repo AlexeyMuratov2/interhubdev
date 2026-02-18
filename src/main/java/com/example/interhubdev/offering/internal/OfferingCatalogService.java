@@ -1,11 +1,11 @@
 package com.example.interhubdev.offering.internal;
 
 import com.example.interhubdev.error.Errors;
-import com.example.interhubdev.group.GroupApi;
+import com.example.interhubdev.offering.CurriculumSubjectLookupPort;
+import com.example.interhubdev.offering.GroupLookupPort;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingExistsPort;
 import com.example.interhubdev.offering.RoomLookupPort;
-import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.teacher.TeacherApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,8 +24,8 @@ class OfferingCatalogService implements OfferingExistsPort {
     private final GroupSubjectOfferingRepository offeringRepository;
     private final OfferingSlotRepository slotRepository;
     private final OfferingTeacherRepository offeringTeacherRepository;
-    private final GroupApi groupApi;
-    private final ProgramApi programApi;
+    private final GroupLookupPort groupLookupPort;
+    private final CurriculumSubjectLookupPort curriculumSubjectLookupPort;
     private final TeacherApi teacherApi;
     private final RoomLookupPort roomLookupPort;
 
@@ -40,6 +40,32 @@ class OfferingCatalogService implements OfferingExistsPort {
 
     List<GroupSubjectOfferingDto> findByGroupId(UUID groupId) {
         return offeringRepository.findByGroupIdOrderByCurriculumSubjectIdAsc(groupId).stream()
+                .map(OfferingMappers::toOfferingDto)
+                .toList();
+    }
+
+    List<GroupSubjectOfferingDto> findByTeacherId(UUID teacherId) {
+        java.util.Set<UUID> offeringIds = new java.util.HashSet<>();
+        
+        // Offerings where teacher is the main teacher
+        offeringIds.addAll(offeringRepository.findByTeacherId(teacherId).stream()
+                .map(GroupSubjectOffering::getId)
+                .collect(java.util.stream.Collectors.toSet()));
+        
+        // Offerings where teacher is assigned to a slot
+        offeringIds.addAll(slotRepository.findByTeacherId(teacherId).stream()
+                .map(OfferingSlot::getOfferingId)
+                .collect(java.util.stream.Collectors.toSet()));
+        
+        // Offerings where teacher is assigned as offering teacher
+        offeringIds.addAll(offeringTeacherRepository.findByTeacherId(teacherId).stream()
+                .map(OfferingTeacher::getOfferingId)
+                .collect(java.util.stream.Collectors.toSet()));
+        
+        return offeringIds.stream()
+                .map(offeringRepository::findById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .map(OfferingMappers::toOfferingDto)
                 .toList();
     }
@@ -59,10 +85,10 @@ class OfferingCatalogService implements OfferingExistsPort {
         if (curriculumSubjectId == null) {
             throw Errors.badRequest("Curriculum subject id is required");
         }
-        if (groupApi.findGroupById(groupId).isEmpty()) {
+        if (!groupLookupPort.existsById(groupId)) {
             throw Errors.notFound("Group not found");
         }
-        if (programApi.findCurriculumSubjectById(curriculumSubjectId).isEmpty()) {
+        if (curriculumSubjectLookupPort.findById(curriculumSubjectId).isEmpty()) {
             throw Errors.notFound("Curriculum subject not found");
         }
         if (teacherId != null && teacherApi.findById(teacherId).isEmpty()) {

@@ -29,6 +29,14 @@ public interface OfferingApi {
     List<GroupSubjectOfferingDto> findOfferingsByGroupId(UUID groupId);
 
     /**
+     * Get all offerings where teacher is assigned (as main teacher, slot teacher, or offering teacher).
+     *
+     * @param teacherId teacher entity ID
+     * @return list of offerings for the teacher; empty if teacher has no offerings
+     */
+    List<GroupSubjectOfferingDto> findOfferingsByTeacherId(UUID teacherId);
+
+    /**
      * Create a new group subject offering.
      *
      * @param groupId group ID

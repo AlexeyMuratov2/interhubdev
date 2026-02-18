@@ -1,12 +1,12 @@
 package com.example.interhubdev.offering.internal;
 
+import com.example.interhubdev.offering.CurriculumSubjectLookupPort;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.LessonEnrichmentDataPort;
 import com.example.interhubdev.offering.LessonEnrichmentItem;
 import com.example.interhubdev.offering.OfferingSlotDto;
 import com.example.interhubdev.offering.OfferingSlotKey;
 import com.example.interhubdev.offering.OfferingTeacherDto;
-import com.example.interhubdev.program.ProgramApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +31,7 @@ class OfferingLessonEnrichmentService implements LessonEnrichmentDataPort {
     private final GroupSubjectOfferingRepository offeringRepository;
     private final OfferingSlotRepository slotRepository;
     private final OfferingTeacherRepository offeringTeacherRepository;
-    private final ProgramApi programApi;
+    private final CurriculumSubjectLookupPort curriculumSubjectLookupPort;
 
     @Override
     public List<LessonEnrichmentItem> getEnrichmentBatch(List<OfferingSlotKey> keys) {
@@ -56,7 +56,7 @@ class OfferingLessonEnrichmentService implements LessonEnrichmentDataPort {
                 .collect(Collectors.toSet());
         Map<UUID, String> subjectNamesByCurriculumSubjectId = curriculumSubjectIds.isEmpty()
                 ? Map.of()
-                : programApi.getSubjectNamesByCurriculumSubjectIds(new ArrayList<>(curriculumSubjectIds));
+                : curriculumSubjectLookupPort.getSubjectNamesByCurriculumSubjectIds(new ArrayList<>(curriculumSubjectIds));
 
         List<LessonEnrichmentItem> result = new ArrayList<>(keys.size());
         for (OfferingSlotKey key : keys) {

@@ -1,7 +1,7 @@
 package com.example.interhubdev.adapter;
 
-import com.example.interhubdev.group.GroupApi;
-import com.example.interhubdev.group.StudentGroupDto;
+import com.example.interhubdev.group.GroupExistsPort;
+import com.example.interhubdev.group.GroupSummaryPort;
 import com.example.interhubdev.schedule.GroupLookupPort;
 import com.example.interhubdev.schedule.GroupSummaryDto;
 import lombok.RequiredArgsConstructor;
@@ -13,29 +13,31 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Adapter: implements Schedule's GroupLookupPort using Group module's GroupApi.
- * Allows Schedule to return 404 when group does not exist (e.g. GET /lessons/group/{groupId}).
+ * Adapter: implements Schedule's GroupLookupPort using Group module's lightweight ports.
+ * Uses GroupExistsPort for existence check and GroupSummaryPort for summaries to avoid circular dependencies.
  */
 @Component
 @RequiredArgsConstructor
 public class GroupLookupAdapter implements GroupLookupPort {
 
-    private final GroupApi groupApi;
+    private final GroupExistsPort groupExistsPort;
+    private final GroupSummaryPort groupSummaryPort;
 
     @Override
     public boolean existsById(UUID groupId) {
-        return groupApi.findGroupById(groupId).isPresent();
+        return groupExistsPort.existsById(groupId);
     }
 
     @Override
     public Map<UUID, GroupSummaryDto> getGroupSummaries(List<UUID> groupIds) {
-        return groupIds.stream()
-                .map(groupApi::findGroupById)
-                .filter(java.util.Optional::isPresent)
-                .map(java.util.Optional::get)
+        Map<UUID, GroupSummaryPort.GroupSummary> summaries = groupSummaryPort.getGroupSummaries(groupIds);
+        return summaries.entrySet().stream()
                 .collect(Collectors.toMap(
-                        StudentGroupDto::id,
-                        dto -> new GroupSummaryDto(dto.id(), dto.code(), dto.name())
+                        Map.Entry::getKey,
+                        entry -> {
+                            GroupSummaryPort.GroupSummary summary = entry.getValue();
+                            return new GroupSummaryDto(summary.id(), summary.code(), summary.name());
+                        }
                 ));
     }
 }

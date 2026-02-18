@@ -6,6 +6,12 @@
  *   <li>{@link com.example.interhubdev.subject.SubjectApi} - subjects and assessment types (facade)</li>
  *   <li>{@link com.example.interhubdev.subject.SubjectDto} - subject DTO</li>
  *   <li>{@link com.example.interhubdev.subject.AssessmentTypeDto} - assessment type DTO</li>
+ *   <li>{@link com.example.interhubdev.subject.TeacherSubjectListItemDto} - teacher subject list item DTO</li>
+ *   <li>{@link com.example.interhubdev.subject.TeacherSubjectDetailDto} - teacher subject detail DTO</li>
+ *   <li>{@link com.example.interhubdev.subject.OfferingLookupPort} - port for offering lookup</li>
+ *   <li>{@link com.example.interhubdev.subject.TeacherLookupPort} - port for teacher lookup</li>
+ *   <li>{@link com.example.interhubdev.subject.CurriculumSubjectLookupPort} - port for curriculum subject lookup</li>
+ *   <li>{@link com.example.interhubdev.subject.GroupSubjectOfferingDto} - group subject offering DTO (from offering module)</li>
  * </ul>
  *
  * <h2>Internal structure</h2>
@@ -23,6 +29,12 @@
  * <h2>Dependencies</h2>
  * <ul>
  *   <li>department - subjects may reference a department; department existence validated on create/update when departmentId is set</li>
+ *   <li>program - curriculum subjects for teacher subjects endpoints (accessed via CurriculumSubjectLookupPort to avoid circular dependency)</li>
+ *   <li>offering - group subject offerings for teacher subjects endpoints</li>
+ *   <li>document - course materials for teacher subjects endpoints</li>
+ *   <li>teacher - teacher lookup for authentication</li>
+ *   <li>group - group information for teacher subjects endpoints</li>
+ *   <li>user - user information for author names</li>
  *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors}</li>
  * </ul>
  *
@@ -37,6 +49,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Subject",
-    allowedDependencies = {"department", "error"}
+    allowedDependencies = {"department", "program", "offering", "document", "teacher", "group", "user", "error"}
 )
 package com.example.interhubdev.subject;

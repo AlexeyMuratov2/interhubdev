@@ -4,11 +4,12 @@
  * <h2>Purpose</h2>
  * <ul>
  *   <li>Schedule needs to validate that an offering exists when creating a lesson.</li>
+ *   <li>Offering needs to validate that a group exists when creating/updating an offering (groups live in Group module).</li>
  *   <li>Offering needs to validate that a room exists when creating/updating an offering (rooms live in Schedule).</li>
  *   <li>Offering needs timeslot info (day of week) for lesson generation.</li>
  *   <li>Offering needs to create/delete lessons in bulk for lesson generation.</li>
  * </ul>
- * Direct dependency Schedule ↔ Offering would be circular. This package implements the consumer ports
+ * Direct dependencies between modules would create circular dependencies. This package implements the consumer ports
  * of each module by delegating to the other module's ports or APIs.
  *
  * <h2>Adapters</h2>
@@ -17,8 +18,11 @@
  *       {@link com.example.interhubdev.schedule.OfferingLookupPort} using Offering's
  *       {@link com.example.interhubdev.offering.OfferingLookupDataPort} (minimal, repo-only; avoids cycle).</li>
  *   <li>{@link com.example.interhubdev.adapter.GroupLookupAdapter} - implements Schedule's
- *       {@link com.example.interhubdev.schedule.GroupLookupPort} using {@link com.example.interhubdev.group.GroupApi}
- *       (so GET /lessons/group/{id} returns 404 when group does not exist).</li>
+ *       {@link com.example.interhubdev.schedule.GroupLookupPort} using {@link com.example.interhubdev.group.GroupExistsPort}
+ *       and {@link com.example.interhubdev.group.GroupSummaryPort} (lightweight ports to avoid circular dependencies).</li>
+ *   <li>{@link com.example.interhubdev.adapter.GroupLookupAdapterForOffering} - implements Offering's
+ *       {@link com.example.interhubdev.offering.GroupLookupPort} using {@link com.example.interhubdev.group.GroupExistsPort}
+ *       (lightweight port that only checks existence, avoiding circular dependencies).</li>
  *   <li>{@link com.example.interhubdev.adapter.ScheduleRoomLookupAdapter} - implements Offering's
  *       {@link com.example.interhubdev.offering.RoomLookupPort} using Schedule's
  *       {@link com.example.interhubdev.schedule.RoomExistsPort}.</li>
@@ -37,17 +41,23 @@
  *   <li>{@link com.example.interhubdev.adapter.OfferingLookupAdapterForDocument} - implements Document's
  *       {@link com.example.interhubdev.document.OfferingLookupPort} using Offering's
  *       {@link com.example.interhubdev.offering.OfferingExistsPort} (for course material offering validation).</li>
+ *   <li>{@link com.example.interhubdev.adapter.CurriculumSubjectLookupAdapter} - implements Offering's
+ *       {@link com.example.interhubdev.offering.CurriculumSubjectLookupPort} using Program's
+ *       {@link com.example.interhubdev.program.ProgramApi} (to avoid circular dependency between offering and program).</li>
+ *   <li>{@link com.example.interhubdev.adapter.SubjectCurriculumSubjectLookupAdapter} - implements Subject's
+ *       {@link com.example.interhubdev.subject.CurriculumSubjectLookupPort} using Program's
+ *       {@link com.example.interhubdev.program.ProgramApi} (to avoid circular dependency between subject and program).</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
- * This package depends on both {@code schedule} and {@code offering} (only their port interfaces
- * and types used in method signatures). The modules themselves do not depend on each other.
+ * This package depends on {@code schedule}, {@code offering}, {@code group}, {@code document}, {@code subject}, and {@code program}
+ * (only their port interfaces and types used in method signatures). The modules themselves do not depend on each other.
  * 
  * <p>This package is not a Spring Modulith module - it's an adapter layer that connects modules
  * without creating circular dependencies. It uses only public APIs (ports, DTOs) from the modules.
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Adapter",
-    allowedDependencies = {"schedule", "offering", "group", "document", "error"}
+    allowedDependencies = {"schedule", "offering", "group", "document", "subject", "program", "error"}
 )
 package com.example.interhubdev.adapter;

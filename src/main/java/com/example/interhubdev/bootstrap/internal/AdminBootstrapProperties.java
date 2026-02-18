@@ -28,9 +28,9 @@ class AdminBootstrapProperties {
     /**
      * Password for the initial SUPER_ADMIN user.
      * Will be BCrypt encoded before storing.
+     * If empty, bootstrap will be skipped (useful for development when bootstrap is disabled).
      */
-    @NotBlank(message = "SUPER_ADMIN password is required")
-    @Size(min = 8, message = "SUPER_ADMIN password must be at least 8 characters")
+    @Size(min = 8, message = "SUPER_ADMIN password must be at least 8 characters if provided")
     private String password;
 
     /**

@@ -1,8 +1,12 @@
 package com.example.interhubdev.subject.internal;
 
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.subject.AssessmentTypeDto;
 import com.example.interhubdev.subject.SubjectApi;
 import com.example.interhubdev.subject.SubjectDto;
+import com.example.interhubdev.subject.TeacherLookupPort;
+import com.example.interhubdev.subject.TeacherSubjectDetailDto;
+import com.example.interhubdev.subject.TeacherSubjectListItemDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -11,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +34,7 @@ import java.util.UUID;
 class SubjectController {
 
     private final SubjectApi subjectApi;
+    private final TeacherLookupPort teacherLookupPort;
 
     /**
      * Returns all subjects in stable order (by code ascending).
@@ -221,4 +228,58 @@ class SubjectController {
             Boolean isFinal,
             Integer sortOrder
     ) {}
+
+    // --- Teacher subjects ---
+
+    /**
+     * Get list of teacher subjects (shortened view) filtered by semester.
+     * Requires authentication. Teacher ID is extracted from JWT token.
+     *
+     * @param semesterNo optional semester number filter (1..N)
+     * @param request HTTP request for authentication
+     * @return 200 OK with list of teacher subject items
+     */
+    @GetMapping("/teacher/my")
+    @Operation(summary = "Get my teacher subjects", description = "Returns all subjects where current authenticated teacher is assigned. Filtered by semester if provided.")
+    public ResponseEntity<List<TeacherSubjectListItemDto>> findMyTeacherSubjects(
+            @RequestParam(required = false) Integer semesterNo,
+            jakarta.servlet.http.HttpServletRequest request) {
+        UUID userId = extractUserIdFromRequest();
+        UUID teacherId = teacherLookupPort.getTeacherIdByUserId(userId)
+                .orElseThrow(() -> SubjectErrors.teacherProfileNotFound());
+        return ResponseEntity.ok(subjectApi.findTeacherSubjects(teacherId, semesterNo));
+    }
+
+    /**
+     * Get full detail of a teacher subject.
+     * Requires authentication. Teacher ID is extracted from JWT token.
+     *
+     * @param curriculumSubjectId curriculum subject ID
+     * @param request HTTP request for authentication
+     * @return 200 OK with teacher subject detail DTO
+     */
+    @GetMapping("/teacher/my/{curriculumSubjectId}")
+    @Operation(summary = "Get my teacher subject detail", description = "Returns full information about a subject including all offerings and materials.")
+    public ResponseEntity<TeacherSubjectDetailDto> findMyTeacherSubjectDetail(
+            @PathVariable UUID curriculumSubjectId,
+            jakarta.servlet.http.HttpServletRequest request) {
+        UUID userId = extractUserIdFromRequest();
+        UUID teacherId = teacherLookupPort.getTeacherIdByUserId(userId)
+                .orElseThrow(() -> com.example.interhubdev.subject.internal.SubjectErrors.teacherProfileNotFound());
+        return ResponseEntity.ok(subjectApi.findTeacherSubjectDetail(curriculumSubjectId, teacherId, userId));
+    }
+
+    private UUID extractUserIdFromRequest() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw Errors.unauthorized("Authentication required");
+        }
+        Object principal = authentication.getPrincipal();
+        try {
+            java.lang.reflect.Method getUserIdMethod = principal.getClass().getMethod("userId");
+            return (UUID) getUserIdMethod.invoke(principal);
+        } catch (Exception e) {
+            throw Errors.unauthorized("Invalid authentication token");
+        }
+    }
 }

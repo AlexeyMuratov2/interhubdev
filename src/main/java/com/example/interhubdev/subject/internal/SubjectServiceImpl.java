@@ -20,6 +20,7 @@ class SubjectServiceImpl implements SubjectApi {
 
     private final SubjectCatalogService subjectCatalogService;
     private final AssessmentTypeCatalogService assessmentTypeCatalogService;
+    private final TeacherSubjectService teacherSubjectService;
 
     // --- Subject ---
 
@@ -145,5 +146,25 @@ class SubjectServiceImpl implements SubjectApi {
     @Transactional
     public void deleteAssessmentType(UUID id) {
         assessmentTypeCatalogService.delete(id);
+    }
+
+    // --- Teacher subjects ---
+
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link TeacherSubjectService#findTeacherSubjects(UUID, Integer)}.
+     */
+    @Override
+    public List<TeacherSubjectListItemDto> findTeacherSubjects(UUID teacherId, Integer semesterNo) {
+        return teacherSubjectService.findTeacherSubjects(teacherId, semesterNo);
+    }
+
+    /**
+     * {@inheritDoc}
+     * Delegates to {@link TeacherSubjectService#findTeacherSubjectDetail(UUID, UUID, UUID)}.
+     */
+    @Override
+    public TeacherSubjectDetailDto findTeacherSubjectDetail(UUID curriculumSubjectId, UUID teacherId, UUID requesterId) {
+        return teacherSubjectService.findTeacherSubjectDetail(curriculumSubjectId, teacherId, requesterId);
     }
 }
