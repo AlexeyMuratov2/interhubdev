@@ -42,7 +42,7 @@
  *       {@link com.example.interhubdev.document.OfferingLookupPort} using Offering's
  *       {@link com.example.interhubdev.offering.OfferingExistsPort} (for course material offering validation).</li>
  *   <li>{@link com.example.interhubdev.adapter.StoredFileUsageAdapterForDocument} - implements Document's
- *       {@link com.example.interhubdev.document.StoredFileUsagePort} using Submission's
+ *       {@link com.example.interhubdev.document.api.StoredFileUsagePort} using Submission's
  *       {@link com.example.interhubdev.submission.SubmissionApi#isStoredFileInUse} (prevents deleting files attached to submissions).</li>
  *   <li>{@link com.example.interhubdev.adapter.CurriculumSubjectLookupAdapter} - implements Offering's
  *       {@link com.example.interhubdev.offering.CurriculumSubjectLookupPort} using Program's
@@ -61,6 +61,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Adapter",
-    allowedDependencies = {"schedule", "offering", "group", "document", "subject", "program", "submission", "error"}
+    allowedDependencies = {"schedule", "offering", "group", "document", "document :: api", "subject", "program", "submission", "error"}
 )
 package com.example.interhubdev.adapter;

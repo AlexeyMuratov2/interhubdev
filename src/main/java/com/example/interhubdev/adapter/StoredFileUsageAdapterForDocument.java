@@ -1,6 +1,6 @@
 package com.example.interhubdev.adapter;
 
-import com.example.interhubdev.document.StoredFileUsagePort;
+import com.example.interhubdev.document.api.StoredFileUsagePort;
 import com.example.interhubdev.submission.SubmissionApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

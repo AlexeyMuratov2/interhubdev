@@ -2,13 +2,14 @@ package com.example.interhubdev.document.internal.storedFile;
 
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.StoredFileDto;
-import com.example.interhubdev.document.StoredFileUsagePort;
+import com.example.interhubdev.document.api.StoredFileUsagePort;
 import com.example.interhubdev.document.StoragePort;
 import com.example.interhubdev.document.UploadContext;
 import com.example.interhubdev.document.UploadResult;
 import com.example.interhubdev.document.UploadSecurityPort;
 import com.example.interhubdev.document.internal.courseMaterial.CourseMaterialRepository;
 import com.example.interhubdev.document.internal.homework.HomeworkRepository;
+import com.example.interhubdev.document.internal.lessonMaterial.LessonMaterialFileRepository;
 import com.example.interhubdev.error.AppException;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
@@ -46,6 +47,7 @@ class DocumentServiceImpl implements DocumentApi {
     private final UserApi userApi;
     private final CourseMaterialRepository courseMaterialRepository;
     private final HomeworkRepository homeworkRepository;
+    private final LessonMaterialFileRepository lessonMaterialFileRepository;
     private final List<StoredFileUsagePort> storedFileUsagePorts;
 
     @Value("${app.storage.preview-url-expires-seconds:3600}")
@@ -209,7 +211,7 @@ class DocumentServiceImpl implements DocumentApi {
     }
 
     /**
-     * Check if file is currently in use (referenced by CourseMaterial, Homework, or other business entities).
+     * Check if file is currently in use (referenced by CourseMaterial, Homework, lesson material, or other business entities).
      * Prevents deletion of files that are still referenced.
      */
     private void checkFileNotInUse(UUID storedFileId) {
@@ -217,6 +219,9 @@ class DocumentServiceImpl implements DocumentApi {
             throw DocumentErrors.fileInUse();
         }
         if (homeworkRepository.existsByStoredFileId(storedFileId)) {
+            throw DocumentErrors.fileInUse();
+        }
+        if (lessonMaterialFileRepository.existsByStoredFileId(storedFileId)) {
             throw DocumentErrors.fileInUse();
         }
         for (StoredFileUsagePort port : storedFileUsagePorts) {

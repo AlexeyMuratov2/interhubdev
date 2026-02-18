@@ -1,4 +1,4 @@
-package com.example.interhubdev.document;
+package com.example.interhubdev.document.api;
 
 import java.util.UUID;
 
