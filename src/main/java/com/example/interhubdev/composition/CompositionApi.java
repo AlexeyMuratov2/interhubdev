@@ -1,0 +1,27 @@
+package com.example.interhubdev.composition;
+
+import java.util.UUID;
+
+/**
+ * Public API for Composition module: read-only data aggregation for complex UI screens.
+ * This module aggregates data from multiple modules to reduce frontend request count.
+ */
+public interface CompositionApi {
+
+    /**
+     * Get full details for a lesson (Use Case #1: Lesson Full Details).
+     * Aggregates all data needed for the "Full Lesson Information" screen:
+     * - Subject information (name and all available subject data)
+     * - Group information (groupId and basic group info if available)
+     * - Lesson materials (all materials linked to the lesson)
+     * - Homework assignments (all homework linked to the lesson)
+     * - Lesson instance details (building, room, teacher, date/time, offering info, offering slot if present)
+     *
+     * @param lessonId lesson ID (must not be null)
+     * @param requesterId current authenticated user ID (for access control)
+     * @return aggregated lesson full details DTO
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if lesson not found,
+     *         UNAUTHORIZED if requesterId is null or invalid
+     */
+    LessonFullDetailsDto getLessonFullDetails(UUID lessonId, UUID requesterId);
+}

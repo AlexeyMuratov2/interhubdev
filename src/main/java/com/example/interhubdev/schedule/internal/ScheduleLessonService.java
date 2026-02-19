@@ -137,8 +137,10 @@ class ScheduleLessonService {
 
     /**
      * Lessons in the week containing the given date for the given teacher, with full enrichment.
+     * Returns only lessons that this teacher actually conducts: if the slot has a teacher (e.g. lecturer for LECTURE),
+     * the lesson is shown only to that slot teacher; otherwise to the offering's main teacher.
      * Returns empty list if teacher has no offerings or no lessons in the week.
-     * Single query for lessons in [weekStart, weekEnd] and offeringId in teacher's offerings, then batch enrichment — no N+1.
+     * Single query for lessons in [weekStart, weekEnd] and offeringId in teacher's offerings, then batch enrichment and filter — no N+1.
      */
     List<LessonForScheduleDto> findByWeekAndTeacherIdEnriched(LocalDate date, UUID teacherId) {
         List<UUID> offeringIds = offeringLookupPort.findOfferingIdsByTeacherId(teacherId);
@@ -151,7 +153,10 @@ class ScheduleLessonService {
                 .findByDateBetweenAndOfferingIdInOrderByDateAscStartTimeAsc(weekStart, weekEnd, offeringIds).stream()
                 .map(ScheduleMappers::toLessonDto)
                 .toList();
-        return enrichLessons(lessons);
+        List<LessonForScheduleDto> enriched = enrichLessons(lessons);
+        return enriched.stream()
+                .filter(dto -> dto.mainTeacher() != null && dto.mainTeacher().id().equals(teacherId))
+                .toList();
     }
 
     private List<LessonForScheduleDto> enrichLessons(List<LessonDto> lessons) {
