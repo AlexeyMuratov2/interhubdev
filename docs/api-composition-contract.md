@@ -193,15 +193,14 @@
 | `createdAt` | string | Дата создания (ISO-8601) |
 | `updatedAt` | string | Дата обновления (ISO-8601) |
 
-### 2.9 OfferingTeacherDto (преподаватель офферинга)
+### 2.9 OfferingTeacherItemDto (преподаватель офферинга)
+
+Список выводится из основного преподавателя офферинга и преподавателей слотов (только чтение).
 
 | Поле | Тип | Описание |
 |------|-----|----------|
-| `id` | UUID | Id записи привязки преподавателя к офферингу |
-| `offeringId` | UUID | Id офферинга |
 | `teacherId` | UUID | Id профиля преподавателя |
-| `role` | string | Роль: например `LECTURE`, `PRACTICE`, `LAB` |
-| `createdAt` | string | Дата создания (ISO-8601) |
+| `role` | string \| null | Роль: `null` для основного преподавателя офферинга; `LECTURE`, `PRACTICE`, `LAB`, `SEMINAR` для преподавателя из слота |
 
 ### 2.10 StoredFileDto (файл в хранилище)
 
@@ -279,7 +278,7 @@
 | `curriculumSubject` | object | Элемент учебного плана — **CurriculumSubjectDto** (см. п. 2.6) |
 | `room` | object \| null | Аудитория и здание — **RoomDto** (см. п. 2.7); `null`, если аудитория не назначена или не найдена |
 | `mainTeacher` | object \| null | Основной преподаватель офферинга — **TeacherDto** (см. п. 2.8); `null`, если не назначен или не найден |
-| `offeringTeachers` | array | Список преподавателей офферинга с ролями — массив **OfferingTeacherDto** (см. п. 2.9); пустой массив, если нет привязок |
+| `offeringTeachers` | array | Список преподавателей офферинга (выводится из основного преподавателя и слотов) — массив **OfferingTeacherItemDto** (см. п. 2.9); пустой массив, если нет назначений |
 | `materials` | array | Все материалы урока — массив **LessonMaterialDto** (см. п. 2.11); пустой массив, если материалов нет |
 | `homework` | array | Все домашние задания, привязанные к уроку — массив **HomeworkDto** (см. п. 2.12); пустой массив, если ДЗ нет |
 
@@ -426,11 +425,8 @@ Authorization: Bearer <JWT>
   },
   "offeringTeachers": [
     {
-      "id": "33333333-4444-5555-6666-777777777777",
-      "offeringId": "660e8400-e29b-41d4-a716-446655440001",
       "teacherId": "12345678-1234-1234-1234-123456789abc",
-      "role": "LECTURE",
-      "createdAt": "2024-09-15T00:00:00"
+      "role": "LECTURE"
     }
   ],
   "materials": [

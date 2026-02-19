@@ -78,31 +78,8 @@ class OfferingController {
 
     @GetMapping("/{offeringId}/teachers")
     @Operation(summary = "Get teachers for offering")
-    public ResponseEntity<List<OfferingTeacherDto>> findTeachersByOfferingId(@PathVariable UUID offeringId) {
+    public ResponseEntity<List<OfferingTeacherItemDto>> findTeachersByOfferingId(@PathVariable UUID offeringId) {
         return ResponseEntity.ok(offeringApi.findTeachersByOfferingId(offeringId));
-    }
-
-    @PostMapping("/{offeringId}/teachers")
-    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Add teacher to offering", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can add offering teachers")
-    public ResponseEntity<OfferingTeacherDto> addOfferingTeacher(
-            @PathVariable UUID offeringId,
-            @RequestBody AddOfferingTeacherRequest request
-    ) {
-        OfferingTeacherDto dto = offeringApi.addOfferingTeacher(
-                offeringId,
-                request.teacherId(),
-                request.role()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
-    }
-
-    @DeleteMapping("/teachers/{id}")
-    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Remove teacher from offering", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can remove offering teachers")
-    public ResponseEntity<Void> removeOfferingTeacher(@PathVariable UUID id) {
-        offeringApi.removeOfferingTeacher(id);
-        return ResponseEntity.noContent().build();
     }
 
     // --- Offering Slots ---
@@ -196,10 +173,6 @@ class OfferingController {
             String notes
     ) {}
     record UpdateOfferingRequest(UUID teacherId, UUID roomId, String format, String notes) {}
-    record AddOfferingTeacherRequest(
-            @NotNull(message = "Teacher id is required") UUID teacherId,
-            @NotBlank(message = "Role is required") String role
-    ) {}
     record AddOfferingSlotRequest(
             UUID timeslotId,
             Integer dayOfWeek,

@@ -5,7 +5,7 @@ import com.example.interhubdev.notification.NotificationTemplateKeys;
 import com.example.interhubdev.notification.internal.application.CreateNotificationUseCase;
 import com.example.interhubdev.notification.internal.domain.Notification;
 import com.example.interhubdev.offering.OfferingApi;
-import com.example.interhubdev.offering.OfferingTeacherDto;
+import com.example.interhubdev.offering.OfferingTeacherItemDto;
 import com.example.interhubdev.outbox.OutboxEvent;
 import com.example.interhubdev.outbox.OutboxEventHandler;
 import com.example.interhubdev.schedule.LessonDto;
@@ -63,7 +63,7 @@ class AbsenceNoticeUpdatedHandler implements OutboxEventHandler {
         UUID offeringId = lesson.offeringId();
 
         // Get teachers for the offering
-        List<OfferingTeacherDto> offeringTeachers = offeringApi.findTeachersByOfferingId(offeringId);
+        List<OfferingTeacherItemDto> offeringTeachers = offeringApi.findTeachersByOfferingId(offeringId);
         if (offeringTeachers.isEmpty()) {
             log.warn("No teachers found for offering: offeringId={}, sessionId={}", offeringId, sessionId);
             return;
@@ -71,7 +71,7 @@ class AbsenceNoticeUpdatedHandler implements OutboxEventHandler {
 
         // Get teacher entity IDs and batch-load teacher profiles
         List<UUID> teacherEntityIds = offeringTeachers.stream()
-                .map(OfferingTeacherDto::teacherId)
+                .map(OfferingTeacherItemDto::teacherId)
                 .distinct()
                 .collect(Collectors.toList());
 

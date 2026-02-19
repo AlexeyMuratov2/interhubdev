@@ -5,8 +5,8 @@
  * <h2>Public API</h2>
  * <ul>
  *   <li>{@link com.example.interhubdev.offering.OfferingApi} - offerings, teachers, slots, and lesson generation (facade)</li>
- *   <li>{@link com.example.interhubdev.offering.GroupSubjectOfferingDto}, {@link com.example.interhubdev.offering.OfferingTeacherDto},
- *       {@link com.example.interhubdev.offering.OfferingSlotDto} - DTOs</li>
+ *   <li>{@link com.example.interhubdev.offering.GroupSubjectOfferingDto}, {@link com.example.interhubdev.offering.OfferingTeacherItemDto},
+ *       {@link com.example.interhubdev.offering.OfferingSlotDto} - DTOs (teachers list derived from main teacher and slot teachers)</li>
  *   <li>{@link com.example.interhubdev.offering.GroupLookupPort} - port for group lookup (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.offering.TimeslotLookupPort} - port for timeslot info (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.offering.LessonCreationPort} - port for lesson creation (implemented by adapter)</li>
@@ -16,8 +16,7 @@
  * <h2>Internal structure</h2>
  * <ul>
  *   <li>{@link com.example.interhubdev.offering.internal.OfferingServiceImpl} - facade implementing OfferingApi</li>
- *   <li>{@link com.example.interhubdev.offering.internal.OfferingCatalogService} - CRUD for group subject offerings</li>
- *   <li>{@link com.example.interhubdev.offering.internal.OfferingTeacherService} - offering teachers (add/remove/list)</li>
+ *   <li>{@link com.example.interhubdev.offering.internal.OfferingCatalogService} - CRUD for offerings and derived teachers list</li>
  *   <li>{@link com.example.interhubdev.offering.internal.OfferingSlotService} - weekly slot management</li>
  *   <li>{@link com.example.interhubdev.offering.internal.LessonGenerationService} - automatic lesson generation</li>
  *   <li>{@link com.example.interhubdev.offering.internal.OfferingMappers} - entity to DTO mapping</li>

@@ -2,7 +2,7 @@ package com.example.interhubdev.attendance.internal;
 
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingApi;
-import com.example.interhubdev.offering.OfferingTeacherDto;
+import com.example.interhubdev.offering.OfferingTeacherItemDto;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.teacher.TeacherApi;
 import com.example.interhubdev.teacher.TeacherDto;
@@ -71,7 +71,7 @@ final class AttendanceAccessPolicy {
             }
 
             // Check if teacher is assigned as offering teacher
-            List<OfferingTeacherDto> teachers = offeringApi.findTeachersByOfferingId(offering.id());
+            List<OfferingTeacherItemDto> teachers = offeringApi.findTeachersByOfferingId(offering.id());
             boolean isAssignedTeacher = teachers.stream()
                     .anyMatch(t -> t.teacherId().equals(teacher.id()));
             if (!isAssignedTeacher) {

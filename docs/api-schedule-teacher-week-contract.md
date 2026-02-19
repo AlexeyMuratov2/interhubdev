@@ -114,7 +114,7 @@ GET /api/schedule/lessons/week/teacher?date=2025-02-18
    - Находятся все offerings (предложения занятий), где преподаватель назначен одним из способов:
      - Как основной преподаватель offering (поле `teacherId` в offering)
      - Как преподаватель слота offering (поле `teacherId` в offering slot)
-     - Как дополнительный преподаватель offering (через таблицу offering_teachers)
+     - Как преподаватель в слоте офферинга (offering_slot.teacher_id)
    - Если у преподавателя нет offerings → возвращается пустой список `[]`
 
 4. **Поиск занятий на неделю:**

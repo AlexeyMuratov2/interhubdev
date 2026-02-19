@@ -5,7 +5,7 @@ import com.example.interhubdev.document.LessonMaterialDto;
 import com.example.interhubdev.group.StudentGroupDto;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingSlotDto;
-import com.example.interhubdev.offering.OfferingTeacherDto;
+import com.example.interhubdev.offering.OfferingTeacherItemDto;
 import com.example.interhubdev.program.CurriculumSubjectDto;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.RoomDto;
@@ -63,10 +63,10 @@ public record LessonFullDetailsDto(
     TeacherDto mainTeacher,
 
     /**
-     * All offering teachers (with roles: LECTURE, PRACTICE, LAB).
-     * Empty list if no offering teachers are assigned.
+     * All offering teachers (derived from main teacher and slot teachers; role from slot lessonType or null for main).
+     * Empty list if no teachers are assigned.
      */
-    List<OfferingTeacherDto> offeringTeachers,
+    List<OfferingTeacherItemDto> offeringTeachers,
 
     /**
      * All lesson materials linked to the lesson.

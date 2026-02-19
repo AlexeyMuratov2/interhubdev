@@ -21,7 +21,6 @@
 | curriculum_subject → curriculum, subject, assessment_type | RESTRICT |
 | group_subject_offering → student_group | CASCADE |
 | group_subject_offering → curriculum_subject, teacher, room | RESTRICT / SET NULL |
-| offering_teacher → offering, teacher | CASCADE / RESTRICT |
 | lesson → offering, timeslot, room | CASCADE / RESTRICT / SET NULL |
 | group_curriculum_override → student_group | CASCADE |
 
@@ -31,7 +30,8 @@
 - **V8** — student_group, students.group_id (deprecated in V20), group_leader
 - **V9** — curriculum_subject
 - **V10** — room, timeslot
-- **V11** — group_subject_offering, offering_teacher
+- **V11** — group_subject_offering (offering_teacher удалена в V42)
+- **V42** — drop offering_teacher (список преподавателей выводится из main + слотов)
 - **V12** — lesson
 - **V13** — group_curriculum_override (ENUM: ADD / REMOVE / REPLACE)
 - **V19** — student_group.curator_user_id (вместо curator_teacher_id)

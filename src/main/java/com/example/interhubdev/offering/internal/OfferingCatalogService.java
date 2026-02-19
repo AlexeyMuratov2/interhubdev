@@ -5,6 +5,7 @@ import com.example.interhubdev.offering.CurriculumSubjectLookupPort;
 import com.example.interhubdev.offering.GroupLookupPort;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingExistsPort;
+import com.example.interhubdev.offering.OfferingTeacherItemDto;
 import com.example.interhubdev.offering.RoomLookupPort;
 import com.example.interhubdev.teacher.TeacherApi;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,7 +25,6 @@ class OfferingCatalogService implements OfferingExistsPort {
 
     private final GroupSubjectOfferingRepository offeringRepository;
     private final OfferingSlotRepository slotRepository;
-    private final OfferingTeacherRepository offeringTeacherRepository;
     private final GroupLookupPort groupLookupPort;
     private final CurriculumSubjectLookupPort curriculumSubjectLookupPort;
     private final TeacherApi teacherApi;
@@ -44,6 +45,26 @@ class OfferingCatalogService implements OfferingExistsPort {
                 .toList();
     }
 
+    /**
+     * Derive list of teachers for an offering from main teacher and slot teachers.
+     * Main teacher has role null; slot teachers have role = slot's lessonType (LECTURE, PRACTICE, LAB).
+     */
+    List<OfferingTeacherItemDto> deriveTeachersByOfferingId(UUID offeringId) {
+        GroupSubjectOffering offering = offeringRepository.findById(offeringId)
+                .orElseThrow(() -> OfferingErrors.offeringNotFound(offeringId));
+        List<OfferingTeacherItemDto> result = new ArrayList<>();
+        if (offering.getTeacherId() != null) {
+            result.add(new OfferingTeacherItemDto(offering.getTeacherId(), null));
+        }
+        List<OfferingSlot> slots = slotRepository.findByOfferingIdOrderByDayOfWeekAscStartTimeAsc(offeringId);
+        for (OfferingSlot slot : slots) {
+            if (slot.getTeacherId() != null) {
+                result.add(new OfferingTeacherItemDto(slot.getTeacherId(), slot.getLessonType()));
+            }
+        }
+        return result;
+    }
+
     List<GroupSubjectOfferingDto> findByTeacherId(UUID teacherId) {
         java.util.Set<UUID> offeringIds = new java.util.HashSet<>();
         
@@ -55,11 +76,6 @@ class OfferingCatalogService implements OfferingExistsPort {
         // Offerings where teacher is assigned to a slot
         offeringIds.addAll(slotRepository.findByTeacherId(teacherId).stream()
                 .map(OfferingSlot::getOfferingId)
-                .collect(java.util.stream.Collectors.toSet()));
-        
-        // Offerings where teacher is assigned as offering teacher
-        offeringIds.addAll(offeringTeacherRepository.findByTeacherId(teacherId).stream()
-                .map(OfferingTeacher::getOfferingId)
                 .collect(java.util.stream.Collectors.toSet()));
         
         return offeringIds.stream()
@@ -139,7 +155,6 @@ class OfferingCatalogService implements OfferingExistsPort {
             throw OfferingErrors.offeringNotFound(id);
         }
         slotRepository.deleteByOfferingId(id);
-        offeringTeacherRepository.deleteByOfferingId(id);
         offeringRepository.deleteById(id);
     }
 }

@@ -88,32 +88,14 @@ public interface OfferingApi {
     // --- Offering Teachers ---
 
     /**
-     * Get all teachers assigned to an offering.
+     * Get all teachers assigned to an offering (derived from main teacher and slot teachers).
+     * Main teacher has role null; slot teachers have role = slot's lessonType (LECTURE, PRACTICE, LAB).
      *
      * @param offeringId offering ID
-     * @return list of offering teachers ordered by role and created date
+     * @return list of offering teacher items (teacherId, role)
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering not found
      */
-    List<OfferingTeacherDto> findTeachersByOfferingId(UUID offeringId);
-
-    /**
-     * Add a teacher to an offering with a role.
-     *
-     * @param offeringId offering ID
-     * @param teacherId teacher ID
-     * @param role LECTURE, PRACTICE, or LAB
-     * @return created offering teacher DTO
-     * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering or teacher not found;
-     *         CONFLICT if teacher with same role already exists
-     */
-    OfferingTeacherDto addOfferingTeacher(UUID offeringId, UUID teacherId, String role);
-
-    /**
-     * Remove an offering teacher by ID.
-     *
-     * @param id offering teacher ID
-     * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering teacher not found
-     */
-    void removeOfferingTeacher(UUID id);
+    List<OfferingTeacherItemDto> findTeachersByOfferingId(UUID offeringId);
 
     // --- Offering Slots (weekly recurring timeslots) ---
 

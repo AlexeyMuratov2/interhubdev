@@ -19,7 +19,6 @@ import java.util.UUID;
 class OfferingServiceImpl implements OfferingApi {
 
     private final OfferingCatalogService catalogService;
-    private final OfferingTeacherService teacherService;
     private final OfferingSlotService slotService;
     private final LessonGenerationService lessonGenerationService;
     private final LessonCreationPort lessonCreationPort;
@@ -76,20 +75,8 @@ class OfferingServiceImpl implements OfferingApi {
     // --- Offering Teachers ---
 
     @Override
-    public List<OfferingTeacherDto> findTeachersByOfferingId(UUID offeringId) {
-        return teacherService.findTeachersByOfferingId(offeringId);
-    }
-
-    @Override
-    @Transactional
-    public OfferingTeacherDto addOfferingTeacher(UUID offeringId, UUID teacherId, String role) {
-        return teacherService.add(offeringId, teacherId, role);
-    }
-
-    @Override
-    @Transactional
-    public void removeOfferingTeacher(UUID id) {
-        teacherService.remove(id);
+    public List<OfferingTeacherItemDto> findTeachersByOfferingId(UUID offeringId) {
+        return catalogService.deriveTeachersByOfferingId(offeringId);
     }
 
     // --- Offering Slots ---

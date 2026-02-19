@@ -9,7 +9,7 @@ import com.example.interhubdev.attendance.internal.integration.AttendanceMarkedE
 import com.example.interhubdev.group.GroupApi;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingApi;
-import com.example.interhubdev.offering.OfferingTeacherDto;
+import com.example.interhubdev.offering.OfferingTeacherItemDto;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.student.StudentApi;
@@ -119,7 +119,7 @@ class AttendanceOutboxEventsIntegrationTest {
         );
         when(offeringApi.findOfferingById(OFFERING_ID)).thenReturn(Optional.of(offering));
         when(offeringApi.findTeachersByOfferingId(OFFERING_ID)).thenReturn(List.of(
-                new OfferingTeacherDto(UUID.randomUUID(), OFFERING_ID, TEACHER_ID, "MAIN", LocalDateTime.now())
+                new OfferingTeacherItemDto(TEACHER_ID, null)
         ));
 
         StudentDto student = new StudentDto(

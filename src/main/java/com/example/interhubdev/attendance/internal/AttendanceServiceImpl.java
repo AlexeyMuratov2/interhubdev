@@ -7,7 +7,7 @@ import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.group.GroupApi;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingApi;
-import com.example.interhubdev.offering.OfferingTeacherDto;
+import com.example.interhubdev.offering.OfferingTeacherItemDto;
 import com.example.interhubdev.outbox.OutboxEventDraft;
 import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import com.example.interhubdev.schedule.LessonDto;
@@ -584,7 +584,7 @@ class AttendanceServiceImpl implements AttendanceApi {
             }
 
             // Check if teacher is assigned as offering teacher
-            List<OfferingTeacherDto> teachers = offeringApi.findTeachersByOfferingId(offering.id());
+            List<OfferingTeacherItemDto> teachers = offeringApi.findTeachersByOfferingId(offering.id());
             boolean isAssignedTeacher = teachers.stream()
                     .anyMatch(t -> t.teacherId().equals(teacher.id()));
             if (!isAssignedTeacher) {
@@ -630,7 +630,7 @@ class AttendanceServiceImpl implements AttendanceApi {
                             return true;
                         }
                         // Check if assigned as offering teacher
-                        List<OfferingTeacherDto> teachers = offeringApi.findTeachersByOfferingId(o.id());
+                        List<OfferingTeacherItemDto> teachers = offeringApi.findTeachersByOfferingId(o.id());
                         return teachers.stream()
                                 .anyMatch(t -> t.teacherId().equals(teacher.id()));
                     });

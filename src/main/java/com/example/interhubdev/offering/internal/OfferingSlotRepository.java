@@ -10,6 +10,8 @@ interface OfferingSlotRepository extends JpaRepository<OfferingSlot, UUID> {
 
     List<OfferingSlot> findByOfferingIdOrderByDayOfWeekAscStartTimeAsc(UUID offeringId);
 
+    List<OfferingSlot> findByOfferingIdInOrderByDayOfWeekAscStartTimeAsc(List<UUID> offeringIds);
+
     boolean existsByOfferingIdAndDayOfWeekAndStartTimeAndEndTimeAndLessonType(
             UUID offeringId, int dayOfWeek, LocalTime startTime, LocalTime endTime, String lessonType);
 

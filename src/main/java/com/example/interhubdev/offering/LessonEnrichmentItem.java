@@ -14,7 +14,7 @@ import java.util.List;
 public record LessonEnrichmentItem(
     GroupSubjectOfferingDto offering,
     OfferingSlotDto slot,
-    List<OfferingTeacherDto> teachers,
+    List<OfferingTeacherItemDto> teachers,
     String subjectName
 ) {
 }

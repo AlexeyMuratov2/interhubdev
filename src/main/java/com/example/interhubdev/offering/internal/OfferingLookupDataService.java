@@ -22,7 +22,6 @@ class OfferingLookupDataService implements OfferingLookupDataPort {
 
     private final GroupSubjectOfferingRepository offeringRepository;
     private final OfferingSlotRepository slotRepository;
-    private final OfferingTeacherRepository offeringTeacherRepository;
 
     @Override
     public boolean existsById(UUID offeringId) {
@@ -39,22 +38,12 @@ class OfferingLookupDataService implements OfferingLookupDataPort {
     @Override
     public List<UUID> findOfferingIdsByTeacherId(UUID teacherId) {
         Set<UUID> offeringIds = new HashSet<>();
-        
-        // Offerings where teacher is the main teacher
         offeringIds.addAll(offeringRepository.findByTeacherId(teacherId).stream()
                 .map(GroupSubjectOffering::getId)
                 .collect(Collectors.toSet()));
-        
-        // Offerings where teacher is assigned to a slot
         offeringIds.addAll(slotRepository.findByTeacherId(teacherId).stream()
                 .map(OfferingSlot::getOfferingId)
                 .collect(Collectors.toSet()));
-        
-        // Offerings where teacher is assigned as offering teacher
-        offeringIds.addAll(offeringTeacherRepository.findByTeacherId(teacherId).stream()
-                .map(OfferingTeacher::getOfferingId)
-                .collect(Collectors.toSet()));
-        
         return offeringIds.stream().toList();
     }
 }

@@ -5,7 +5,7 @@ import com.example.interhubdev.offering.LessonEnrichmentDataPort;
 import com.example.interhubdev.offering.LessonEnrichmentItem;
 import com.example.interhubdev.offering.OfferingSlotDto;
 import com.example.interhubdev.offering.OfferingSlotKey;
-import com.example.interhubdev.offering.OfferingTeacherDto;
+import com.example.interhubdev.offering.OfferingTeacherItemDto;
 import com.example.interhubdev.schedule.LessonEnrichmentData;
 import com.example.interhubdev.schedule.LessonEnrichmentPort;
 import com.example.interhubdev.schedule.LessonEnrichmentRequest;
@@ -70,7 +70,7 @@ public class LessonEnrichmentAdapter implements LessonEnrichmentPort {
         );
     }
 
-    private static TeacherRoleDto toTeacherRole(OfferingTeacherDto t) {
+    private static TeacherRoleDto toTeacherRole(OfferingTeacherItemDto t) {
         return new TeacherRoleDto(t.teacherId(), t.role());
     }
 }

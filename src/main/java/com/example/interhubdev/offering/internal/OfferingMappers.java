@@ -2,7 +2,6 @@ package com.example.interhubdev.offering.internal;
 
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingSlotDto;
-import com.example.interhubdev.offering.OfferingTeacherDto;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -26,16 +25,6 @@ final class OfferingMappers {
                 e.getNotes(),
                 e.getCreatedAt(),
                 e.getUpdatedAt()
-        );
-    }
-
-    static OfferingTeacherDto toTeacherDto(OfferingTeacher e) {
-        return new OfferingTeacherDto(
-                e.getId(),
-                e.getOfferingId(),
-                e.getTeacherId(),
-                e.getRole(),
-                e.getCreatedAt()
         );
     }
 
