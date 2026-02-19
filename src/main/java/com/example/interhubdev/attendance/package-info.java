@@ -59,6 +59,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Attendance",
-    allowedDependencies = {"schedule", "offering", "student", "group", "teacher", "auth", "user", "error", "document"}
+    allowedDependencies = {"schedule", "offering", "student", "group", "teacher", "auth", "user", "error", "document", "outbox"}
 )
 package com.example.interhubdev.attendance;

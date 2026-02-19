@@ -2,11 +2,16 @@ package com.example.interhubdev.attendance.internal;
 
 import com.example.interhubdev.attendance.AbsenceNoticeDto;
 import com.example.interhubdev.attendance.AbsenceNoticeStatus;
+import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeCanceledEventPayload;
+import com.example.interhubdev.outbox.OutboxEventDraft;
+import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +26,7 @@ class CancelAbsenceNoticeUseCase {
 
     private final AbsenceNoticeRepository noticeRepository;
     private final AbsenceNoticeAttachmentRepository attachmentRepository;
+    private final OutboxIntegrationEventPublisher publisher;
 
     /**
      * Cancel an absence notice.
@@ -54,10 +60,27 @@ class CancelAbsenceNoticeUseCase {
         List<AbsenceNoticeAttachment> attachments = attachmentRepository
                 .findByNoticeIdOrderByCreatedAtAsc(noticeId);
 
-        // TODO: publish IntegrationEvent AbsenceNoticeCanceled {
-        //   noticeId, sessionId, studentId, canceledAt
-        // }
+        // Publish integration event
+        Instant occurredAt = Instant.now();
+        AbsenceNoticeCanceledEventPayload payload = new AbsenceNoticeCanceledEventPayload(
+                saved.getId(),
+                saved.getLessonSessionId(),
+                saved.getStudentId(),
+                toInstant(saved.getCanceledAt())
+        );
+        publisher.publish(OutboxEventDraft.builder()
+                .eventType(AttendanceEventTypes.ABSENCE_NOTICE_CANCELED)
+                .payload(payload)
+                .occurredAt(occurredAt)
+                .build());
 
         return AbsenceNoticeMappers.toDto(saved, attachments);
+    }
+
+    /**
+     * Convert LocalDateTime to Instant using UTC offset.
+     */
+    private Instant toInstant(LocalDateTime localDateTime) {
+        return localDateTime != null ? localDateTime.toInstant(ZoneOffset.UTC) : Instant.now();
     }
 }

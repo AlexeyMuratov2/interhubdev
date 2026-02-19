@@ -3,13 +3,20 @@ package com.example.interhubdev.attendance.internal;
 import com.example.interhubdev.attendance.AbsenceNoticeDto;
 import com.example.interhubdev.attendance.AbsenceNoticeStatus;
 import com.example.interhubdev.attendance.SubmitAbsenceNoticeRequest;
+import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeSubmittedEventPayload;
+import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeUpdatedEventPayload;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingApi;
+import com.example.interhubdev.outbox.OutboxEventDraft;
+import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import com.example.interhubdev.schedule.LessonDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +37,7 @@ class SubmitOrUpdateAbsenceNoticeUseCase {
     private final SessionGateway sessionGateway;
     private final RosterGateway rosterGateway;
     private final OfferingApi offeringApi;
+    private final OutboxIntegrationEventPublisher publisher;
 
     /**
      * Submit or update an absence notice for a student.
@@ -75,6 +83,9 @@ class SubmitOrUpdateAbsenceNoticeUseCase {
         AbsenceNotice notice = noticeRepository
                 .findActiveBySessionAndStudent(request.lessonSessionId(), studentId, AbsenceNoticeStatus.SUBMITTED)
                 .orElse(null);
+
+        // Remember if this is an update (notice existed before save)
+        boolean existed = (notice != null);
 
         if (notice != null) {
             // Update existing notice
@@ -133,11 +144,47 @@ class SubmitOrUpdateAbsenceNoticeUseCase {
         List<AbsenceNoticeAttachment> finalAttachments = attachmentRepository
                 .findByNoticeIdOrderByCreatedAtAsc(noticeId);
 
-        // TODO: publish IntegrationEvent AbsenceNoticeSubmittedOrUpdated {
-        //   noticeId, sessionId, studentId, type, submittedAt/updatedAt
-        // }
-        // TODO: notify teachers of session via Notification module (future outbox)
+        // Publish integration event
+        Instant occurredAt = Instant.now();
+        if (!existed) {
+            // New notice submitted
+            AbsenceNoticeSubmittedEventPayload payload = new AbsenceNoticeSubmittedEventPayload(
+                    saved.getId(),
+                    saved.getLessonSessionId(),
+                    saved.getStudentId(),
+                    saved.getType(),
+                    toInstant(saved.getSubmittedAt())
+            );
+            publisher.publish(OutboxEventDraft.builder()
+                    .eventType(AttendanceEventTypes.ABSENCE_NOTICE_SUBMITTED)
+                    .payload(payload)
+                    .occurredAt(occurredAt)
+                    .build());
+        } else {
+            // Existing notice updated
+            AbsenceNoticeUpdatedEventPayload payload = new AbsenceNoticeUpdatedEventPayload(
+                    saved.getId(),
+                    saved.getLessonSessionId(),
+                    saved.getStudentId(),
+                    saved.getType(),
+                    toInstant(saved.getUpdatedAt())
+            );
+            publisher.publish(OutboxEventDraft.builder()
+                    .eventType(AttendanceEventTypes.ABSENCE_NOTICE_UPDATED)
+                    .payload(payload)
+                    .occurredAt(occurredAt)
+                    .build());
+        }
+
+        // TODO: Notification module will handle this outbox event and notify teachers of the session.
 
         return AbsenceNoticeMappers.toDto(saved, finalAttachments);
+    }
+
+    /**
+     * Convert LocalDateTime to Instant using UTC offset.
+     */
+    private Instant toInstant(LocalDateTime localDateTime) {
+        return localDateTime != null ? localDateTime.toInstant(ZoneOffset.UTC) : Instant.now();
     }
 }

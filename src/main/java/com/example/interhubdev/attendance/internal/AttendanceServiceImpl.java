@@ -1,11 +1,15 @@
 package com.example.interhubdev.attendance.internal;
 
 import com.example.interhubdev.attendance.*;
+import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeAttachedEventPayload;
+import com.example.interhubdev.attendance.internal.integration.AttendanceMarkedEventPayload;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.group.GroupApi;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingApi;
 import com.example.interhubdev.offering.OfferingTeacherDto;
+import com.example.interhubdev.outbox.OutboxEventDraft;
+import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.student.StudentApi;
@@ -19,8 +23,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,6 +53,7 @@ class AttendanceServiceImpl implements AttendanceApi {
     private final GroupApi groupApi;
     private final TeacherApi teacherApi;
     private final UserApi userApi;
+    private final OutboxIntegrationEventPublisher publisher;
 
     @Override
     @Transactional
@@ -74,7 +81,9 @@ class AttendanceServiceImpl implements AttendanceApi {
 
         // Validate and upsert each item
         LocalDateTime now = LocalDateTime.now();
+        Instant occurredAt = Instant.now();
         List<AttendanceRecord> toSave = new ArrayList<>();
+        Map<UUID, UUID> oldAbsenceNoticeIds = new HashMap<>(); // recordId -> old absenceNoticeId
 
         for (MarkAttendanceItem item : items) {
             // Validate student exists and is in roster
@@ -93,6 +102,8 @@ class AttendanceServiceImpl implements AttendanceApi {
             AttendanceRecord record;
             if (existing.isPresent()) {
                 record = existing.get();
+                // Remember old absenceNoticeId for attach event detection
+                oldAbsenceNoticeIds.put(record.getId(), record.getAbsenceNoticeId());
                 record.setStatus(item.status());
                 record.setMinutesLate(item.minutesLate());
                 record.setTeacherComment(item.teacherComment());
@@ -119,9 +130,43 @@ class AttendanceServiceImpl implements AttendanceApi {
         // Save all in transaction (all-or-nothing)
         List<AttendanceRecord> saved = repository.saveAll(toSave);
 
-        // TODO: publish IntegrationEvent AttendanceMarked for each record
-        // IntegrationEvent event = new AttendanceMarkedEvent(recordId, sessionId, studentId, status, markedBy, markedAt);
-        // eventPublisher.publish(event);
+        // Publish integration events
+        Instant markedAtInstant = toInstant(now);
+        for (AttendanceRecord record : saved) {
+            // Publish ATTENDANCE_MARKED event
+            AttendanceMarkedEventPayload markedPayload = new AttendanceMarkedEventPayload(
+                    record.getId(),
+                    record.getLessonSessionId(),
+                    record.getStudentId(),
+                    record.getStatus(),
+                    record.getMarkedBy(),
+                    markedAtInstant
+            );
+            publisher.publish(OutboxEventDraft.builder()
+                    .eventType(AttendanceEventTypes.ATTENDANCE_MARKED)
+                    .payload(markedPayload)
+                    .occurredAt(occurredAt)
+                    .build());
+
+            // Publish ABSENCE_NOTICE_ATTACHED event if notice was attached/changed
+            UUID newAbsenceNoticeId = record.getAbsenceNoticeId();
+            UUID oldAbsenceNoticeId = oldAbsenceNoticeIds.get(record.getId());
+            if (newAbsenceNoticeId != null && !newAbsenceNoticeId.equals(oldAbsenceNoticeId)) {
+                AbsenceNoticeAttachedEventPayload attachedPayload = new AbsenceNoticeAttachedEventPayload(
+                        record.getId(),
+                        newAbsenceNoticeId,
+                        record.getLessonSessionId(),
+                        record.getStudentId(),
+                        markedBy,
+                        occurredAt
+                );
+                publisher.publish(OutboxEventDraft.builder()
+                        .eventType(AttendanceEventTypes.ABSENCE_NOTICE_ATTACHED)
+                        .payload(attachedPayload)
+                        .occurredAt(occurredAt)
+                        .build());
+            }
+        }
 
         return saved.stream()
                 .map(AttendanceMappers::toDto)
@@ -168,9 +213,12 @@ class AttendanceServiceImpl implements AttendanceApi {
         // Find existing or create new
         Optional<AttendanceRecord> existing = repository.findByLessonSessionIdAndStudentId(sessionId, studentId);
         LocalDateTime now = LocalDateTime.now();
+        Instant occurredAt = Instant.now();
+        UUID oldAbsenceNoticeId = null;
         AttendanceRecord record;
         if (existing.isPresent()) {
             record = existing.get();
+            oldAbsenceNoticeId = record.getAbsenceNoticeId();
             record.setStatus(status);
             record.setMinutesLate(minutesLate);
             record.setTeacherComment(teacherComment);
@@ -193,9 +241,39 @@ class AttendanceServiceImpl implements AttendanceApi {
 
         AttendanceRecord saved = repository.save(record);
 
-        // TODO: publish IntegrationEvent AttendanceMarked
-        // IntegrationEvent event = new AttendanceMarkedEvent(saved.getId(), sessionId, studentId, status, markedBy, now);
-        // eventPublisher.publish(event);
+        // Publish ATTENDANCE_MARKED event
+        Instant markedAtInstant = toInstant(now);
+        AttendanceMarkedEventPayload markedPayload = new AttendanceMarkedEventPayload(
+                saved.getId(),
+                sessionId,
+                studentId,
+                status,
+                markedBy,
+                markedAtInstant
+        );
+        publisher.publish(OutboxEventDraft.builder()
+                .eventType(AttendanceEventTypes.ATTENDANCE_MARKED)
+                .payload(markedPayload)
+                .occurredAt(occurredAt)
+                .build());
+
+        // Publish ABSENCE_NOTICE_ATTACHED event if notice was attached/changed
+        UUID newAbsenceNoticeId = saved.getAbsenceNoticeId();
+        if (newAbsenceNoticeId != null && !newAbsenceNoticeId.equals(oldAbsenceNoticeId)) {
+            AbsenceNoticeAttachedEventPayload attachedPayload = new AbsenceNoticeAttachedEventPayload(
+                    saved.getId(),
+                    newAbsenceNoticeId,
+                    sessionId,
+                    studentId,
+                    markedBy,
+                    occurredAt
+            );
+            publisher.publish(OutboxEventDraft.builder()
+                    .eventType(AttendanceEventTypes.ABSENCE_NOTICE_ATTACHED)
+                    .payload(attachedPayload)
+                    .occurredAt(occurredAt)
+                    .build());
+        }
 
         return AttendanceMappers.toDto(saved);
     }
@@ -625,10 +703,8 @@ class AttendanceServiceImpl implements AttendanceApi {
             }
 
             record.setAbsenceNoticeId(absenceNoticeId);
-
-            // TODO: publish IntegrationEvent AbsenceNoticeAttachedToAttendance {
-            //   recordId: record.getId(), noticeId, sessionId, studentId, attachedAt: LocalDateTime.now(), attachedBy: record.getMarkedBy()
-            // }
+            // Note: ABSENCE_NOTICE_ATTACHED event is published in markAttendanceBulk/markAttendanceSingle
+            // after save, to ensure record.getId() is available.
 
             return;
         }
@@ -640,15 +716,20 @@ class AttendanceServiceImpl implements AttendanceApi {
 
             if (lastNotice.isPresent()) {
                 record.setAbsenceNoticeId(lastNotice.get().getId());
-
-                // TODO: publish IntegrationEvent AbsenceNoticeAttachedToAttendance {
-                //   recordId: record.getId(), noticeId: lastNotice.get().getId(), sessionId, studentId, attachedAt: LocalDateTime.now(), attachedBy: record.getMarkedBy()
-                // }
+                // Note: ABSENCE_NOTICE_ATTACHED event is published in markAttendanceBulk/markAttendanceSingle
+                // after save, to ensure record.getId() is available.
             }
             // If no notice found, leave absenceNoticeId as null (not an error)
             return;
         }
 
         // No attachment requested - leave absenceNoticeId as is (or null if new record)
+    }
+
+    /**
+     * Convert LocalDateTime to Instant using UTC offset.
+     */
+    private Instant toInstant(LocalDateTime localDateTime) {
+        return localDateTime != null ? localDateTime.toInstant(ZoneOffset.UTC) : Instant.now();
     }
 }

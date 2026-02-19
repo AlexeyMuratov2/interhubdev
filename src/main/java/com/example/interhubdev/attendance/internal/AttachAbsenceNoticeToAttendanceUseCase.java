@@ -2,14 +2,18 @@ package com.example.interhubdev.attendance.internal;
 
 import com.example.interhubdev.attendance.AbsenceNoticeStatus;
 import com.example.interhubdev.attendance.AttendanceRecordDto;
+import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeAttachedEventPayload;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingApi;
+import com.example.interhubdev.outbox.OutboxEventDraft;
+import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -26,6 +30,7 @@ class AttachAbsenceNoticeToAttendanceUseCase {
     private final ScheduleApi scheduleApi;
     private final OfferingApi offeringApi;
     private final AttendanceAccessPolicy accessPolicy;
+    private final OutboxIntegrationEventPublisher publisher;
 
     /**
      * Attach an absence notice to an attendance record.
@@ -71,10 +76,21 @@ class AttachAbsenceNoticeToAttendanceUseCase {
         record.setAbsenceNoticeId(noticeId);
         AttendanceRecord saved = recordRepository.save(record);
 
-        // TODO: publish IntegrationEvent AbsenceNoticeAttachedToAttendance {
-        //   recordId, noticeId, sessionId: record.getLessonSessionId(), studentId: record.getStudentId(),
-        //   attachedAt: java.time.LocalDateTime.now(), attachedBy: requesterId
-        // }
+        // Publish integration event
+        Instant occurredAt = Instant.now();
+        AbsenceNoticeAttachedEventPayload payload = new AbsenceNoticeAttachedEventPayload(
+                saved.getId(),
+                noticeId,
+                saved.getLessonSessionId(),
+                saved.getStudentId(),
+                requesterId,
+                occurredAt
+        );
+        publisher.publish(OutboxEventDraft.builder()
+                .eventType(AttendanceEventTypes.ABSENCE_NOTICE_ATTACHED)
+                .payload(payload)
+                .occurredAt(occurredAt)
+                .build());
 
         return AttendanceMappers.toDto(saved);
     }
