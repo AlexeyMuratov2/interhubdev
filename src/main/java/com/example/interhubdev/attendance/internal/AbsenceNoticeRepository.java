@@ -75,4 +75,30 @@ interface AbsenceNoticeRepository extends JpaRepository<AbsenceNotice, UUID> {
      * @return optional notice
      */
     Optional<AbsenceNotice> findByIdAndStudentId(UUID id, UUID studentId);
+
+    /**
+     * Find the last submitted notice for a student and session.
+     * Used for auto-attach functionality.
+     *
+     * @param sessionId lesson session ID
+     * @param studentId student profile ID
+     * @return optional notice (most recent SUBMITTED notice, ordered by submittedAt DESC, then updatedAt DESC)
+     */
+    @Query("SELECT an FROM AbsenceNotice an WHERE an.lessonSessionId = :sessionId " +
+            "AND an.studentId = :studentId AND an.status = :status " +
+            "ORDER BY an.submittedAt DESC, an.updatedAt DESC")
+    Optional<AbsenceNotice> findLastSubmittedBySessionAndStudent(
+            @Param("sessionId") UUID sessionId,
+            @Param("studentId") UUID studentId,
+            @Param("status") AbsenceNoticeStatus status
+    );
+
+    /**
+     * Find all notices for a lesson session (for UI display).
+     * Returns all notices regardless of status (can be filtered by status in application layer).
+     *
+     * @param sessionId lesson session ID
+     * @return list of notices (ordered by submittedAt DESC)
+     */
+    List<AbsenceNotice> findByLessonSessionId(UUID sessionId);
 }

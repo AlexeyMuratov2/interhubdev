@@ -55,6 +55,9 @@ class AttendanceRecord {
     @Builder.Default
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    @Column(name = "absence_notice_id")
+    private UUID absenceNoticeId;
+
     @PreUpdate
     void preUpdate() {
         updatedAt = LocalDateTime.now();

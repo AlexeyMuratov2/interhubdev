@@ -16,6 +16,11 @@ public record AttendanceRecordDto(
         Optional<String> teacherComment,
         UUID markedBy,
         LocalDateTime markedAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        /**
+         * Optional link to absence notice attached to this record.
+         * Single source of truth: stored in attendance_record.absence_notice_id.
+         */
+        Optional<UUID> absenceNoticeId
 ) {
 }

@@ -39,6 +39,8 @@ import java.util.stream.Collectors;
 class AttendanceServiceImpl implements AttendanceApi {
 
     private final AttendanceRecordRepository repository;
+    private final AbsenceNoticeRepository absenceNoticeRepository;
+    private final AbsenceNoticeAttachmentRepository absenceNoticeAttachmentRepository;
     private final ScheduleApi scheduleApi;
     private final OfferingApi offeringApi;
     private final StudentApi studentApi;
@@ -107,6 +109,10 @@ class AttendanceServiceImpl implements AttendanceApi {
                         .markedAt(now)
                         .build();
             }
+
+            // Handle absence notice attachment
+            handleAbsenceNoticeAttachment(record, item, sessionId);
+
             toSave.add(record);
         }
 
@@ -130,6 +136,8 @@ class AttendanceServiceImpl implements AttendanceApi {
             AttendanceStatus status,
             Integer minutesLate,
             String teacherComment,
+            UUID absenceNoticeId,
+            Boolean autoAttachLastNotice,
             UUID markedBy
     ) {
         // Get lesson and validate
@@ -179,6 +187,10 @@ class AttendanceServiceImpl implements AttendanceApi {
                     .markedAt(now)
                     .build();
         }
+
+        // Handle absence notice attachment
+        handleAbsenceNoticeAttachment(record, absenceNoticeId, autoAttachLastNotice, sessionId, studentId);
+
         AttendanceRecord saved = repository.save(record);
 
         // TODO: publish IntegrationEvent AttendanceMarked
@@ -190,7 +202,7 @@ class AttendanceServiceImpl implements AttendanceApi {
 
     @Override
     @Transactional(readOnly = true)
-    public SessionAttendanceDto getSessionAttendance(UUID sessionId, UUID requesterId) {
+    public SessionAttendanceDto getSessionAttendance(UUID sessionId, UUID requesterId, boolean includeCanceled) {
         // Get lesson
         LessonDto lesson = scheduleApi.findLessonById(sessionId)
                 .orElseThrow(() -> AttendanceErrors.lessonNotFound(sessionId));
@@ -210,7 +222,14 @@ class AttendanceServiceImpl implements AttendanceApi {
         Map<UUID, AttendanceRecord> recordMap = records.stream()
                 .collect(Collectors.toMap(AttendanceRecord::getStudentId, r -> r));
 
-        // Build response: for each student in roster, include attendance status (or UNMARKED)
+        // Get all notices for this session (one query, then group by studentId)
+        List<AbsenceNotice> allNotices = includeCanceled
+                ? absenceNoticeRepository.findByLessonSessionId(sessionId)
+                : absenceNoticeRepository.findByLessonSessionIdAndStatus(sessionId, AbsenceNoticeStatus.SUBMITTED);
+        Map<UUID, List<AbsenceNotice>> noticesByStudent = allNotices.stream()
+                .collect(Collectors.groupingBy(AbsenceNotice::getStudentId));
+
+        // Build response: for each student in roster, include attendance status (or UNMARKED) and notices
         Map<AttendanceStatus, Integer> counts = new HashMap<>();
         counts.put(AttendanceStatus.PRESENT, 0);
         counts.put(AttendanceStatus.ABSENT, 0);
@@ -221,6 +240,27 @@ class AttendanceServiceImpl implements AttendanceApi {
         List<SessionAttendanceDto.SessionAttendanceStudentDto> studentDtos = new ArrayList<>();
         for (StudentDto student : roster) {
             AttendanceRecord record = recordMap.get(student.id());
+            List<AbsenceNotice> studentNotices = noticesByStudent.getOrDefault(student.id(), List.of());
+
+            // Map notices to minimal DTOs
+            List<SessionAttendanceDto.StudentNoticeDto> noticeDtos = studentNotices.stream()
+                    .map(notice -> {
+                        List<AbsenceNoticeAttachment> attachments = absenceNoticeAttachmentRepository
+                                .findByNoticeIdOrderByCreatedAtAsc(notice.getId());
+                        List<String> fileIds = attachments.stream()
+                                .map(AbsenceNoticeAttachment::getFileId)
+                                .toList();
+                        return new SessionAttendanceDto.StudentNoticeDto(
+                                notice.getId(),
+                                notice.getType(),
+                                notice.getStatus(),
+                                Optional.ofNullable(notice.getReasonText()).filter(s -> !s.isBlank()),
+                                notice.getSubmittedAt(),
+                                fileIds
+                        );
+                    })
+                    .toList();
+
             if (record == null) {
                 unmarkedCount++;
                 studentDtos.add(new SessionAttendanceDto.SessionAttendanceStudentDto(
@@ -229,7 +269,9 @@ class AttendanceServiceImpl implements AttendanceApi {
                         null,
                         null,
                         null,
-                        null
+                        null,
+                        Optional.empty(),
+                        noticeDtos
                 ));
             } else {
                 counts.put(record.getStatus(), counts.get(record.getStatus()) + 1);
@@ -239,7 +281,9 @@ class AttendanceServiceImpl implements AttendanceApi {
                         record.getMinutesLate(),
                         record.getTeacherComment(),
                         record.getMarkedAt(),
-                        record.getMarkedBy()
+                        record.getMarkedBy(),
+                        Optional.ofNullable(record.getAbsenceNoticeId()),
+                        noticeDtos
                 ));
             }
         }
@@ -519,5 +563,92 @@ class AttendanceServiceImpl implements AttendanceApi {
         }
 
         throw AttendanceErrors.forbidden("Only teachers or administrators can view group attendance");
+    }
+
+    /**
+     * Handle absence notice attachment for a record (bulk operation).
+     * If status is PRESENT, clears absenceNoticeId.
+     * If absenceNoticeId is provided, attaches that notice (with validation).
+     * If autoAttachLastNotice is true, attaches last submitted notice for student/session.
+     */
+    private void handleAbsenceNoticeAttachment(
+            AttendanceRecord record,
+            MarkAttendanceItem item,
+            UUID sessionId
+    ) {
+        handleAbsenceNoticeAttachment(
+                record,
+                item.absenceNoticeId(),
+                item.autoAttachLastNotice(),
+                sessionId,
+                item.studentId()
+        );
+    }
+
+    /**
+     * Handle absence notice attachment for a record (single operation).
+     * If status is PRESENT, clears absenceNoticeId.
+     * If absenceNoticeId is provided, attaches that notice (with validation).
+     * If autoAttachLastNotice is true, attaches last submitted notice for student/session.
+     */
+    private void handleAbsenceNoticeAttachment(
+            AttendanceRecord record,
+            UUID absenceNoticeId,
+            Boolean autoAttachLastNotice,
+            UUID sessionId,
+            UUID studentId
+    ) {
+        // If status is PRESENT, clear absence notice (no excuse needed for present)
+        if (record.getStatus() == AttendanceStatus.PRESENT) {
+            record.setAbsenceNoticeId(null);
+            return;
+        }
+
+        // Explicit notice ID provided
+        if (absenceNoticeId != null) {
+            AbsenceNotice notice = absenceNoticeRepository.findById(absenceNoticeId)
+                    .orElseThrow(() -> AttendanceErrors.noticeNotFound(absenceNoticeId));
+
+            // Validate notice matches record
+            if (!notice.getLessonSessionId().equals(sessionId)) {
+                throw AttendanceErrors.noticeDoesNotMatchRecord(
+                        absenceNoticeId, record.getId(), "notice sessionId does not match record sessionId");
+            }
+            if (!notice.getStudentId().equals(studentId)) {
+                throw AttendanceErrors.noticeDoesNotMatchRecord(
+                        absenceNoticeId, record.getId(), "notice studentId does not match record studentId");
+            }
+
+            // Validate notice is not canceled
+            if (notice.getStatus() == AbsenceNoticeStatus.CANCELED) {
+                throw AttendanceErrors.noticeCanceled(absenceNoticeId);
+            }
+
+            record.setAbsenceNoticeId(absenceNoticeId);
+
+            // TODO: publish IntegrationEvent AbsenceNoticeAttachedToAttendance {
+            //   recordId: record.getId(), noticeId, sessionId, studentId, attachedAt: LocalDateTime.now(), attachedBy: record.getMarkedBy()
+            // }
+
+            return;
+        }
+
+        // Auto-attach last notice
+        if (Boolean.TRUE.equals(autoAttachLastNotice)) {
+            Optional<AbsenceNotice> lastNotice = absenceNoticeRepository.findLastSubmittedBySessionAndStudent(
+                    sessionId, studentId, AbsenceNoticeStatus.SUBMITTED);
+
+            if (lastNotice.isPresent()) {
+                record.setAbsenceNoticeId(lastNotice.get().getId());
+
+                // TODO: publish IntegrationEvent AbsenceNoticeAttachedToAttendance {
+                //   recordId: record.getId(), noticeId: lastNotice.get().getId(), sessionId, studentId, attachedAt: LocalDateTime.now(), attachedBy: record.getMarkedBy()
+                // }
+            }
+            // If no notice found, leave absenceNoticeId as null (not an error)
+            return;
+        }
+
+        // No attachment requested - leave absenceNoticeId as is (or null if new record)
     }
 }

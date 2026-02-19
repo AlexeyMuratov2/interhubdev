@@ -33,6 +33,8 @@ public interface AttendanceApi {
      * @param status       attendance status (required)
      * @param minutesLate  optional minutes late (required if status=LATE, must be null otherwise)
      * @param teacherComment optional teacher comment
+     * @param absenceNoticeId optional explicit absence notice ID to attach
+     * @param autoAttachLastNotice if true, automatically attach last submitted notice for this student and session
      * @param markedBy     user ID who marks attendance (must be teacher of session or admin)
      * @return created/updated attendance record DTO
      * @throws AppException NOT_FOUND (session/student), BAD_REQUEST (validation), FORBIDDEN (not teacher of session)
@@ -43,6 +45,8 @@ public interface AttendanceApi {
             AttendanceStatus status,
             Integer minutesLate,
             String teacherComment,
+            UUID absenceNoticeId,
+            Boolean autoAttachLastNotice,
             UUID markedBy
     );
 
@@ -52,10 +56,11 @@ public interface AttendanceApi {
      *
      * @param sessionId  lesson session (lesson) ID
      * @param requesterId current user ID (must be teacher of session or admin)
-     * @return session attendance DTO with counts and student records
+     * @param includeCanceled if true, include CANCELED notices in student notices; if false, only SUBMITTED
+     * @return session attendance DTO with counts and student records (including notices per student)
      * @throws AppException NOT_FOUND (session), FORBIDDEN (not teacher of session)
      */
-    SessionAttendanceDto getSessionAttendance(UUID sessionId, UUID requesterId);
+    SessionAttendanceDto getSessionAttendance(UUID sessionId, UUID requesterId, boolean includeCanceled);
 
     /**
      * Get attendance history for a student.

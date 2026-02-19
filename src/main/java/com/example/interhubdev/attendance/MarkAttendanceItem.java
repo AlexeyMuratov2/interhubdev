@@ -15,6 +15,17 @@ public record MarkAttendanceItem(
         AttendanceStatus status,
         Integer minutesLate,
         @Size(max = 2000, message = "teacherComment must not exceed 2000 characters")
-        String teacherComment
+        String teacherComment,
+        /**
+         * Optional explicit absence notice ID to attach to this record.
+         * If provided, this notice will be attached (must match session/student and be SUBMITTED).
+         * Mutually exclusive with autoAttachLastNotice.
+         */
+        UUID absenceNoticeId,
+        /**
+         * If true, automatically attach the last submitted notice for this student and session.
+         * Mutually exclusive with absenceNoticeId.
+         */
+        Boolean autoAttachLastNotice
 ) {
 }

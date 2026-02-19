@@ -30,6 +30,11 @@ public final class AttendanceErrors {
     public static final String CODE_SESSION_NOT_FOUND = "ATTENDANCE_SESSION_NOT_FOUND";
     public static final String CODE_INVALID_ATTACHMENT_COUNT = "ATTENDANCE_INVALID_ATTACHMENT_COUNT";
     public static final String CODE_INVALID_FILE_ID = "ATTENDANCE_INVALID_FILE_ID";
+    
+    // Attendance record attachment errors
+    public static final String CODE_RECORD_NOT_FOUND = "ATTENDANCE_RECORD_NOT_FOUND";
+    public static final String CODE_NOTICE_CANCELED = "ATTENDANCE_NOTICE_CANCELED";
+    public static final String CODE_NOTICE_DOES_NOT_MATCH_RECORD = "ATTENDANCE_NOTICE_DOES_NOT_MATCH_RECORD";
 
     public static AppException lessonNotFound(UUID id) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_LESSON_NOT_FOUND, "Lesson session not found: " + id);
@@ -87,5 +92,20 @@ public final class AttendanceErrors {
     public static AppException invalidFileId(String fileId, String reason) {
         return Errors.of(HttpStatus.BAD_REQUEST, CODE_INVALID_FILE_ID,
                 "Invalid file ID: " + fileId + ". " + reason);
+    }
+
+    // Attendance record attachment error factories
+    public static AppException recordNotFound(UUID id) {
+        return Errors.of(HttpStatus.NOT_FOUND, CODE_RECORD_NOT_FOUND, "Attendance record not found: " + id);
+    }
+
+    public static AppException noticeCanceled(UUID noticeId) {
+        return Errors.of(HttpStatus.BAD_REQUEST, CODE_NOTICE_CANCELED,
+                "Absence notice " + noticeId + " is canceled and cannot be attached");
+    }
+
+    public static AppException noticeDoesNotMatchRecord(UUID noticeId, UUID recordId, String reason) {
+        return Errors.of(HttpStatus.BAD_REQUEST, CODE_NOTICE_DOES_NOT_MATCH_RECORD,
+                "Absence notice " + noticeId + " does not match attendance record " + recordId + ": " + reason);
     }
 }

@@ -28,6 +28,8 @@ import java.util.UUID;
 class AttendanceController {
 
     private final AttendanceApi attendanceApi;
+    private final AttachAbsenceNoticeToAttendanceUseCase attachNoticeUseCase;
+    private final DetachAbsenceNoticeFromAttendanceUseCase detachNoticeUseCase;
     private final AuthApi authApi;
 
     private UUID requireCurrentUser(HttpServletRequest request) {
@@ -63,19 +65,22 @@ class AttendanceController {
                 body.status(),
                 body.minutesLate(),
                 body.teacherComment(),
+                body.absenceNoticeId(),
+                body.autoAttachLastNotice(),
                 markedBy
         );
         return ResponseEntity.ok(record);
     }
 
     @GetMapping("/sessions/{sessionId}")
-    @Operation(summary = "Get session attendance", description = "Get attendance records for a lesson session with roster and counts. Requires TEACHER (of session) or ADMIN role.")
+    @Operation(summary = "Get session attendance", description = "Get attendance records for a lesson session with roster and counts. Query: includeCanceled (default: false). Requires TEACHER (of session) or ADMIN role.")
     public ResponseEntity<SessionAttendanceDto> getSessionAttendance(
             @PathVariable UUID sessionId,
+            @RequestParam(required = false, defaultValue = "false") boolean includeCanceled,
             HttpServletRequest request
     ) {
         UUID requesterId = requireCurrentUser(request);
-        SessionAttendanceDto dto = attendanceApi.getSessionAttendance(sessionId, requesterId);
+        SessionAttendanceDto dto = attendanceApi.getSessionAttendance(sessionId, requesterId, includeCanceled);
         return ResponseEntity.ok(dto);
     }
 
@@ -112,6 +117,29 @@ class AttendanceController {
         return ResponseEntity.ok(dto);
     }
 
+    @PostMapping("/records/{recordId}/attach-notice")
+    @Operation(summary = "Attach absence notice to attendance record", description = "Explicitly attach an absence notice to an attendance record. Requires TEACHER (of session) or ADMIN role.")
+    public ResponseEntity<AttendanceRecordDto> attachNotice(
+            @PathVariable UUID recordId,
+            @Valid @RequestBody AttachNoticeRequest body,
+            HttpServletRequest request
+    ) {
+        UUID requesterId = requireCurrentUser(request);
+        AttendanceRecordDto record = attachNoticeUseCase.execute(recordId, body.noticeId(), requesterId);
+        return ResponseEntity.ok(record);
+    }
+
+    @PostMapping("/records/{recordId}/detach-notice")
+    @Operation(summary = "Detach absence notice from attendance record", description = "Detach absence notice from an attendance record. Requires TEACHER (of session) or ADMIN role.")
+    public ResponseEntity<AttendanceRecordDto> detachNotice(
+            @PathVariable UUID recordId,
+            HttpServletRequest request
+    ) {
+        UUID requesterId = requireCurrentUser(request);
+        AttendanceRecordDto record = detachNoticeUseCase.execute(recordId, requesterId);
+        return ResponseEntity.ok(record);
+    }
+
     /**
      * Request for bulk attendance marking.
      */
@@ -128,7 +156,26 @@ class AttendanceController {
             AttendanceStatus status,
             Integer minutesLate,
             @jakarta.validation.constraints.Size(max = 2000, message = "teacherComment must not exceed 2000 characters")
-            String teacherComment
+            String teacherComment,
+            /**
+             * Optional explicit absence notice ID to attach to this record.
+             * Mutually exclusive with autoAttachLastNotice.
+             */
+            UUID absenceNoticeId,
+            /**
+             * If true, automatically attach the last submitted notice for this student and session.
+             * Mutually exclusive with absenceNoticeId.
+             */
+            Boolean autoAttachLastNotice
+    ) {
+    }
+
+    /**
+     * Request for attaching notice to record.
+     */
+    public record AttachNoticeRequest(
+            @jakarta.validation.constraints.NotNull(message = "noticeId is required")
+            UUID noticeId
     ) {
     }
 }

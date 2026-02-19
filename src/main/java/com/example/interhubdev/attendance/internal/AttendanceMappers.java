@@ -23,7 +23,8 @@ final class AttendanceMappers {
                 Optional.ofNullable(e.getTeacherComment()).filter(s -> !s.isBlank()),
                 e.getMarkedBy(),
                 e.getMarkedAt(),
-                e.getUpdatedAt()
+                e.getUpdatedAt(),
+                Optional.ofNullable(e.getAbsenceNoticeId())
         );
     }
 }
