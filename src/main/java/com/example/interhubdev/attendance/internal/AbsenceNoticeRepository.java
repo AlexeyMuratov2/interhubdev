@@ -1,0 +1,78 @@
+package com.example.interhubdev.attendance.internal;
+
+import com.example.interhubdev.attendance.AbsenceNoticeStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * JPA repository for absence_notice.
+ */
+interface AbsenceNoticeRepository extends JpaRepository<AbsenceNotice, UUID> {
+
+    /**
+     * Find active (SUBMITTED) notice for a student and session.
+     */
+    @Query("SELECT an FROM AbsenceNotice an WHERE an.lessonSessionId = :sessionId " +
+            "AND an.studentId = :studentId AND an.status = :status")
+    Optional<AbsenceNotice> findActiveBySessionAndStudent(
+            @Param("sessionId") UUID sessionId,
+            @Param("studentId") UUID studentId,
+            @Param("status") AbsenceNoticeStatus status
+    );
+
+    /**
+     * Find all notices for a lesson session.
+     *
+     * @param sessionId lesson session ID
+     * @return list of notices (ordered by submittedAt DESC)
+     */
+    List<AbsenceNotice> findByLessonSessionIdOrderBySubmittedAtDesc(UUID sessionId);
+
+    /**
+     * Find all notices for a lesson session with optional status filter.
+     *
+     * @param sessionId lesson session ID
+     * @param status    optional status filter (if null, returns all)
+     * @return list of notices (ordered by submittedAt DESC)
+     */
+    @Query("SELECT an FROM AbsenceNotice an WHERE an.lessonSessionId = :sessionId " +
+            "AND (:status IS NULL OR an.status = :status) " +
+            "ORDER BY an.submittedAt DESC")
+    List<AbsenceNotice> findByLessonSessionIdAndStatus(
+            @Param("sessionId") UUID sessionId,
+            @Param("status") AbsenceNoticeStatus status
+    );
+
+    /**
+     * Find all notices for a student within a date range.
+     *
+     * @param studentId student profile ID
+     * @param from      optional filter: submittedAt >= from
+     * @param to        optional filter: submittedAt <= to
+     * @return list of notices (ordered by submittedAt DESC)
+     */
+    @Query("SELECT an FROM AbsenceNotice an WHERE an.studentId = :studentId " +
+            "AND (:from IS NULL OR an.submittedAt >= :from) " +
+            "AND (:to IS NULL OR an.submittedAt <= :to) " +
+            "ORDER BY an.submittedAt DESC")
+    List<AbsenceNotice> findByStudentIdAndSubmittedAtBetween(
+            @Param("studentId") UUID studentId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
+    /**
+     * Find notice by ID and student ID (for ownership check).
+     *
+     * @param id        notice ID
+     * @param studentId student profile ID
+     * @return optional notice
+     */
+    Optional<AbsenceNotice> findByIdAndStudentId(UUID id, UUID studentId);
+}
