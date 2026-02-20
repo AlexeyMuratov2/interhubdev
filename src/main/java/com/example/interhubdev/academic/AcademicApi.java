@@ -38,6 +38,25 @@ public interface AcademicApi {
 
     List<SemesterDto> findSemestersByAcademicYearId(UUID academicYearId);
 
+    /**
+     * Find semester by academic year and number (1 or 2).
+     *
+     * @param academicYearId academic year ID (identifies the year)
+     * @param number         semester number within the year (1 or 2)
+     * @return optional semester DTO if found
+     */
+    Optional<SemesterDto> findSemesterByAcademicYearIdAndNumber(UUID academicYearId, int number);
+
+    /**
+     * Find semester by calendar year of the academic year start and semester number (1 or 2).
+     * E.g. calendarYear 2024 finds the academic year that starts in 2024 (e.g. "2024/25"), then semester by number.
+     *
+     * @param calendarYear calendar year of the academic year's start date
+     * @param semesterNo   semester number within the year (1 or 2)
+     * @return optional semester DTO if found
+     */
+    Optional<SemesterDto> findSemesterByCalendarYearAndNumber(int calendarYear, int semesterNo);
+
     SemesterDto createSemester(
             UUID academicYearId,
             int number,

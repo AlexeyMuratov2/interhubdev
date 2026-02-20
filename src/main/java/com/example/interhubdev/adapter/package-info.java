@@ -50,10 +50,13 @@
  *   <li>{@link com.example.interhubdev.adapter.SubjectCurriculumSubjectLookupAdapter} - implements Subject's
  *       {@link com.example.interhubdev.subject.CurriculumSubjectLookupPort} using Program's
  *       {@link com.example.interhubdev.program.ProgramApi} (to avoid circular dependency between subject and program).</li>
+ *   <li>{@link com.example.interhubdev.adapter.SemesterIdByYearAdapter} - implements Program's
+ *       {@link com.example.interhubdev.program.SemesterIdByYearPort} using Academic's
+ *       {@link com.example.interhubdev.academic.AcademicApi} (so Program can resolve semester ID by year and number without depending on Academic).</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
- * This package depends on {@code schedule}, {@code offering}, {@code group}, {@code document}, {@code subject}, {@code program}, and {@code submission}
+ * This package depends on {@code schedule}, {@code offering}, {@code group}, {@code document}, {@code subject}, {@code program}, {@code academic}, and {@code submission}
  * (only their port interfaces and types used in method signatures). The modules themselves do not depend on each other.
  * 
  * <p>This package is not a Spring Modulith module - it's an adapter layer that connects modules
@@ -61,6 +64,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Adapter",
-    allowedDependencies = {"schedule", "offering", "group", "document", "document :: api", "subject", "program", "submission", "error"}
+    allowedDependencies = {"schedule", "offering", "group", "document", "document :: api", "subject", "program", "academic", "submission", "error"}
 )
 package com.example.interhubdev.adapter;

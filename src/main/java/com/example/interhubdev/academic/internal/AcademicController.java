@@ -96,6 +96,17 @@ class AcademicController {
         return ResponseEntity.ok(academicApi.findSemestersByAcademicYearId(academicYearId));
     }
 
+    @GetMapping("/years/{academicYearId}/semesters/{number}")
+    @Operation(summary = "Get semester by academic year and number", description = "Returns the semester with given number (1 or 2) within the academic year. Year is identified by academicYearId.")
+    public ResponseEntity<SemesterDto> findSemesterByAcademicYearIdAndNumber(
+            @PathVariable UUID academicYearId,
+            @PathVariable @Min(value = 1, message = "Semester number must be 1 or 2") @Max(value = 2, message = "Semester number must be 1 or 2") int number
+    ) {
+        return academicApi.findSemesterByAcademicYearIdAndNumber(academicYearId, number)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/semesters/current")
     @Operation(summary = "Get current semester")
     public ResponseEntity<SemesterDto> findCurrentSemester() {
@@ -185,7 +196,7 @@ class AcademicController {
     ) {}
 
     record CreateSemesterRequest(
-            @Min(value = 1, message = "Semester number must be at least 1") int number,
+            @Min(value = 1, message = "Semester number must be 1 or 2") @Max(value = 2, message = "Semester number must be 1 or 2") int number,
             String name,
             @NotNull(message = "Start date is required") LocalDate startDate,
             @NotNull(message = "End date is required") LocalDate endDate,

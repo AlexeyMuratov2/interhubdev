@@ -87,9 +87,8 @@ class CurriculumSubjectService {
         if (subjectId == null) throw Errors.badRequest("Subject id is required");
         if (assessmentTypeId == null) throw Errors.badRequest("Assessment type id is required");
 
-        if (curriculumRepository.findById(curriculumId).isEmpty()) {
-            throw Errors.notFound("Curriculum not found: " + curriculumId);
-        }
+        Curriculum curriculum = curriculumRepository.findById(curriculumId)
+                .orElseThrow(() -> Errors.notFound("Curriculum not found: " + curriculumId));
         if (subjectApi.findSubjectById(subjectId).isEmpty()) {
             throw Errors.notFound("Subject not found: " + subjectId);
         }
@@ -97,7 +96,10 @@ class CurriculumSubjectService {
             throw Errors.notFound("Assessment type not found: " + assessmentTypeId);
         }
 
-        ProgramValidation.validatePositive(semesterNo, "semesterNo");
+        ProgramValidation.validateSemesterNoOneOrTwo(semesterNo, "semesterNo");
+        if (courseYear != null) {
+            ProgramValidation.validateCourseYearAgainstCurriculum(curriculum.getStartYear(), curriculum.getEndYear(), courseYear);
+        }
         ProgramValidation.validatePositive(durationWeeks, "durationWeeks");
 
         // Common-sense checks; keep them permissive for now.
@@ -163,7 +165,12 @@ class CurriculumSubjectService {
         ProgramValidation.validateNonNegative(hoursConsultation, "hoursConsultation");
         ProgramValidation.validateNonNegative(hoursCourseWork, "hoursCourseWork");
 
-        if (courseYear != null) entity.setCourseYear(courseYear);
+        if (courseYear != null) {
+            Curriculum curriculum = curriculumRepository.findById(entity.getCurriculumId())
+                    .orElseThrow(() -> Errors.notFound("Curriculum not found: " + entity.getCurriculumId()));
+            ProgramValidation.validateCourseYearAgainstCurriculum(curriculum.getStartYear(), curriculum.getEndYear(), courseYear);
+            entity.setCourseYear(courseYear);
+        }
         if (hoursTotal != null) entity.setHoursTotal(hoursTotal);
         if (hoursLecture != null) entity.setHoursLecture(hoursLecture);
         if (hoursPractice != null) entity.setHoursPractice(hoursPractice);

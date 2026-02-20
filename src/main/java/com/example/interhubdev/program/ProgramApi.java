@@ -36,6 +36,20 @@ public interface ProgramApi {
 
     void deleteCurriculum(UUID id);
 
+    /**
+     * Resolve semester ID for a curriculum position (course year + semester number).
+     * Calendar year is computed as curriculum.startYear + (courseYear - 1); then the semester
+     * with that year and number (1 or 2) is looked up in the academic calendar.
+     *
+     * @param curriculumId curriculum ID
+     * @param courseYear   course year (1-based)
+     * @param semesterNo   semester number within the year (1 or 2)
+     * @return semester ID if curriculum and semester exist; otherwise throws NOT_FOUND
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if curriculum not found or semester not found for the computed year and number
+     * @throws com.example.interhubdev.error.AppException BAD_REQUEST if courseYear or semesterNo are invalid
+     */
+    UUID getSemesterIdForCurriculumCourseAndSemester(UUID curriculumId, int courseYear, int semesterNo);
+
     // --- Curriculum subject ---
     Optional<CurriculumSubjectDto> findCurriculumSubjectById(UUID id);
 

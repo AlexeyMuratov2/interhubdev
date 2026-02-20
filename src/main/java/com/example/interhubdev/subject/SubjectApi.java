@@ -145,7 +145,7 @@ public interface SubjectApi {
      * Returns all subjects where teacher is assigned (as main teacher, slot teacher, or offering teacher).
      *
      * @param teacherId teacher entity ID (must not be null)
-     * @param semesterNo optional semester number filter (1..N); if null, returns all semesters
+     * @param semesterNo optional semester number filter (1 or 2); if null, returns all semesters
      * @return list of teacher subject items (never null, may be empty)
      * @throws com.example.interhubdev.error.AppException if teacher not found
      */

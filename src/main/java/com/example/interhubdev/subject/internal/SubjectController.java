@@ -235,7 +235,7 @@ class SubjectController {
      * Get list of teacher subjects (shortened view) filtered by semester.
      * Requires authentication. Teacher ID is extracted from JWT token.
      *
-     * @param semesterNo optional semester number filter (1..N)
+     * @param semesterNo optional semester number filter (1 or 2)
      * @param request HTTP request for authentication
      * @return 200 OK with list of teacher subject items
      */

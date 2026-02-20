@@ -133,6 +133,25 @@ class AcademicServiceImpl implements AcademicApi {
     }
 
     @Override
+    public Optional<SemesterDto> findSemesterByAcademicYearIdAndNumber(UUID academicYearId, int number) {
+        if (number < 1 || number > 2) {
+            return Optional.empty();
+        }
+        return semesterRepository.findByAcademicYearIdAndNumber(academicYearId, number)
+                .map(this::toSemesterDto);
+    }
+
+    @Override
+    public Optional<SemesterDto> findSemesterByCalendarYearAndNumber(int calendarYear, int semesterNo) {
+        if (semesterNo < 1 || semesterNo > 2) {
+            return Optional.empty();
+        }
+        return academicYearRepository.findFirstByStartDateYear(calendarYear)
+                .flatMap(ay -> semesterRepository.findByAcademicYearIdAndNumber(ay.getId(), semesterNo))
+                .map(this::toSemesterDto);
+    }
+
+    @Override
     @Transactional
     public SemesterDto createSemester(
             UUID academicYearId,
@@ -156,8 +175,8 @@ class AcademicServiceImpl implements AcademicApi {
         if (!endDate.isAfter(startDate)) {
             throw Errors.badRequest("End date must be after start date");
         }
-        if (number < 1) {
-            throw Errors.badRequest("Semester number must be >= 1");
+        if (number < 1 || number > 2) {
+            throw Errors.badRequest("Semester number must be 1 or 2");
         }
         if (weekCount != null && (weekCount < 1 || weekCount > 52)) {
             throw Errors.badRequest("Week count must be between 1 and 52");

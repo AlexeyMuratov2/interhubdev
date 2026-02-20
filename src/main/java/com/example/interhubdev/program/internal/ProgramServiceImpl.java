@@ -1,5 +1,6 @@
 package com.example.interhubdev.program.internal;
 
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.program.CurriculumDto;
 import com.example.interhubdev.program.CurriculumPracticeDto;
 import com.example.interhubdev.program.CurriculumStatus;
@@ -9,6 +10,7 @@ import com.example.interhubdev.program.PracticeLocation;
 import com.example.interhubdev.program.PracticeType;
 import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.program.ProgramDto;
+import com.example.interhubdev.program.SemesterIdByYearPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ class ProgramServiceImpl implements ProgramApi {
     private final CurriculumSubjectService curriculumSubjectService;
     private final CurriculumAssessmentService curriculumAssessmentService;
     private final CurriculumPracticeService curriculumPracticeService;
+    private final SemesterIdByYearPort semesterIdByYearPort;
 
     @Override
     public Optional<ProgramDto> findProgramById(UUID id) {
@@ -95,6 +98,17 @@ class ProgramServiceImpl implements ProgramApi {
     @Transactional
     public void deleteCurriculum(UUID id) {
         curriculumService.deleteCurriculum(id);
+    }
+
+    @Override
+    public UUID getSemesterIdForCurriculumCourseAndSemester(UUID curriculumId, int courseYear, int semesterNo) {
+        CurriculumDto curriculum = curriculumService.findCurriculumById(curriculumId)
+                .orElseThrow(() -> Errors.notFound("Curriculum not found: " + curriculumId));
+        ProgramValidation.validateCourseYearAgainstCurriculum(curriculum.startYear(), curriculum.endYear(), courseYear);
+        ProgramValidation.validateSemesterNoOneOrTwo(semesterNo, "semesterNo");
+        int calendarYear = curriculum.startYear() + (courseYear - 1);
+        return semesterIdByYearPort.findSemesterIdByCalendarYearAndNumber(calendarYear, semesterNo)
+                .orElseThrow(() -> Errors.notFound("Semester not found for curriculum course and semester"));
     }
 
     @Override

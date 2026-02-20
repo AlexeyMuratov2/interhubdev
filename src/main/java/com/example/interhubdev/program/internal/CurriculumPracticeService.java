@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,7 +54,7 @@ class CurriculumPracticeService {
         if (assessmentTypeId != null && subjectApi.findAssessmentTypeById(assessmentTypeId).isEmpty()) {
             throw Errors.notFound("Assessment type not found: " + assessmentTypeId);
         }
-        ProgramValidation.validatePositive(semesterNo, "semesterNo");
+        ProgramValidation.validateSemesterNoOneOrTwo(semesterNo, "semesterNo");
         ProgramValidation.validatePositive(durationWeeks, "durationWeeks");
 
         CurriculumPractice entity = CurriculumPractice.builder()
@@ -97,7 +96,7 @@ class CurriculumPracticeService {
         if (name != null) entity.setName(name.trim());
         if (description != null) entity.setDescription(description.trim());
         if (semesterNo != null) {
-            ProgramValidation.validatePositive(semesterNo, "semesterNo");
+            ProgramValidation.validateSemesterNoOneOrTwo(semesterNo, "semesterNo");
             entity.setSemesterNo(semesterNo);
         }
         if (durationWeeks != null) {

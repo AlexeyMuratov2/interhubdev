@@ -21,7 +21,7 @@
  * <ul>
  *   <li>NOT_FOUND (404) - academic year or semester not found</li>
  *   <li>CONFLICT (409) - academic year with name already exists; semester number already exists for this year</li>
- *   <li>BAD_REQUEST (400) - name/dates required; end date not after start date; semester dates outside academic year; invalid weekCount</li>
+ *   <li>BAD_REQUEST (400) - name/dates required; end date not after start date; semester number must be 1 or 2; semester dates outside academic year; invalid weekCount</li>
  *   <li>VALIDATION_FAILED (400) - request validation failed (@Valid on create/update)</li>
  *   <li>FORBIDDEN (403) - user has no required role for the operation</li>
  * </ul>

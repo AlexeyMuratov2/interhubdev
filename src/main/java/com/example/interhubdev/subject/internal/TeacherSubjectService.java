@@ -61,7 +61,7 @@ class TeacherSubjectService {
      * Get list of teacher subjects (shortened view) filtered by semester.
      *
      * @param teacherId teacher entity ID
-     * @param semesterNo optional semester number filter (1..N)
+     * @param semesterNo optional semester number filter (1 or 2)
      * @return list of teacher subject items
      */
     List<TeacherSubjectListItemDto> findTeacherSubjects(UUID teacherId, Integer semesterNo) {
