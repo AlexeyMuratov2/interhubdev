@@ -10,6 +10,8 @@ import com.example.interhubdev.program.PracticeLocation;
 import com.example.interhubdev.program.PracticeType;
 import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.program.ProgramDto;
+import com.example.interhubdev.program.GroupCurriculumIdPort;
+import com.example.interhubdev.program.GroupStartYearPort;
 import com.example.interhubdev.program.SemesterIdByYearPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,8 @@ class ProgramServiceImpl implements ProgramApi {
     private final CurriculumAssessmentService curriculumAssessmentService;
     private final CurriculumPracticeService curriculumPracticeService;
     private final SemesterIdByYearPort semesterIdByYearPort;
+    private final GroupStartYearPort groupStartYearPort;
+    private final GroupCurriculumIdPort groupCurriculumIdPort;
 
     @Override
     public Optional<ProgramDto> findProgramById(UUID id) {
@@ -78,14 +82,14 @@ class ProgramServiceImpl implements ProgramApi {
 
     @Override
     @Transactional
-    public CurriculumDto createCurriculum(UUID programId, String version, int startYear, Integer endYear, boolean isActive, String notes) {
-        return curriculumService.createCurriculum(programId, version, startYear, endYear, isActive, notes);
+    public CurriculumDto createCurriculum(UUID programId, String version, int durationYears, boolean isActive, String notes) {
+        return curriculumService.createCurriculum(programId, version, durationYears, isActive, notes);
     }
 
     @Override
     @Transactional
-    public CurriculumDto updateCurriculum(UUID id, String version, int startYear, Integer endYear, boolean isActive, CurriculumStatus status, String notes) {
-        return curriculumService.updateCurriculum(id, version, startYear, endYear, isActive, status, notes);
+    public CurriculumDto updateCurriculum(UUID id, String version, int durationYears, boolean isActive, CurriculumStatus status, String notes) {
+        return curriculumService.updateCurriculum(id, version, durationYears, isActive, status, notes);
     }
 
     @Override
@@ -101,14 +105,31 @@ class ProgramServiceImpl implements ProgramApi {
     }
 
     @Override
-    public UUID getSemesterIdForCurriculumCourseAndSemester(UUID curriculumId, int courseYear, int semesterNo) {
+    public UUID getSemesterIdForCurriculumCourseAndSemester(UUID groupId, int courseYear, int semesterNo) {
+        // Get group's start year
+        int groupStartYear = groupStartYearPort.getStartYearByGroupId(groupId)
+                .orElseThrow(() -> Errors.notFound("Group not found: " + groupId));
+        
+        // Get curriculum ID from group
+        UUID curriculumId = groupCurriculumIdPort.getCurriculumIdByGroupId(groupId)
+                .orElseThrow(() -> Errors.notFound("Group not found: " + groupId));
+        
+        // Get curriculum to validate courseYear against duration
         CurriculumDto curriculum = curriculumService.findCurriculumById(curriculumId)
                 .orElseThrow(() -> Errors.notFound("Curriculum not found: " + curriculumId));
-        ProgramValidation.validateCourseYearAgainstCurriculum(curriculum.startYear(), curriculum.endYear(), courseYear);
+        
+        // Validate courseYear against curriculum duration
+        ProgramValidation.validateCourseYearAgainstCurriculum(curriculum.durationYears(), courseYear);
         ProgramValidation.validateSemesterNoOneOrTwo(semesterNo, "semesterNo");
-        int calendarYear = curriculum.startYear() + (courseYear - 1);
+        
+        // Calculate calendar year: groupStartYear + (courseYear - 1)
+        int calendarYear = groupStartYear + (courseYear - 1);
+        
         return semesterIdByYearPort.findSemesterIdByCalendarYearAndNumber(calendarYear, semesterNo)
-                .orElseThrow(() -> Errors.notFound("Semester not found for curriculum course and semester"));
+                .orElseThrow(() -> Errors.notFound(
+                        String.format("Semester not found: groupId=%s, courseYear=%d, semesterNo=%d, calendarYear=%d. " +
+                                "Please ensure the academic year for calendar year %d exists and has semester %d.",
+                                groupId, courseYear, semesterNo, calendarYear, calendarYear, semesterNo)));
     }
 
     @Override

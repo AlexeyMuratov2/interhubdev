@@ -6,6 +6,8 @@
  *   <li>{@link com.example.interhubdev.group.GroupApi} - groups, leaders, overrides</li>
  *   <li>{@link com.example.interhubdev.group.GroupExistsPort} - lightweight port for checking group existence (avoids circular dependencies)</li>
  *   <li>{@link com.example.interhubdev.group.GroupSummaryPort} - lightweight port for getting group summaries (id, code, name) (avoids circular dependencies)</li>
+ *   <li>{@link com.example.interhubdev.group.GroupStartYearPort} - lightweight port for getting group start year (avoids circular dependencies)</li>
+ *   <li>{@link com.example.interhubdev.group.GroupCurriculumIdPort} - lightweight port for getting group curriculum ID (avoids circular dependencies)</li>
  *   <li>{@link com.example.interhubdev.group.StudentGroupDto}, {@link com.example.interhubdev.group.GroupLeaderDto}, {@link com.example.interhubdev.group.GroupCurriculumOverrideDto} - DTOs</li>
  * </ul>
  *

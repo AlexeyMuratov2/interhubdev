@@ -37,8 +37,8 @@ class Curriculum {
     @Column(name = "version", nullable = false, length = 50)
     private String version;
 
-    @Column(name = "start_year", nullable = false)
-    private int startYear;
+    @Column(name = "duration_years", nullable = false)
+    private int durationYears;
 
     @Column(name = "is_active", nullable = false)
     @Builder.Default
@@ -57,9 +57,6 @@ class Curriculum {
 
     @Column(name = "approved_by")
     private UUID approvedBy;
-
-    @Column(name = "end_year")
-    private Integer endYear;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

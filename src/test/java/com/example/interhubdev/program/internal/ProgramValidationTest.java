@@ -56,15 +56,15 @@ class ProgramValidationTest {
         @Test
         @DisplayName("throws when courseYear is 0")
         void throwsWhenZero() {
-            assertThatThrownBy(() -> ProgramValidation.validateCourseYearAgainstCurriculum(2020, 2024, 0))
+            assertThatThrownBy(() -> ProgramValidation.validateCourseYearAgainstCurriculum(4, 0))
                     .isInstanceOf(AppException.class)
                     .hasMessageContaining("courseYear must be at least 1");
         }
 
         @Test
-        @DisplayName("throws when courseYear exceeds endYear - startYear")
+        @DisplayName("throws when courseYear exceeds durationYears")
         void throwsWhenExceedsDuration() {
-            assertThatThrownBy(() -> ProgramValidation.validateCourseYearAgainstCurriculum(2020, 2024, 5))
+            assertThatThrownBy(() -> ProgramValidation.validateCourseYearAgainstCurriculum(4, 5))
                     .isInstanceOf(AppException.class)
                     .hasMessageContaining("courseYear must not exceed curriculum duration")
                     .hasMessageContaining("max is 4");
@@ -73,17 +73,19 @@ class ProgramValidationTest {
         @Test
         @DisplayName("does not throw when courseYear is in range")
         void acceptsValidRange() {
-            assertThatCode(() -> ProgramValidation.validateCourseYearAgainstCurriculum(2020, 2024, 1))
+            assertThatCode(() -> ProgramValidation.validateCourseYearAgainstCurriculum(4, 1))
                     .doesNotThrowAnyException();
-            assertThatCode(() -> ProgramValidation.validateCourseYearAgainstCurriculum(2020, 2024, 4))
+            assertThatCode(() -> ProgramValidation.validateCourseYearAgainstCurriculum(4, 4))
                     .doesNotThrowAnyException();
         }
 
         @Test
-        @DisplayName("when endYear is null allows any courseYear >= 1")
-        void whenEndYearNullAllowsLargeCourseYear() {
-            assertThatCode(() -> ProgramValidation.validateCourseYearAgainstCurriculum(2020, null, 10))
-                    .doesNotThrowAnyException();
+        @DisplayName("throws when courseYear exceeds durationYears")
+        void throwsWhenExceedsDurationYears() {
+            assertThatThrownBy(() -> ProgramValidation.validateCourseYearAgainstCurriculum(4, 10))
+                    .isInstanceOf(AppException.class)
+                    .hasMessageContaining("courseYear must not exceed curriculum duration")
+                    .hasMessageContaining("max is 4");
         }
     }
 }

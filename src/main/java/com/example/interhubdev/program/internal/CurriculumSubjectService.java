@@ -98,7 +98,7 @@ class CurriculumSubjectService {
 
         ProgramValidation.validateSemesterNoOneOrTwo(semesterNo, "semesterNo");
         if (courseYear != null) {
-            ProgramValidation.validateCourseYearAgainstCurriculum(curriculum.getStartYear(), curriculum.getEndYear(), courseYear);
+            ProgramValidation.validateCourseYearAgainstCurriculum(curriculum.getDurationYears(), courseYear);
         }
         ProgramValidation.validatePositive(durationWeeks, "durationWeeks");
 
@@ -168,7 +168,7 @@ class CurriculumSubjectService {
         if (courseYear != null) {
             Curriculum curriculum = curriculumRepository.findById(entity.getCurriculumId())
                     .orElseThrow(() -> Errors.notFound("Curriculum not found: " + entity.getCurriculumId()));
-            ProgramValidation.validateCourseYearAgainstCurriculum(curriculum.getStartYear(), curriculum.getEndYear(), courseYear);
+            ProgramValidation.validateCourseYearAgainstCurriculum(curriculum.getDurationYears(), courseYear);
             entity.setCourseYear(courseYear);
         }
         if (hoursTotal != null) entity.setHoursTotal(hoursTotal);

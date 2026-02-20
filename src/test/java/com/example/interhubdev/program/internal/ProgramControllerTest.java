@@ -101,36 +101,4 @@ class ProgramControllerTest {
         }
     }
 
-    @Nested
-    @DisplayName("GET /api/programs/curricula/{curriculumId}/semester-id")
-    class GetSemesterIdForCurriculumCourseAndSemester {
-
-        @Test
-        @DisplayName("returns 200 and semesterId when found")
-        void returns200AndSemesterId() throws Exception {
-            UUID semesterId = UUID.randomUUID();
-            when(programApi.getSemesterIdForCurriculumCourseAndSemester(eq(CURRICULUM_ID), eq(1), eq(1)))
-                    .thenReturn(semesterId);
-
-            mockMvc.perform(get("/api/programs/curricula/{curriculumId}/semester-id", CURRICULUM_ID)
-                            .param("courseYear", "1")
-                            .param("semesterNo", "1"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.semesterId").value(semesterId.toString()));
-
-            verify(programApi).getSemesterIdForCurriculumCourseAndSemester(CURRICULUM_ID, 1, 1);
-        }
-
-        @Test
-        @DisplayName("returns 404 when semester not found")
-        void returns404WhenNotFound() throws Exception {
-            when(programApi.getSemesterIdForCurriculumCourseAndSemester(eq(CURRICULUM_ID), eq(1), eq(1)))
-                    .thenThrow(new AppException("NOT_FOUND", HttpStatus.NOT_FOUND, "Semester not found for curriculum course and semester", null));
-
-            mockMvc.perform(get("/api/programs/curricula/{curriculumId}/semester-id", CURRICULUM_ID)
-                            .param("courseYear", "1")
-                            .param("semesterNo", "1"))
-                    .andExpect(status().isNotFound());
-        }
-    }
 }

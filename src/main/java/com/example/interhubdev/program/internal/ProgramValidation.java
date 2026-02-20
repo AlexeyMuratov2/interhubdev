@@ -36,20 +36,18 @@ final class ProgramValidation {
     }
 
     /**
-     * Validates course year against curriculum start/end years: 1 <= courseYear <= (endYear - startYear)
-     * when endYear is set; otherwise only courseYear >= 1.
+     * Validates course year against curriculum duration: 1 <= courseYear <= durationYears.
      *
-     * @param startYear  curriculum start year
-     * @param endYear    curriculum end year (nullable)
-     * @param courseYear course year to validate (must be non-null when calling)
+     * @param durationYears curriculum duration in years
+     * @param courseYear    course year to validate (must be non-null when calling)
      * @throws com.example.interhubdev.error.AppException BAD_REQUEST if out of range
      */
-    static void validateCourseYearAgainstCurriculum(int startYear, Integer endYear, int courseYear) {
+    static void validateCourseYearAgainstCurriculum(int durationYears, int courseYear) {
         if (courseYear < 1) {
             throw Errors.badRequest("courseYear must be at least 1");
         }
-        if (endYear != null && courseYear > (endYear - startYear)) {
-            throw Errors.badRequest("courseYear must not exceed curriculum duration (endYear - startYear), max is " + (endYear - startYear));
+        if (courseYear > durationYears) {
+            throw Errors.badRequest("courseYear must not exceed curriculum duration, max is " + durationYears);
         }
     }
 

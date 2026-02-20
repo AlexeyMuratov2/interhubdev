@@ -9,7 +9,6 @@ import com.example.interhubdev.program.PracticeLocation;
 import com.example.interhubdev.program.PracticeType;
 import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.program.ProgramDto;
-import com.example.interhubdev.program.SemesterIdResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -113,8 +112,7 @@ class ProgramController {
         CurriculumDto dto = programApi.createCurriculum(
                 programId,
                 request.version(),
-                request.startYear(),
-                request.endYear(),
+                request.durationYears(),
                 request.isActive() != null ? request.isActive() : true,
                 request.notes()
         );
@@ -131,8 +129,7 @@ class ProgramController {
         CurriculumDto dto = programApi.updateCurriculum(
                 id,
                 request.version(),
-                request.startYear(),
-                request.endYear(),
+                request.durationYears(),
                 request.isActive(),
                 request.status(),
                 request.notes()
@@ -164,17 +161,6 @@ class ProgramController {
     @Operation(summary = "Get curriculum subjects by curriculum ID")
     public ResponseEntity<List<CurriculumSubjectDto>> findCurriculumSubjectsByCurriculumId(@PathVariable UUID curriculumId) {
         return ResponseEntity.ok(programApi.findCurriculumSubjectsByCurriculumId(curriculumId));
-    }
-
-    @GetMapping("/curricula/{curriculumId}/semester-id")
-    @Operation(summary = "Get semester ID by curriculum, course and semester number", description = "Resolves the calendar semester for the given curriculum position. Course 1 = curriculum start year, course 2 = start year + 1, etc. Semester number must be 1 or 2.")
-    public ResponseEntity<SemesterIdResponse> getSemesterIdForCurriculumCourseAndSemester(
-            @PathVariable UUID curriculumId,
-            @RequestParam @Min(value = 1, message = "courseYear must be at least 1") int courseYear,
-            @RequestParam @Min(value = 1, message = "semesterNo must be 1 or 2") @Max(value = 2, message = "semesterNo must be 1 or 2") int semesterNo
-    ) {
-        UUID semesterId = programApi.getSemesterIdForCurriculumCourseAndSemester(curriculumId, courseYear, semesterNo);
-        return ResponseEntity.ok(new SemesterIdResponse(semesterId));
     }
 
     @GetMapping("/curriculum-subjects/{id}")
@@ -369,15 +355,13 @@ class ProgramController {
     record UpdateProgramRequest(String name, String description, String degreeLevel, UUID departmentId) {}
     record CreateCurriculumRequest(
             @NotBlank(message = "Version is required") String version,
-            @Min(value = 1900, message = "startYear must be at least 1900") @Max(value = 2100, message = "startYear must be at most 2100") int startYear,
-            @Min(value = 1900, message = "endYear must be at least 1900") @Max(value = 2100, message = "endYear must be at most 2100") Integer endYear,
+            @Min(value = 1, message = "durationYears must be at least 1") int durationYears,
             Boolean isActive,
             String notes
     ) {}
     record UpdateCurriculumRequest(
             String version,
-            @Min(value = 1900, message = "startYear must be at least 1900") @Max(value = 2100, message = "startYear must be at most 2100") int startYear,
-            @Min(value = 1900, message = "endYear must be at least 1900") @Max(value = 2100, message = "endYear must be at most 2100") Integer endYear,
+            @Min(value = 1, message = "durationYears must be at least 1") int durationYears,
             boolean isActive,
             CurriculumStatus status,
             String notes

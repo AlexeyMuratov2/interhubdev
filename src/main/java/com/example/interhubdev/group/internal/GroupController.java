@@ -1,6 +1,8 @@
 package com.example.interhubdev.group.internal;
 
 import com.example.interhubdev.group.*;
+import com.example.interhubdev.program.ProgramApi;
+import com.example.interhubdev.program.SemesterIdResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,6 +30,7 @@ import java.util.UUID;
 class GroupController {
 
     private final GroupApi groupApi;
+    private final ProgramApi programApi;
 
     @GetMapping
     @Operation(summary = "Get all groups")
@@ -198,6 +201,17 @@ class GroupController {
     public ResponseEntity<Void> deleteOverride(@PathVariable UUID id) {
         groupApi.deleteOverride(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{groupId}/semester-id")
+    @Operation(summary = "Get semester ID by group, course and semester number", description = "Resolves the calendar semester for the given group's curriculum position. Course 1 = group start year, course 2 = start year + 1, etc. Semester number must be 1 or 2.")
+    public ResponseEntity<SemesterIdResponse> getSemesterIdForGroupCourseAndSemester(
+            @PathVariable UUID groupId,
+            @RequestParam @Min(value = 1, message = "courseYear must be at least 1") int courseYear,
+            @RequestParam @Min(value = 1, message = "semesterNo must be 1 or 2") @Max(value = 2, message = "semesterNo must be 1 or 2") int semesterNo
+    ) {
+        UUID semesterId = programApi.getSemesterIdForCurriculumCourseAndSemester(groupId, courseYear, semesterNo);
+        return ResponseEntity.ok(new SemesterIdResponse(semesterId));
     }
 
     record AddGroupMemberRequest(@NotNull(message = "Student id is required") UUID studentId) {}

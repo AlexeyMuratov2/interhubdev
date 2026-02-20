@@ -25,23 +25,19 @@ class CurriculumService {
     }
 
     List<CurriculumDto> findCurriculaByProgramId(UUID programId) {
-        return curriculumRepository.findByProgramIdOrderByStartYearDescVersionDesc(programId).stream()
+        return curriculumRepository.findByProgramIdOrderByVersionDesc(programId).stream()
                 .map(ProgramMappers::toCurriculumDto)
                 .toList();
     }
 
     @Transactional
-    CurriculumDto createCurriculum(UUID programId, String version, int startYear, Integer endYear, boolean isActive, String notes) {
+    CurriculumDto createCurriculum(UUID programId, String version, int durationYears, boolean isActive, String notes) {
         if (programRepository.findById(programId).isEmpty()) {
             throw Errors.notFound("Program not found: " + programId);
         }
 
         String trimmedVersion = ProgramValidation.requiredTrimmed(version, "Curriculum version");
-        ProgramValidation.validateYearRange(startYear, "startYear");
-        ProgramValidation.validateOptionalYearRange(endYear, "endYear");
-        if (endYear != null && endYear < startYear) {
-            throw Errors.badRequest("endYear must be greater than or equal to startYear");
-        }
+        ProgramValidation.validatePositive(durationYears, "durationYears");
         if (curriculumRepository.existsByProgramIdAndVersion(programId, trimmedVersion)) {
             throw Errors.conflict("Curriculum with version '" + trimmedVersion + "' already exists for program");
         }
@@ -49,8 +45,7 @@ class CurriculumService {
         Curriculum entity = Curriculum.builder()
                 .programId(programId)
                 .version(trimmedVersion)
-                .startYear(startYear)
-                .endYear(endYear)
+                .durationYears(durationYears)
                 .isActive(isActive)
                 .notes(notes != null ? notes.trim() : null)
                 .build();
@@ -58,7 +53,7 @@ class CurriculumService {
     }
 
     @Transactional
-    CurriculumDto updateCurriculum(UUID id, String version, int startYear, Integer endYear, boolean isActive, CurriculumStatus status, String notes) {
+    CurriculumDto updateCurriculum(UUID id, String version, int durationYears, boolean isActive, CurriculumStatus status, String notes) {
         Curriculum entity = curriculumRepository.findById(id)
                 .orElseThrow(() -> Errors.notFound("Curriculum not found: " + id));
 
@@ -67,14 +62,9 @@ class CurriculumService {
         }
         if (version != null) entity.setVersion(version.trim());
 
-        ProgramValidation.validateYearRange(startYear, "startYear");
-        ProgramValidation.validateOptionalYearRange(endYear, "endYear");
-        if (endYear != null && endYear < startYear) {
-            throw Errors.badRequest("endYear must be greater than or equal to startYear");
-        }
+        ProgramValidation.validatePositive(durationYears, "durationYears");
 
-        entity.setStartYear(startYear);
-        entity.setEndYear(endYear);
+        entity.setDurationYears(durationYears);
         entity.setActive(isActive);
         if (status != null) entity.setStatus(status);
         if (notes != null) entity.setNotes(notes.trim());

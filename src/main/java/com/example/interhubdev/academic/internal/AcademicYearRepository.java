@@ -17,7 +17,11 @@ interface AcademicYearRepository extends JpaRepository<AcademicYear, UUID> {
     /** All academic years ordered by start date descending (most recent first). */
     List<AcademicYear> findAllByOrderByStartDateDesc();
 
-    /** Academic year whose start date falls in the given calendar year (e.g. 2024 for "2024/25"). */
-    @Query("SELECT ay FROM AcademicYear ay WHERE YEAR(ay.startDate) = :year")
-    Optional<AcademicYear> findFirstByStartDateYear(@Param("year") int year);
+    /** Academic year that contains the given calendar year (e.g. 2026 finds "2025/26" if it spans into 2026). */
+    @Query("SELECT ay FROM AcademicYear ay WHERE ay.startDate <= :date AND ay.endDate >= :date")
+    Optional<AcademicYear> findFirstByDate(@Param("date") java.time.LocalDate date);
+
+    /** Academic year that starts in the given calendar year (e.g. 2024 finds "2024/25" if it starts in 2024). */
+    @Query("SELECT ay FROM AcademicYear ay WHERE ay.startDate >= :yearStart AND ay.startDate < :yearEnd ORDER BY ay.startDate DESC")
+    Optional<AcademicYear> findFirstByStartYear(@Param("yearStart") java.time.LocalDate yearStart, @Param("yearEnd") java.time.LocalDate yearEnd);
 }

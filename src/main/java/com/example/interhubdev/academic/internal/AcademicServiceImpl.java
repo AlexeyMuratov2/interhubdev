@@ -146,7 +146,32 @@ class AcademicServiceImpl implements AcademicApi {
         if (semesterNo < 1 || semesterNo > 2) {
             return Optional.empty();
         }
-        return academicYearRepository.findFirstByStartDateYear(calendarYear)
+        // For groups: find academic year that contains the calendar year
+        // Use date appropriate for the semester:
+        // - Semester 1 typically starts in September (fall semester)
+        // - Semester 2 typically starts in February (spring semester)
+        // Try dates that are likely to be within the academic year
+        java.time.LocalDate[] datesToTry = {
+            java.time.LocalDate.of(calendarYear, semesterNo == 1 ? 9 : 2, 15), // Typical semester start
+            java.time.LocalDate.of(calendarYear, 6, 15), // Mid-year fallback
+            java.time.LocalDate.of(calendarYear, 1, 1) // Start of year fallback
+        };
+        
+        for (java.time.LocalDate date : datesToTry) {
+            Optional<AcademicYear> academicYear = academicYearRepository.findFirstByDate(date);
+            if (academicYear.isPresent()) {
+                Optional<SemesterDto> semester = semesterRepository.findByAcademicYearIdAndNumber(academicYear.get().getId(), semesterNo)
+                        .map(this::toSemesterDto);
+                if (semester.isPresent()) {
+                    return semester;
+                }
+            }
+        }
+        
+        // Fallback: academic year that starts in the given calendar year
+        java.time.LocalDate yearStart = java.time.LocalDate.of(calendarYear, 1, 1);
+        java.time.LocalDate yearEnd = java.time.LocalDate.of(calendarYear + 1, 1, 1);
+        return academicYearRepository.findFirstByStartYear(yearStart, yearEnd)
                 .flatMap(ay -> semesterRepository.findByAcademicYearIdAndNumber(ay.getId(), semesterNo))
                 .map(this::toSemesterDto);
     }

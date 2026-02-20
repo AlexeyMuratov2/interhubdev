@@ -53,6 +53,12 @@
  *   <li>{@link com.example.interhubdev.adapter.SemesterIdByYearAdapter} - implements Program's
  *       {@link com.example.interhubdev.program.SemesterIdByYearPort} using Academic's
  *       {@link com.example.interhubdev.academic.AcademicApi} (so Program can resolve semester ID by year and number without depending on Academic).</li>
+ *   <li>{@link com.example.interhubdev.adapter.GroupStartYearAdapter} - implements Program's
+ *       {@link com.example.interhubdev.program.GroupStartYearPort} using Group's
+ *       {@link com.example.interhubdev.group.GroupStartYearPort} (so Program can get group start year without depending on Group).</li>
+ *   <li>{@link com.example.interhubdev.adapter.GroupCurriculumIdAdapter} - implements Program's
+ *       {@link com.example.interhubdev.program.GroupCurriculumIdPort} using Group's
+ *       {@link com.example.interhubdev.group.GroupCurriculumIdPort} (so Program can get curriculum ID from group without depending on Group).</li>
  * </ul>
  *
  * <h2>Dependencies</h2>

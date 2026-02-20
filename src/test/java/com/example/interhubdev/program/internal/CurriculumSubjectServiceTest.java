@@ -48,13 +48,12 @@ class CurriculumSubjectServiceTest {
     @InjectMocks
     private CurriculumSubjectService curriculumSubjectService;
 
-    private static Curriculum curriculum(int startYear, Integer endYear) {
+    private static Curriculum curriculum(int durationYears) {
         return Curriculum.builder()
                 .id(CURRICULUM_ID)
                 .programId(UUID.randomUUID())
                 .version("v1")
-                .startYear(startYear)
-                .endYear(endYear)
+                .durationYears(durationYears)
                 .isActive(true)
                 .status(CurriculumStatus.DRAFT)
                 .build();
@@ -71,9 +70,9 @@ class CurriculumSubjectServiceTest {
                 ASSESSMENT_TYPE_ID, "EXAM", null, null, true, true, 1, LocalDateTime.now());
     }
 
-    private void givenCurriculumWithYears(int startYear, Integer endYear) {
+    private void givenCurriculumWithDuration(int durationYears) {
         when(curriculumRepository.findById(CURRICULUM_ID))
-                .thenReturn(Optional.of(curriculum(startYear, endYear)));
+                .thenReturn(Optional.of(curriculum(durationYears)));
     }
 
     private void givenSubjectAndAssessmentTypeExist() {
@@ -102,7 +101,7 @@ class CurriculumSubjectServiceTest {
         @Test
         @DisplayName("throws when semesterNo is 3")
         void throwsWhenSemesterNoThree() {
-            givenCurriculumWithYears(2020, 2024);
+            givenCurriculumWithDuration(4);
             givenSubjectAndAssessmentTypeExist();
 
             assertThatThrownBy(() -> curriculumSubjectService.createCurriculumSubject(
@@ -116,9 +115,9 @@ class CurriculumSubjectServiceTest {
         }
 
         @Test
-        @DisplayName("throws when courseYear exceeds endYear - startYear")
+        @DisplayName("throws when courseYear exceeds durationYears")
         void throwsWhenCourseYearExceedsDuration() {
-            givenCurriculumWithYears(2020, 2024); // max course = 4
+            givenCurriculumWithDuration(4); // max course = 4
             givenSubjectAndAssessmentTypeExist();
 
             assertThatThrownBy(() -> curriculumSubjectService.createCurriculumSubject(
@@ -135,7 +134,7 @@ class CurriculumSubjectServiceTest {
         @Test
         @DisplayName("succeeds when semesterNo is 1 and courseYear in range")
         void succeedsWithValidSemesterNoAndCourseYear() {
-            givenCurriculumWithYears(2020, 2024);
+            givenCurriculumWithDuration(4);
             givenSubjectAndAssessmentTypeExist();
             givenNoDuplicateCurriculumSubject();
             givenSaveReturnsEntityWithId();
@@ -154,21 +153,20 @@ class CurriculumSubjectServiceTest {
         }
 
         @Test
-        @DisplayName("when endYear is null allows courseYear >= 1 without upper bound")
-        void whenEndYearNullAllowsLargeCourseYear() {
-            givenCurriculumWithYears(2020, null);
+        @DisplayName("throws when courseYear exceeds durationYears")
+        void throwsWhenCourseYearExceedsDurationYears() {
+            givenCurriculumWithDuration(4); // max course = 4
             givenSubjectAndAssessmentTypeExist();
-            givenNoDuplicateCurriculumSubject();
-            givenSaveReturnsEntityWithId();
 
-            CurriculumSubjectDto dto = curriculumSubjectService.createCurriculumSubject(
+            assertThatThrownBy(() -> curriculumSubjectService.createCurriculumSubject(
                     CURRICULUM_ID, SUBJECT_ID, 2, 10, 16,
                     null, null, null, null, null, null, null, null,
-                    ASSESSMENT_TYPE_ID, BigDecimal.ONE);
+                    ASSESSMENT_TYPE_ID, BigDecimal.ONE))
+                    .isInstanceOf(AppException.class)
+                    .hasMessageContaining("courseYear must not exceed curriculum duration")
+                    .hasMessageContaining("max is 4");
 
-            assertThat(dto).isNotNull();
-            assertThat(dto.courseYear()).isEqualTo(10);
-            verify(curriculumSubjectRepository).save(any(CurriculumSubject.class));
+            verify(curriculumSubjectRepository, never()).save(any());
         }
     }
 
@@ -191,7 +189,7 @@ class CurriculumSubjectServiceTest {
                     .build();
             when(curriculumSubjectRepository.findById(subjectId)).thenReturn(Optional.of(existing));
             when(curriculumRepository.findById(CURRICULUM_ID))
-                    .thenReturn(Optional.of(curriculum(2020, 2024)));
+                    .thenReturn(Optional.of(curriculum(4)));
 
             assertThatThrownBy(() -> curriculumSubjectService.updateCurriculumSubject(
                     subjectId, 5, null, null, null, null, null, null, null, null, null, null))

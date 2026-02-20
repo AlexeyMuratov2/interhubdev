@@ -20,8 +20,8 @@ final class ProgramMappers {
     }
 
     static CurriculumDto toCurriculumDto(Curriculum e) {
-        return new CurriculumDto(e.getId(), e.getProgramId(), e.getVersion(), e.getStartYear(),
-                e.getEndYear(), e.isActive(), e.getStatus(), e.getApprovedAt(), e.getApprovedBy(),
+        return new CurriculumDto(e.getId(), e.getProgramId(), e.getVersion(), e.getDurationYears(),
+                e.isActive(), e.getStatus(), e.getApprovedAt(), e.getApprovedBy(),
                 e.getNotes(), e.getCreatedAt(), e.getUpdatedAt());
     }
 
