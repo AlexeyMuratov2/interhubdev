@@ -24,4 +24,18 @@ public interface CompositionApi {
      *         UNAUTHORIZED if requesterId is null or invalid
      */
     LessonFullDetailsDto getLessonFullDetails(UUID lessonId, UUID requesterId);
+
+    /**
+     * Get roster attendance for a lesson (Use Case #2: Lesson attendance table).
+     * Aggregates all students in the lesson's group with their attendance status and absence notices
+     * for this lesson. Designed for the lesson screen attendance table UI.
+     *
+     * @param lessonId        lesson (session) ID (must not be null)
+     * @param requesterId     current authenticated user ID (must be teacher of this lesson or admin)
+     * @param includeCanceled if true, include CANCELED absence notices in each student's notices list
+     * @return aggregated roster with student display data, attendance status, and notices per row
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if lesson/offering/group not found,
+     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view session attendance
+     */
+    LessonRosterAttendanceDto getLessonRosterAttendance(UUID lessonId, UUID requesterId, boolean includeCanceled);
 }

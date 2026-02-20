@@ -15,7 +15,7 @@ public enum AttendanceStatus {
     ABSENT,
 
     /**
-     * Student was late (minutesLate must be provided and >= 0).
+     * Student was late (optional minutesLate >= 0 if provided).
      */
     LATE,
 

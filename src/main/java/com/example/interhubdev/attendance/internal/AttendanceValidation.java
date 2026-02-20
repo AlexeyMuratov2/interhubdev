@@ -14,15 +14,12 @@ final class AttendanceValidation {
 
     /**
      * Validate status and minutesLate combination:
-     * - LATE requires minutesLate != null and minutesLate >= 0
-     * - Non-LATE requires minutesLate == null
+     * - LATE: minutesLate is optional; if provided, must be >= 0
+     * - Non-LATE: minutesLate must be null
      */
     static void validateStatusAndMinutesLate(AttendanceStatus status, Integer minutesLate) {
         if (status == AttendanceStatus.LATE) {
-            if (minutesLate == null) {
-                throw AttendanceErrors.validationFailed("minutesLate is required when status is LATE");
-            }
-            if (minutesLate < 0) {
+            if (minutesLate != null && minutesLate < 0) {
                 throw AttendanceErrors.validationFailed("minutesLate must be >= 0");
             }
         } else {

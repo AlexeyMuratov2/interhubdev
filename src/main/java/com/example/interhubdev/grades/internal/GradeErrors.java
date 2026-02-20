@@ -23,6 +23,17 @@ public final class GradeErrors {
     public static final String CODE_VALIDATION_FAILED = "GRADE_VALIDATION_FAILED";
     public static final String CODE_ENTRY_VOIDED = "GRADE_ENTRY_VOIDED";
     public static final String CODE_FORBIDDEN = "GRADE_FORBIDDEN";
+    public static final String CODE_LESSON_NOT_FOUND = "GRADE_LESSON_NOT_FOUND";
+    public static final String CODE_STUDENT_NOT_IN_GROUP = "GRADE_STUDENT_NOT_IN_GROUP";
+
+    public static AppException lessonNotFound(UUID id) {
+        return Errors.of(HttpStatus.NOT_FOUND, CODE_LESSON_NOT_FOUND, "Lesson not found: " + id);
+    }
+
+    public static AppException studentNotInGroup(UUID studentId, UUID groupId) {
+        return Errors.of(HttpStatus.BAD_REQUEST, CODE_STUDENT_NOT_IN_GROUP,
+                "Student " + studentId + " is not in group " + groupId);
+    }
 
     public static AppException entryNotFound(UUID id) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_ENTRY_NOT_FOUND, "Grade entry not found: " + id);

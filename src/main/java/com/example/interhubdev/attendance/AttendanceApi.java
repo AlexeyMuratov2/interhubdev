@@ -31,7 +31,7 @@ public interface AttendanceApi {
      * @param sessionId    lesson session (lesson) ID
      * @param studentId    student profile ID
      * @param status       attendance status (required)
-     * @param minutesLate  optional minutes late (required if status=LATE, must be null otherwise)
+     * @param minutesLate  optional minutes late (only for status=LATE; if provided, must be >= 0; must be null otherwise)
      * @param teacherComment optional teacher comment
      * @param absenceNoticeId optional explicit absence notice ID to attach
      * @param autoAttachLastNotice if true, automatically attach last submitted notice for this student and session

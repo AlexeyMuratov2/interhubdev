@@ -158,4 +158,30 @@ public interface GradesApi {
             boolean includeVoided,
             UUID requesterId
     );
+
+    /**
+     * Get total points per student for a single lesson (all ACTIVE entries with lesson_id = lessonSessionId).
+     * Used by composition for the lesson screen roster (e.g. "points for this lesson" column).
+     *
+     * @param lessonSessionId lesson (session) id
+     * @param requesterId     current user (must have permission to view grades: TEACHER or ADMIN)
+     * @return summary with one row per student who has at least one grade entry for this lesson
+     * @throws AppException FORBIDDEN if requester cannot view grades
+     */
+    LessonGradesSummaryDto getLessonGradesSummary(UUID lessonSessionId, UUID requesterId);
+
+    /**
+     * Set or replace points for one student for one lesson (UX: single cell edit).
+     * If the student already has ACTIVE grade entries linked to this lesson, the first is updated to the new
+     * points value and the rest are voided (so total for this lesson = points). If there are no such entries,
+     * a new entry is created with the given points, linked to this lesson.
+     *
+     * @param lessonSessionId lesson (session) id
+     * @param studentId       student profile id
+     * @param points          new points value
+     * @param requesterId     user performing the action (must have permission to manage grades)
+     * @return the grade entry that now holds the points for this lesson (created or updated)
+     * @throws AppException NOT_FOUND (lesson/offering/student), BAD_REQUEST (student not in lesson's group, validation), FORBIDDEN
+     */
+    GradeEntryDto setPointsForLesson(UUID lessonSessionId, UUID studentId, BigDecimal points, UUID requesterId);
 }

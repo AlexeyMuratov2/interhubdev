@@ -23,6 +23,7 @@
  *   <li>student — roster by group for group summary ({@link com.example.interhubdev.student.StudentApi#findByGroupId})</li>
  *   <li>group — validate group exists for group summary</li>
  *   <li>offering — validate offering exists and belongs to group</li>
+ *   <li>schedule — resolve lesson to offering for set-points-for-lesson</li>
  *   <li>auth — current user for graded_by</li>
  *   <li>user — roles for permission checks</li>
  *   <li>error — AppException, Errors</li>
@@ -30,6 +31,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Grades",
-    allowedDependencies = {"student", "group", "offering", "auth", "user", "error"}
+    allowedDependencies = {"student", "group", "offering", "schedule", "auth", "user", "error"}
 )
 package com.example.interhubdev.grades;

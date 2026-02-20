@@ -148,4 +148,17 @@ class GradesController {
         GroupOfferingSummaryDto dto = gradesApi.getGroupOfferingSummary(groupId, offeringId, from, to, includeVoided, requesterId);
         return ResponseEntity.ok(dto);
     }
+
+    @PutMapping("/lessons/{lessonId}/students/{studentId}/points")
+    @Operation(summary = "Set or replace points for lesson", description = "Set points for one student for one lesson. Replaces previous points for this lesson with the new value; if none existed, creates one entry. For UX: single cell edit on lesson screen.")
+    public ResponseEntity<GradeEntryDto> setPointsForLesson(
+            @PathVariable UUID lessonId,
+            @PathVariable UUID studentId,
+            @Valid @RequestBody SetLessonPointsRequest body,
+            HttpServletRequest request
+    ) {
+        UUID requesterId = requireCurrentUser(request);
+        GradeEntryDto dto = gradesApi.setPointsForLesson(lessonId, studentId, body.points(), requesterId);
+        return ResponseEntity.ok(dto);
+    }
 }

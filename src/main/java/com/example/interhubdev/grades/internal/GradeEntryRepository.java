@@ -18,9 +18,9 @@ interface GradeEntryRepository extends JpaRepository<GradeEntryEntity, UUID> {
             UUID offeringId
     );
 
+    /** from/to must be non-null (use sentinels in service when optional); avoids PostgreSQL parameter type inference with IS NULL. */
     @Query("SELECT e FROM GradeEntryEntity e WHERE e.studentId = :studentId AND e.offeringId = :offeringId " +
-            "AND (:from IS NULL OR e.gradedAt >= :from) AND (:to IS NULL OR e.gradedAt <= :to) " +
-            "ORDER BY e.gradedAt DESC")
+            "AND e.gradedAt >= :from AND e.gradedAt <= :to ORDER BY e.gradedAt DESC")
     List<GradeEntryEntity> findByStudentIdAndOfferingIdAndGradedAtBetween(
             @Param("studentId") UUID studentId,
             @Param("offeringId") UUID offeringId,
@@ -31,5 +31,22 @@ interface GradeEntryRepository extends JpaRepository<GradeEntryEntity, UUID> {
     List<GradeEntryEntity> findByOfferingIdAndStudentIdInOrderByStudentIdAscGradedAtDesc(
             UUID offeringId,
             List<UUID> studentIds
+    );
+
+    /**
+     * All ACTIVE grade entries linked to this lesson (for lesson-level points summary).
+     */
+    List<GradeEntryEntity> findByLessonIdAndStatusOrderByStudentIdAsc(
+            UUID lessonId,
+            String status
+    );
+
+    /**
+     * ACTIVE grade entries for one student linked to this lesson (for set/replace points).
+     */
+    List<GradeEntryEntity> findByLessonIdAndStudentIdAndStatusOrderByGradedAtDesc(
+            UUID lessonId,
+            UUID studentId,
+            String status
     );
 }

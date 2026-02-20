@@ -3,6 +3,7 @@ package com.example.interhubdev.grades.internal;
 import com.example.interhubdev.grades.*;
 import com.example.interhubdev.offering.OfferingApi;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
+import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
 import com.example.interhubdev.group.GroupApi;
@@ -27,6 +28,7 @@ class GradesServiceImpl implements GradesApi {
 
     private final GradeEntryRepository repository;
     private final OfferingApi offeringApi;
+    private final ScheduleApi scheduleApi;
     private final StudentApi studentApi;
     private final GroupApi groupApi;
     private final UserApi userApi;
@@ -188,8 +190,10 @@ class GradesServiceImpl implements GradesApi {
     ) {
         ensureCanGrade(requesterId);
         validateOfferingExists(offeringId);
+        LocalDateTime fromBound = from != null ? from : LocalDateTime.MIN;
+        LocalDateTime toBound = to != null ? to : LocalDateTime.MAX;
         List<GradeEntryEntity> list = repository.findByStudentIdAndOfferingIdAndGradedAtBetween(
-                studentId, offeringId, from, to);
+                studentId, offeringId, fromBound, toBound);
         List<GradeEntryDto> entries = list.stream()
                 .filter(e -> includeVoided || GradeEntryEntity.STATUS_ACTIVE.equals(e.getStatus()))
                 .map(GradeEntryMappers::toDto)
@@ -256,6 +260,72 @@ class GradesServiceImpl implements GradesApi {
             rows.add(new GroupOfferingSummaryRow(sid, total, breakdown));
         }
         return new GroupOfferingSummaryDto(groupId, offeringId, rows);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LessonGradesSummaryDto getLessonGradesSummary(UUID lessonSessionId, UUID requesterId) {
+        ensureCanGrade(requesterId);
+        List<GradeEntryEntity> entries = repository.findByLessonIdAndStatusOrderByStudentIdAsc(
+                lessonSessionId, GradeEntryEntity.STATUS_ACTIVE);
+        Map<UUID, BigDecimal> pointsByStudent = entries.stream()
+                .collect(Collectors.groupingBy(GradeEntryEntity::getStudentId,
+                        Collectors.reducing(BigDecimal.ZERO, GradeEntryEntity::getPoints, BigDecimal::add)));
+        List<LessonGradesSummaryDto.LessonGradeRowDto> rows = pointsByStudent.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> new LessonGradesSummaryDto.LessonGradeRowDto(e.getKey(), e.getValue()))
+                .toList();
+        return new LessonGradesSummaryDto(lessonSessionId, rows);
+    }
+
+    @Override
+    @Transactional
+    public GradeEntryDto setPointsForLesson(UUID lessonSessionId, UUID studentId, BigDecimal points, UUID requesterId) {
+        ensureCanGrade(requesterId);
+        GradeValidation.validatePoints(points);
+
+        var lesson = scheduleApi.findLessonById(lessonSessionId)
+                .orElseThrow(() -> GradeErrors.lessonNotFound(lessonSessionId));
+        var offering = offeringApi.findOfferingById(lesson.offeringId())
+                .orElseThrow(() -> GradeErrors.offeringNotFound(lesson.offeringId()));
+        validateStudentExists(studentId);
+
+        List<StudentDto> roster = studentApi.findByGroupId(offering.groupId());
+        boolean inGroup = roster.stream().anyMatch(s -> s.id().equals(studentId));
+        if (!inGroup) {
+            throw GradeErrors.studentNotInGroup(studentId, offering.groupId());
+        }
+
+        List<GradeEntryEntity> existing = repository.findByLessonIdAndStudentIdAndStatusOrderByGradedAtDesc(
+                lessonSessionId, studentId, GradeEntryEntity.STATUS_ACTIVE);
+
+        if (existing.isEmpty()) {
+            GradeEntryEntity created = GradeEntryEntity.builder()
+                    .studentId(studentId)
+                    .offeringId(offering.id())
+                    .points(points)
+                    .typeCode(GradeTypeCode.OTHER)
+                    .typeLabel(null)
+                    .description(null)
+                    .lessonId(lessonSessionId)
+                    .homeworkSubmissionId(null)
+                    .gradedBy(requesterId)
+                    .gradedAt(LocalDateTime.now())
+                    .status(GradeEntryEntity.STATUS_ACTIVE)
+                    .build();
+            GradeEntryEntity saved = repository.save(created);
+            return GradeEntryMappers.toDto(saved);
+        }
+
+        GradeEntryEntity first = existing.get(0);
+        first.setPoints(points);
+        repository.save(first);
+        for (int i = 1; i < existing.size(); i++) {
+            GradeEntryEntity e = existing.get(i);
+            e.setStatus(GradeEntryEntity.STATUS_VOIDED);
+            repository.save(e);
+        }
+        return GradeEntryMappers.toDto(first);
     }
 
     private void ensureCanGrade(UUID userId) {

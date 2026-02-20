@@ -487,7 +487,7 @@
 
 **Метод и путь:** `PUT /api/attendance/sessions/{sessionId}/students/{studentId}`
 
-**Тело запроса:** `status` (обязательно), `minutesLate`, `teacherComment`, `absenceNoticeId`, `autoAttachLastNotice`.
+**Тело запроса:** `status` (обязательно), `minutesLate` (опционально; только при status = LATE, если указано — число >= 0), `teacherComment`, `absenceNoticeId`, `autoAttachLastNotice`.
 
 **Успешный ответ:** `200 OK` — объект **AttendanceRecordDto**.
 
