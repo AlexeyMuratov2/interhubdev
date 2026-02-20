@@ -35,6 +35,7 @@ services:
       retries: 3
 
   # ClamAV: antivirus daemon (clamd) on port 3310. Uses ~1.5 GiB RAM; prefer 4 GiB for production.
+  # Configured to scan files up to 500MB via INSTREAM protocol.
   clamav:
     image: clamav/clamav:latest
     container_name: interhubdev-clamav
@@ -42,6 +43,7 @@ services:
       - "3310:3310"  # clamd
     volumes:
       - clamav_data:/var/lib/clamav
+      - ./clamav/clamd.conf:/etc/clamav/clamd.conf:ro  # Custom config for large files
     healthcheck:
       test: ["CMD", "clamdscan", "--ping", "1"]
       interval: 30s

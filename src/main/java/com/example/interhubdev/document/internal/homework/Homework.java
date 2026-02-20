@@ -51,7 +51,7 @@ class Homework {
     @JoinColumn(name = "stored_file_id")
     private StoredFile storedFile;
 
-    @OneToOne(mappedBy = "homework", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "homework", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
     private LessonHomework lessonHomework;
 
     @Column(name = "created_at", nullable = false, updatable = false)

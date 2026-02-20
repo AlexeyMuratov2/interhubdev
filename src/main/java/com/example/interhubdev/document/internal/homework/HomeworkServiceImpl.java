@@ -9,6 +9,8 @@ import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,9 @@ class HomeworkServiceImpl implements HomeworkApi {
     private final StoredFileRepository storedFileRepository;
     private final LessonLookupPort lessonLookupPort;
     private final UserApi userApi;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     @Transactional
@@ -66,11 +71,22 @@ class HomeworkServiceImpl implements HomeworkApi {
             Homework saved = homeworkRepository.save(homework);
             
             // Create junction table entry
+            LessonHomework.LessonHomeworkId compositeId = new LessonHomework.LessonHomeworkId(lessonId, saved.getId());
             LessonHomework lessonHomework = new LessonHomework(lessonId, saved.getId(), saved);
-            lessonHomeworkRepository.save(lessonHomework);
             
-            // Set the relationship for proper mapping
-            saved.setLessonHomework(lessonHomework);
+            // Save LessonHomework first without setting the relationship
+            // This avoids Hibernate trying to manage it twice during flush
+            LessonHomework savedLessonHomework = lessonHomeworkRepository.save(lessonHomework);
+            
+            // Flush to ensure LessonHomework is persisted and becomes fully managed
+            entityManager.flush();
+            
+            // Get the managed instance from persistence context to avoid identity conflicts
+            // This ensures we're using the exact instance Hibernate knows about
+            LessonHomework managedInstance = entityManager.find(LessonHomework.class, compositeId);
+            
+            // Set the relationship using the managed instance to avoid Hibernate trying to persist it again
+            saved.setLessonHomework(managedInstance != null ? managedInstance : savedLessonHomework);
             
             return HomeworkMappers.toDto(saved);
         } catch (PersistenceException | DataIntegrityViolationException e) {

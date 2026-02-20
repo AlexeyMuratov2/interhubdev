@@ -23,9 +23,16 @@ class MaliciousFileChecks {
     /** Right-to-left override (U+202E) used to mask extensions (e.g. photo\u202Egpj.exe shows as photoexe.jpg). */
     private static final char RTL_OVERRIDE = '\u202E';
     private static final Set<String> DANGEROUS_EXTENSIONS = Set.of(
-        "exe", "bat", "cmd", "com", "msi", "scr", "vbs", "js", "jse", "ws", "wsf", "wsc", "wsh",
-        "ps1", "ps1xml", "ps2", "ps2xml", "psc1", "psc2", "msh", "msh1", "msh2", "mshxml", "msh1xml", "msh2xml",
-        "jar", "sh", "bash", "dll", "so", "dylib"
+        // Executables
+        "exe", "bat", "cmd", "com", "msi", "scr", "jar", "dll", "so", "dylib",
+        // Scripts
+        "vbs", "js", "jse", "ws", "wsf", "wsc", "wsh",
+        "ps1", "ps1xml", "ps2", "ps2xml", "psc1", "psc2",
+        "msh", "msh1", "msh2", "mshxml", "msh1xml", "msh2xml",
+        "sh", "bash", "zsh", "csh", "fish",
+        // Other dangerous
+        "app", "deb", "rpm", "pkg", "dmg", "apk", "ipa",
+        "bin", "run", "out", "elf"
     );
     private static final Set<String> RESERVED_NAMES = Set.of(
         "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",

@@ -83,50 +83,58 @@ class AllowedFileTypesPolicyTest {
                     .satisfies(ex -> assertThat(((AppException) ex).getCode())
                             .isEqualTo(UploadSecurityErrors.CODE_FORBIDDEN_FILE_TYPE));
         }
+
+        @Test
+        @DisplayName("rejects application/x-sh")
+        void shellScript() {
+            assertThatThrownBy(() -> policy.checkAllowed("application/x-sh", "script.sh"))
+                    .isInstanceOf(AppException.class)
+                    .satisfies(ex -> assertThat(((AppException) ex).getCode())
+                            .isEqualTo(UploadSecurityErrors.CODE_FORBIDDEN_FILE_TYPE));
+        }
     }
 
     @Nested
-    @DisplayName("Extension mismatch")
-    class ExtensionMismatch {
+    @DisplayName("Forbidden extensions")
+    class ForbiddenExtensions {
 
         @Test
-        @DisplayName("rejects .exe when declared type is application/pdf")
-        void pdfMimeWithExeExtension() {
-            assertThatThrownBy(() -> policy.checkAllowed("application/pdf", "document.exe"))
+        @DisplayName("rejects .exe extension")
+        void exe() {
+            assertThatThrownBy(() -> policy.checkAllowed("application/pdf", "malware.exe"))
                     .isInstanceOf(AppException.class)
                     .satisfies(ex -> assertThat(((AppException) ex).getCode())
-                            .isEqualTo(UploadSecurityErrors.CODE_EXTENSION_MISMATCH));
+                            .isEqualTo(UploadSecurityErrors.CODE_FORBIDDEN_FILE_TYPE));
         }
 
         @Test
-        @DisplayName("rejects .pdf when declared type is image/png")
-        void pngMimeWithPdfExtension() {
-            assertThatThrownBy(() -> policy.checkAllowed("image/png", "image.pdf"))
+        @DisplayName("rejects .bat extension")
+        void bat() {
+            assertThatThrownBy(() -> policy.checkAllowed("text/plain", "script.bat"))
                     .isInstanceOf(AppException.class)
                     .satisfies(ex -> assertThat(((AppException) ex).getCode())
-                            .isEqualTo(UploadSecurityErrors.CODE_EXTENSION_MISMATCH));
+                            .isEqualTo(UploadSecurityErrors.CODE_FORBIDDEN_FILE_TYPE));
         }
 
         @Test
-        @DisplayName("rejects .doc when declared type is application/vnd...docx")
-        void docxMimeWithDocExtension() {
-            assertThatThrownBy(() -> policy.checkAllowed(
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "file.doc"))
+        @DisplayName("rejects .sh extension")
+        void sh() {
+            assertThatThrownBy(() -> policy.checkAllowed("text/plain", "script.sh"))
                     .isInstanceOf(AppException.class)
                     .satisfies(ex -> assertThat(((AppException) ex).getCode())
-                            .isEqualTo(UploadSecurityErrors.CODE_EXTENSION_MISMATCH));
+                            .isEqualTo(UploadSecurityErrors.CODE_FORBIDDEN_FILE_TYPE));
         }
 
         @Test
-        @DisplayName("rejects .xls when declared type is xlsx")
-        void xlsxMimeWithXlsExtension() {
-            assertThatThrownBy(() -> policy.checkAllowed(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "data.xls"))
+        @DisplayName("rejects .jar extension")
+        void jar() {
+            assertThatThrownBy(() -> policy.checkAllowed("application/zip", "app.jar"))
                     .isInstanceOf(AppException.class)
                     .satisfies(ex -> assertThat(((AppException) ex).getCode())
-                            .isEqualTo(UploadSecurityErrors.CODE_EXTENSION_MISMATCH));
+                            .isEqualTo(UploadSecurityErrors.CODE_FORBIDDEN_FILE_TYPE));
         }
     }
+
 
     @Nested
     @DisplayName("Allowed types and extensions")
@@ -154,6 +162,48 @@ class AllowedFileTypesPolicyTest {
         }
 
         @Test
+        @DisplayName("accepts PNG")
+        void png() {
+            assertThatCode(() -> policy.checkAllowed("image/png", "image.png"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("accepts GIF")
+        void gif() {
+            assertThatCode(() -> policy.checkAllowed("image/gif", "animation.gif"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("accepts WebP")
+        void webp() {
+            assertThatCode(() -> policy.checkAllowed("image/webp", "image.webp"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("accepts SVG")
+        void svg() {
+            assertThatCode(() -> policy.checkAllowed("image/svg+xml", "diagram.svg"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("accepts MP4 video")
+        void mp4() {
+            assertThatCode(() -> policy.checkAllowed("video/mp4", "video.mp4"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("accepts MP3 audio")
+        void mp3() {
+            assertThatCode(() -> policy.checkAllowed("audio/mpeg", "audio.mp3"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
         @DisplayName("accepts Word docx")
         void docx() {
             assertThatCode(() -> policy.checkAllowed(
@@ -166,6 +216,21 @@ class AllowedFileTypesPolicyTest {
         void xlsx() {
             assertThatCode(() -> policy.checkAllowed(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "data.xlsx"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("accepts PowerPoint pptx")
+        void pptx() {
+            assertThatCode(() -> policy.checkAllowed(
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation", "presentation.pptx"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("accepts ZIP archive")
+        void zip() {
+            assertThatCode(() -> policy.checkAllowed("application/zip", "archive.zip"))
                     .doesNotThrowAnyException();
         }
 
@@ -191,9 +256,17 @@ class AllowedFileTypesPolicyTest {
         }
 
         @Test
-        @DisplayName("accepts filename without extension (no extension check)")
+        @DisplayName("accepts filename without extension")
         void noExtension() {
             assertThatCode(() -> policy.checkAllowed("application/pdf", "document"))
+                    .doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("accepts different image extension with image MIME")
+        void imageExtensionFlexibility() {
+            // Now we allow flexibility - any safe extension with safe MIME
+            assertThatCode(() -> policy.checkAllowed("image/png", "image.custom"))
                     .doesNotThrowAnyException();
         }
     }
