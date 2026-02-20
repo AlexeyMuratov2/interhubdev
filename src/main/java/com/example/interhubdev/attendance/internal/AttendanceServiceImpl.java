@@ -54,6 +54,10 @@ class AttendanceServiceImpl implements AttendanceApi {
     private final TeacherApi teacherApi;
     private final UserApi userApi;
     private final OutboxIntegrationEventPublisher publisher;
+    private final GetTeacherAbsenceNoticesUseCase getTeacherAbsenceNoticesUseCase;
+    private final CreateAbsenceNoticeUseCase createAbsenceNoticeUseCase;
+    private final UpdateAbsenceNoticeUseCase updateAbsenceNoticeUseCase;
+    private final RespondToAbsenceNoticeUseCase respondToAbsenceNoticeUseCase;
 
     @Override
     @Transactional
@@ -731,5 +735,34 @@ class AttendanceServiceImpl implements AttendanceApi {
      */
     private Instant toInstant(LocalDateTime localDateTime) {
         return localDateTime != null ? localDateTime.toInstant(ZoneOffset.UTC) : Instant.now();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TeacherAbsenceNoticePage getTeacherAbsenceNotices(
+            UUID teacherId,
+            List<AbsenceNoticeStatus> statuses,
+            UUID cursor,
+            Integer limit
+    ) {
+        return getTeacherAbsenceNoticesUseCase.execute(teacherId, statuses, cursor, limit);
+    }
+
+    @Override
+    @Transactional
+    public AbsenceNoticeDto createAbsenceNotice(SubmitAbsenceNoticeRequest request, UUID studentId) {
+        return createAbsenceNoticeUseCase.execute(request, studentId);
+    }
+
+    @Override
+    @Transactional
+    public AbsenceNoticeDto updateAbsenceNotice(UUID noticeId, SubmitAbsenceNoticeRequest request, UUID studentId) {
+        return updateAbsenceNoticeUseCase.execute(noticeId, request, studentId);
+    }
+
+    @Override
+    @Transactional
+    public AbsenceNoticeDto respondToAbsenceNotice(UUID noticeId, boolean approved, String comment, UUID teacherId) {
+        return respondToAbsenceNoticeUseCase.execute(noticeId, approved, comment, teacherId);
     }
 }

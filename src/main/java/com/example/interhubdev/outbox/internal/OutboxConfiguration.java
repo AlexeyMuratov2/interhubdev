@@ -1,6 +1,7 @@
 package com.example.interhubdev.outbox.internal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,12 +16,11 @@ class OutboxConfiguration {
 
     /**
      * Create ObjectMapper bean if not already present.
-     * Spring Boot usually provides this automatically when spring-boot-starter-web is present,
-     * but this ensures it's available for the outbox module.
+     * Registers JavaTimeModule so payloads with java.time types (e.g. Instant) serialize correctly.
      */
     @Bean
     @ConditionalOnMissingBean(ObjectMapper.class)
     ObjectMapper objectMapper() {
-        return new ObjectMapper();
+        return new ObjectMapper().registerModule(new JavaTimeModule());
     }
 }

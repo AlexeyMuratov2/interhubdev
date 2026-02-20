@@ -28,6 +28,7 @@
  *   <li>offering - get offering by id to get groupId and teacherIds for authorization</li>
  *   <li>student - get roster by group, validate student exists</li>
  *   <li>group - validate group exists</li>
+ *   <li>program - subject display names by curriculum subject (teacher notices)</li>
  *   <li>teacher - get teacher profile by userId for authorization checks</li>
  *   <li>auth - current user for marked_by and authorization checks</li>
  *   <li>user - roles for permission checks</li>
@@ -59,6 +60,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Attendance",
-    allowedDependencies = {"schedule", "offering", "student", "group", "teacher", "auth", "user", "error", "document", "outbox"}
+    allowedDependencies = {"schedule", "offering", "student", "group", "teacher", "program", "auth", "user", "error", "document", "outbox"}
 )
 package com.example.interhubdev.attendance;

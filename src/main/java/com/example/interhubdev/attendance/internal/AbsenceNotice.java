@@ -61,6 +61,15 @@ class AbsenceNotice {
     @Column(name = "attached_record_id")
     private UUID attachedRecordId;
 
+    @Column(name = "teacher_comment", columnDefinition = "TEXT")
+    private String teacherComment;
+
+    @Column(name = "responded_at")
+    private LocalDateTime respondedAt;
+
+    @Column(name = "responded_by")
+    private UUID respondedBy;
+
     @Version
     @Column(name = "version")
     private Long version;

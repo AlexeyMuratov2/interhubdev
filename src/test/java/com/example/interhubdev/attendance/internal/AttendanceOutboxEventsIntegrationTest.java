@@ -64,7 +64,10 @@ class AttendanceOutboxEventsIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private SubmitOrUpdateAbsenceNoticeUseCase submitOrUpdateAbsenceNoticeUseCase;
+    private CreateAbsenceNoticeUseCase createAbsenceNoticeUseCase;
+
+    @Autowired
+    private UpdateAbsenceNoticeUseCase updateAbsenceNoticeUseCase;
 
     @Autowired
     private CancelAbsenceNoticeUseCase cancelAbsenceNoticeUseCase;
@@ -156,7 +159,7 @@ class AttendanceOutboxEventsIntegrationTest {
             );
 
             // When
-            submitOrUpdateAbsenceNoticeUseCase.execute(request, STUDENT_ID);
+            createAbsenceNoticeUseCase.execute(request, STUDENT_ID);
 
             // Then
             List<OutboxEvent> events = findEventsByType(AttendanceEventTypes.ABSENCE_NOTICE_SUBMITTED);
@@ -179,11 +182,11 @@ class AttendanceOutboxEventsIntegrationTest {
         @Test
         @DisplayName("publishes ABSENCE_NOTICE_UPDATED when updating existing notice")
         void publishesUpdatedEvent() {
-            // Given - first submit a notice
+            // Given - first create a notice
             SubmitAbsenceNoticeRequest firstRequest = new SubmitAbsenceNoticeRequest(
                     SESSION_ID, AbsenceNoticeType.ABSENT, "First reason", List.of()
             );
-            AbsenceNoticeDto firstNotice = submitOrUpdateAbsenceNoticeUseCase.execute(firstRequest, STUDENT_ID);
+            AbsenceNoticeDto firstNotice = createAbsenceNoticeUseCase.execute(firstRequest, STUDENT_ID);
 
             // Clear events from first submission
             jdbcTemplate.update("DELETE FROM outbox_event");
@@ -192,7 +195,7 @@ class AttendanceOutboxEventsIntegrationTest {
             SubmitAbsenceNoticeRequest updateRequest = new SubmitAbsenceNoticeRequest(
                     SESSION_ID, AbsenceNoticeType.LATE, "Updated reason", List.of()
             );
-            submitOrUpdateAbsenceNoticeUseCase.execute(updateRequest, STUDENT_ID);
+            updateAbsenceNoticeUseCase.execute(firstNotice.id(), updateRequest, STUDENT_ID);
 
             // Then
             List<OutboxEvent> events = findEventsByType(AttendanceEventTypes.ABSENCE_NOTICE_UPDATED);
@@ -214,11 +217,11 @@ class AttendanceOutboxEventsIntegrationTest {
         @Test
         @DisplayName("publishes ABSENCE_NOTICE_CANCELED when canceling notice")
         void publishesCanceledEvent() {
-            // Given - submit a notice first
+            // Given - create a notice first
             SubmitAbsenceNoticeRequest request = new SubmitAbsenceNoticeRequest(
                     SESSION_ID, AbsenceNoticeType.ABSENT, "Test reason", List.of()
             );
-            AbsenceNoticeDto notice = submitOrUpdateAbsenceNoticeUseCase.execute(request, STUDENT_ID);
+            AbsenceNoticeDto notice = createAbsenceNoticeUseCase.execute(request, STUDENT_ID);
 
             // Clear events from submission
             jdbcTemplate.update("DELETE FROM outbox_event");
@@ -286,7 +289,7 @@ class AttendanceOutboxEventsIntegrationTest {
             SubmitAbsenceNoticeRequest noticeRequest = new SubmitAbsenceNoticeRequest(
                     SESSION_ID, AbsenceNoticeType.ABSENT, "Test reason", List.of()
             );
-            AbsenceNoticeDto notice = submitOrUpdateAbsenceNoticeUseCase.execute(noticeRequest, STUDENT_ID);
+            AbsenceNoticeDto notice = createAbsenceNoticeUseCase.execute(noticeRequest, STUDENT_ID);
 
             AttendanceRecordDto record = attendanceService.markAttendanceSingle(
                     SESSION_ID, STUDENT_ID, AttendanceStatus.EXCUSED,

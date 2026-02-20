@@ -22,5 +22,15 @@ public enum AbsenceNoticeStatus {
     /**
      * Notice has been attached to an attendance record (reserved for future use).
      */
-    ATTACHED
+    ATTACHED,
+
+    /**
+     * Notice has been approved by the teacher.
+     */
+    APPROVED,
+
+    /**
+     * Notice has been rejected by the teacher.
+     */
+    REJECTED
 }

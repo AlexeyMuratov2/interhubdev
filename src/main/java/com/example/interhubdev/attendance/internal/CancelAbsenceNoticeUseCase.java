@@ -45,7 +45,10 @@ class CancelAbsenceNoticeUseCase {
             throw AttendanceErrors.noticeNotOwned(noticeId);
         }
 
-        // Validate status
+        // Validate status: only SUBMITTED can be canceled; cannot cancel after teacher responded
+        if (notice.getStatus() == AbsenceNoticeStatus.APPROVED || notice.getStatus() == AbsenceNoticeStatus.REJECTED) {
+            throw AttendanceErrors.noticeCannotBeCanceledAfterResponse(noticeId);
+        }
         if (notice.getStatus() != AbsenceNoticeStatus.SUBMITTED) {
             throw AttendanceErrors.noticeNotCancelable(noticeId,
                     "Only SUBMITTED notices can be canceled. Current status: " + notice.getStatus());

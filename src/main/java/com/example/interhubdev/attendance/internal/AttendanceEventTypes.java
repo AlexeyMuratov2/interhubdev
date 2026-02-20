@@ -36,4 +36,9 @@ public final class AttendanceEventTypes {
      * Event type when an absence notice is attached to an attendance record.
      */
     public static final String ABSENCE_NOTICE_ATTACHED = "attendance.record.notice_attached";
+
+    /**
+     * Event type when a teacher responds (approves or rejects) to an absence notice.
+     */
+    public static final String ABSENCE_NOTICE_TEACHER_RESPONDED = "attendance.absence_notice.teacher_responded";
 }

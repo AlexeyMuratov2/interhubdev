@@ -120,7 +120,7 @@ interface OutboxEventRepository extends JpaRepository<OutboxEventEntity, UUID> {
         SET status = 'PROCESSING',
             locked_by = :workerId,
             locked_at = :now
-        WHERE id = ANY(:eventIds)
+        WHERE id IN (:eventIds)
         """, nativeQuery = true)
     void updateToProcessing(
             @Param("eventIds") List<UUID> eventIds,

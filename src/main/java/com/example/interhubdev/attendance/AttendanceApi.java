@@ -102,4 +102,56 @@ public interface AttendanceApi {
             UUID requesterId
     );
 
+    /**
+     * Get all absence notices for a teacher with cursor-based pagination.
+     * Returns notices for all lesson sessions where the teacher is assigned to the offering.
+     * Each item includes notice data plus student, lesson, offering, and group context for the UI.
+     *
+     * @param teacherId user ID (must be a teacher)
+     * @param statuses optional list of statuses to filter (if empty or null, returns all statuses)
+     * @param cursor   optional cursor (notice ID) for pagination
+     * @param limit    maximum number of results per page (capped at 30)
+     * @return page of enriched absence notice items (notice + student, lesson, offering, group)
+     * @throws AppException FORBIDDEN if user is not a teacher
+     */
+    TeacherAbsenceNoticePage getTeacherAbsenceNotices(
+            UUID teacherId,
+            List<AbsenceNoticeStatus> statuses,
+            UUID cursor,
+            Integer limit
+    );
+
+    /**
+     * Create a new absence notice for a student.
+     *
+     * @param request   submission request
+     * @param studentId student profile ID
+     * @return created notice DTO
+     * @throws AppException NOT_FOUND (session), BAD_REQUEST (validation), CONFLICT (already has active notice for session)
+     */
+    AbsenceNoticeDto createAbsenceNotice(SubmitAbsenceNoticeRequest request, UUID studentId);
+
+    /**
+     * Update an existing absence notice (only SUBMITTED; not after teacher response).
+     *
+     * @param noticeId  notice ID
+     * @param request   submission request (lessonSessionId must match notice)
+     * @param studentId student profile ID (ownership)
+     * @return updated notice DTO
+     * @throws AppException NOT_FOUND (notice), BAD_REQUEST (not SUBMITTED / already responded), FORBIDDEN (not owner)
+     */
+    AbsenceNoticeDto updateAbsenceNotice(UUID noticeId, SubmitAbsenceNoticeRequest request, UUID studentId);
+
+    /**
+     * Teacher responds (approve or reject) to an absence notice with optional comment.
+     *
+     * @param noticeId  notice ID
+     * @param approved  true to approve, false to reject
+     * @param comment   optional teacher comment
+     * @param teacherId user ID of the teacher responding
+     * @return updated notice DTO
+     * @throws AppException NOT_FOUND (notice), BAD_REQUEST (already responded), FORBIDDEN (not teacher of session)
+     */
+    AbsenceNoticeDto respondToAbsenceNotice(UUID noticeId, boolean approved, String comment, UUID teacherId);
+
 }

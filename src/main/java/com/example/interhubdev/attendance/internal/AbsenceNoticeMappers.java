@@ -37,7 +37,10 @@ final class AbsenceNoticeMappers {
                 notice.getUpdatedAt(),
                 Optional.ofNullable(notice.getCanceledAt()),
                 Optional.ofNullable(notice.getAttachedRecordId()),
-                fileIds
+                fileIds,
+                Optional.ofNullable(notice.getTeacherComment()).filter(s -> !s.isBlank()),
+                Optional.ofNullable(notice.getRespondedAt()),
+                Optional.ofNullable(notice.getRespondedBy())
         );
     }
 }

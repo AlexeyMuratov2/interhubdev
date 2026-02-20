@@ -101,4 +101,53 @@ interface AbsenceNoticeRepository extends JpaRepository<AbsenceNotice, UUID> {
      * @return list of notices (ordered by submittedAt DESC)
      */
     List<AbsenceNotice> findByLessonSessionId(UUID sessionId);
+
+    /**
+     * First page: find absence notices for lessons (no cursor).
+     * Used when cursor is null to avoid binding null parameters (PostgreSQL type inference issue).
+     * Note: limit is applied in application layer.
+     */
+    @Query("SELECT an FROM AbsenceNotice an " +
+            "WHERE an.lessonSessionId IN :sessionIds " +
+            "ORDER BY an.submittedAt DESC, an.id DESC")
+    List<AbsenceNotice> findFirstPageBySessionIds(@Param("sessionIds") List<UUID> sessionIds);
+
+    /**
+     * Next page: find absence notices with cursor (cursorSubmittedAt and cursorId are non-null).
+     * Note: limit is applied in application layer.
+     */
+    @Query("SELECT an FROM AbsenceNotice an " +
+            "WHERE an.lessonSessionId IN :sessionIds " +
+            "AND ((an.submittedAt < :cursorSubmittedAt) OR (an.submittedAt = :cursorSubmittedAt AND an.id < :cursorId)) " +
+            "ORDER BY an.submittedAt DESC, an.id DESC")
+    List<AbsenceNotice> findNextPageBySessionIds(
+            @Param("sessionIds") List<UUID> sessionIds,
+            @Param("cursorSubmittedAt") java.time.LocalDateTime cursorSubmittedAt,
+            @Param("cursorId") UUID cursorId
+    );
+
+    /**
+     * First page: find absence notices with status filter (no cursor).
+     */
+    @Query("SELECT an FROM AbsenceNotice an " +
+            "WHERE an.lessonSessionId IN :sessionIds AND an.status IN :statuses " +
+            "ORDER BY an.submittedAt DESC, an.id DESC")
+    List<AbsenceNotice> findFirstPageBySessionIdsAndStatuses(
+            @Param("sessionIds") List<UUID> sessionIds,
+            @Param("statuses") List<AbsenceNoticeStatus> statuses
+    );
+
+    /**
+     * Next page: find absence notices with status filter and cursor.
+     */
+    @Query("SELECT an FROM AbsenceNotice an " +
+            "WHERE an.lessonSessionId IN :sessionIds AND an.status IN :statuses " +
+            "AND ((an.submittedAt < :cursorSubmittedAt) OR (an.submittedAt = :cursorSubmittedAt AND an.id < :cursorId)) " +
+            "ORDER BY an.submittedAt DESC, an.id DESC")
+    List<AbsenceNotice> findNextPageBySessionIdsAndStatuses(
+            @Param("sessionIds") List<UUID> sessionIds,
+            @Param("statuses") List<AbsenceNoticeStatus> statuses,
+            @Param("cursorSubmittedAt") java.time.LocalDateTime cursorSubmittedAt,
+            @Param("cursorId") UUID cursorId
+    );
 }

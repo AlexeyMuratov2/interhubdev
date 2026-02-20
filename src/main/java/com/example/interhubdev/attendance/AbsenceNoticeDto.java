@@ -19,6 +19,9 @@ public record AbsenceNoticeDto(
         LocalDateTime updatedAt,
         Optional<LocalDateTime> canceledAt,
         Optional<UUID> attachedRecordId,
-        List<String> fileIds // File IDs from Document module
+        List<String> fileIds, // File IDs from Document module
+        Optional<String> teacherComment,
+        Optional<LocalDateTime> respondedAt,
+        Optional<UUID> respondedBy
 ) {
 }

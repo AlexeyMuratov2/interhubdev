@@ -1,6 +1,7 @@
 package com.example.interhubdev.attendance.internal;
 
 import com.example.interhubdev.attendance.AbsenceNoticeDto;
+import com.example.interhubdev.attendance.AttendanceApi;
 import com.example.interhubdev.attendance.SubmitAbsenceNoticeRequest;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.error.Errors;
@@ -30,7 +31,7 @@ import java.util.UUID;
 @Tag(name = "Attendance - Student Notices", description = "Student operations for absence notices")
 class AttendanceStudentController {
 
-    private final SubmitOrUpdateAbsenceNoticeUseCase submitOrUpdateUseCase;
+    private final AttendanceApi attendanceApi;
     private final CancelAbsenceNoticeUseCase cancelUseCase;
     private final GetMyAbsenceNoticesUseCase getMyNoticesUseCase;
     private final AuthApi authApi;
@@ -50,14 +51,26 @@ class AttendanceStudentController {
     }
 
     @PostMapping
-    @Operation(summary = "Submit or update absence notice", description = "Create a new absence notice or update existing active notice for a lesson session. Students can only submit notices for sessions in their groups.")
-    public ResponseEntity<AbsenceNoticeDto> submitOrUpdateNotice(
+    @Operation(summary = "Create absence notice", description = "Create a new absence notice for a lesson session. Students can only create notices for sessions in their groups. Only one active notice per student per session.")
+    public ResponseEntity<AbsenceNoticeDto> createNotice(
             @Valid @RequestBody SubmitAbsenceNoticeRequest request,
             HttpServletRequest httpRequest
     ) {
         UUID studentId = requireCurrentStudentId(httpRequest);
-        AbsenceNoticeDto notice = submitOrUpdateUseCase.execute(request, studentId);
+        AbsenceNoticeDto notice = attendanceApi.createAbsenceNotice(request, studentId);
         return ResponseEntity.status(HttpStatus.CREATED).body(notice);
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Update absence notice", description = "Update an existing absence notice (only SUBMITTED; not after teacher has responded). Only the notice owner can update it.")
+    public ResponseEntity<AbsenceNoticeDto> updateNotice(
+            @PathVariable UUID id,
+            @Valid @RequestBody SubmitAbsenceNoticeRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        UUID studentId = requireCurrentStudentId(httpRequest);
+        AbsenceNoticeDto notice = attendanceApi.updateAbsenceNotice(id, request, studentId);
+        return ResponseEntity.ok(notice);
     }
 
     @PostMapping("/{id}/cancel")
