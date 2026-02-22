@@ -25,7 +25,7 @@ import java.util.UUID;
 
 /**
  * Implementation of {@link HomeworkApi}: create, list, get, update, delete homework.
- * When file reference is cleared we only set it to null; we do not delete the stored file.
+ * When file links are cleared we only remove the links; we do not delete the stored files.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,6 +33,7 @@ import java.util.UUID;
 class HomeworkServiceImpl implements HomeworkApi {
 
     private final HomeworkRepository homeworkRepository;
+    private final HomeworkFileRepository homeworkFileRepository;
     private final LessonHomeworkRepository lessonHomeworkRepository;
     private final StoredFileRepository storedFileRepository;
     private final LessonLookupPort lessonLookupPort;
@@ -44,7 +45,7 @@ class HomeworkServiceImpl implements HomeworkApi {
     @Override
     @Transactional
     public HomeworkDto create(UUID lessonId, String title, String description, Integer points,
-                              UUID storedFileId, UUID requesterId) {
+                              List<UUID> storedFileIds, UUID requesterId) {
         validateRequester(requesterId);
         checkManagePermission(requesterId);
 
@@ -54,41 +55,41 @@ class HomeworkServiceImpl implements HomeworkApi {
         validateTitle(title);
         validatePoints(points);
 
-        StoredFile file = null;
-        if (storedFileId != null) {
-            file = storedFileRepository.findById(storedFileId)
-                .orElseThrow(() -> HomeworkErrors.fileNotFound(storedFileId));
+        List<UUID> fileIds = storedFileIds != null ? storedFileIds : List.of();
+        if (fileIds.stream().distinct().count() != fileIds.size()) {
+            throw HomeworkErrors.validationFailed("Duplicate file IDs in request");
         }
 
         Homework homework = Homework.builder()
             .title(title)
             .description(description)
             .points(points)
-            .storedFile(file)
             .build();
 
         try {
             Homework saved = homeworkRepository.save(homework);
-            
-            // Create junction table entry
+
+            for (int i = 0; i < fileIds.size(); i++) {
+                UUID fileId = fileIds.get(i);
+                StoredFile file = storedFileRepository.findById(fileId)
+                    .orElseThrow(() -> HomeworkErrors.fileNotFound(fileId));
+                HomeworkFile hf = new HomeworkFile(saved.getId(), fileId, i, null, file);
+                homeworkFileRepository.save(hf);
+            }
+
             LessonHomework.LessonHomeworkId compositeId = new LessonHomework.LessonHomeworkId(lessonId, saved.getId());
             LessonHomework lessonHomework = new LessonHomework(lessonId, saved.getId(), saved);
-            
-            // Save LessonHomework first without setting the relationship
-            // This avoids Hibernate trying to manage it twice during flush
+
             LessonHomework savedLessonHomework = lessonHomeworkRepository.save(lessonHomework);
-            
-            // Flush to ensure LessonHomework is persisted and becomes fully managed
+
             entityManager.flush();
-            
-            // Get the managed instance from persistence context to avoid identity conflicts
-            // This ensures we're using the exact instance Hibernate knows about
+
             LessonHomework managedInstance = entityManager.find(LessonHomework.class, compositeId);
-            
-            // Set the relationship using the managed instance to avoid Hibernate trying to persist it again
+
             saved.setLessonHomework(managedInstance != null ? managedInstance : savedLessonHomework);
-            
-            return HomeworkMappers.toDto(saved);
+
+            return HomeworkMappers.toDto(
+                homeworkRepository.findByIdWithLessonAndFiles(saved.getId()).orElse(saved));
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save homework (lessonId={}): {}", lessonId, e.getMessage());
             throw HomeworkErrors.saveFailed();
@@ -102,7 +103,7 @@ class HomeworkServiceImpl implements HomeworkApi {
         if (!lessonLookupPort.existsById(lessonId)) {
             throw HomeworkErrors.lessonNotFound(lessonId);
         }
-        List<Homework> list = homeworkRepository.findByLessonIdOrderByCreatedAtDesc(lessonId);
+        List<Homework> list = homeworkRepository.findByLessonIdOrderByCreatedAtDescWithFiles(lessonId);
         return list.stream().map(HomeworkMappers::toDto).toList();
     }
 
@@ -110,18 +111,18 @@ class HomeworkServiceImpl implements HomeworkApi {
     @Transactional(readOnly = true)
     public Optional<HomeworkDto> get(UUID homeworkId, UUID requesterId) {
         validateRequester(requesterId);
-        return homeworkRepository.findByIdWithLesson(homeworkId)
+        return homeworkRepository.findByIdWithLessonAndFiles(homeworkId)
             .map(HomeworkMappers::toDto);
     }
 
     @Override
     @Transactional
     public HomeworkDto update(UUID homeworkId, String title, String description, Integer points,
-                              boolean clearFile, UUID storedFileId, UUID requesterId) {
+                              boolean clearFiles, List<UUID> storedFileIds, UUID requesterId) {
         validateRequester(requesterId);
         checkManagePermission(requesterId);
 
-        Homework homework = homeworkRepository.findById(homeworkId)
+        Homework homework = homeworkRepository.findByIdWithLessonAndFiles(homeworkId)
             .orElseThrow(() -> HomeworkErrors.homeworkNotFound(homeworkId));
 
         if (title != null) {
@@ -136,12 +137,20 @@ class HomeworkServiceImpl implements HomeworkApi {
             homework.setPoints(points);
         }
 
-        if (clearFile) {
-            homework.setStoredFile(null);
-        } else if (storedFileId != null) {
-            StoredFile file = storedFileRepository.findById(storedFileId)
-                .orElseThrow(() -> HomeworkErrors.fileNotFound(storedFileId));
-            homework.setStoredFile(file);
+        if (clearFiles) {
+            homework.getFiles().clear();
+        } else if (storedFileIds != null) {
+            if (storedFileIds.stream().distinct().count() != storedFileIds.size()) {
+                throw HomeworkErrors.validationFailed("Duplicate file IDs in request");
+            }
+            homework.getFiles().clear();
+            for (int i = 0; i < storedFileIds.size(); i++) {
+                UUID fileId = storedFileIds.get(i);
+                StoredFile file = storedFileRepository.findById(fileId)
+                    .orElseThrow(() -> HomeworkErrors.fileNotFound(fileId));
+                HomeworkFile hf = new HomeworkFile(homework.getId(), fileId, i, homework, file);
+                homework.getFiles().add(hf);
+            }
         }
         homework.setUpdatedAt(LocalDateTime.now());
 

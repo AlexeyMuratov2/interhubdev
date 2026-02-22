@@ -11,6 +11,7 @@
  *   <li>{@link com.example.interhubdev.composition.CompositionApi} - data composition facade</li>
  *   <li>{@link com.example.interhubdev.composition.LessonFullDetailsDto} - aggregated lesson details container</li>
  *   <li>{@link com.example.interhubdev.composition.LessonRosterAttendanceDto} - roster attendance for lesson screen table</li>
+ *   <li>{@link com.example.interhubdev.composition.LessonHomeworkSubmissionsDto} - homework submissions per student per homework for lesson screen table</li>
  * </ul>
  *
  * <h2>Architecture</h2>
@@ -22,6 +23,7 @@
  * <ul>
  *   <li>Use Case #1: Lesson Full Details - aggregates all data needed for the "Full Lesson Information" screen</li>
  *   <li>Use Case #2: Lesson Roster Attendance - students in group + attendance status + absence notices for lesson screen table</li>
+ *   <li>Use Case #3: Lesson Homework Submissions - all students in group + submissions, points, and files per homework for lesson screen table</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
@@ -38,6 +40,7 @@
  *   <li>student - roster by group for attendance table</li>
  *   <li>attendance - session attendance and absence notices</li>
  *   <li>grades - points per student for this lesson</li>
+ *   <li>submission - homework submissions by students</li>
  * </ul>
  *
  * <h2>Error codes (via {@link com.example.interhubdev.error.Errors})</h2>
@@ -48,6 +51,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Composition",
-    allowedDependencies = {"schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "grades"}
+    allowedDependencies = {"schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "grades", "submission"}
 )
 package com.example.interhubdev.composition;

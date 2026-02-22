@@ -65,17 +65,16 @@ class UploadSecurityService implements UploadSecurityPort {
                 logSecurityEvent(context, "AV_UNAVAILABLE", null);
                 throw UploadSecurityErrors.avUnavailable("Antivirus service is temporarily unavailable. Please try again later.");
             }
-            switch (result.status()) {
-                case INFECTED -> {
-                    logSecurityEvent(context, "MALWARE_DETECTED", result.signatureName());
-                    throw UploadSecurityErrors.malwareDetected();
-                }
-                case ERROR -> {
-                    logSecurityEvent(context, "AV_UNAVAILABLE", null);
-                    throw UploadSecurityErrors.avUnavailable("Antivirus service is temporarily unavailable. Please try again later.");
-                }
-                default -> { /* CLEAN */ }
+            AntivirusPort.ScanResult.Status status = result.status();
+            if (status == AntivirusPort.ScanResult.Status.INFECTED) {
+                logSecurityEvent(context, "MALWARE_DETECTED", result.signatureName());
+                throw UploadSecurityErrors.malwareDetected();
             }
+            if (status == AntivirusPort.ScanResult.Status.ERROR) {
+                logSecurityEvent(context, "AV_UNAVAILABLE", null);
+                throw UploadSecurityErrors.avUnavailable("Antivirus service is temporarily unavailable. Please try again later.");
+            }
+            /* CLEAN - no throw */
         }
     }
 

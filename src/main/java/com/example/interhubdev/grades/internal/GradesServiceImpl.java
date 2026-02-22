@@ -348,4 +348,40 @@ class GradesServiceImpl implements GradesApi {
             throw GradeErrors.studentNotFound(studentId);
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, BigDecimal> getPointsByHomeworkSubmissionIds(List<UUID> submissionIds, UUID requesterId) {
+        ensureCanGrade(requesterId);
+        if (submissionIds == null || submissionIds.isEmpty()) {
+            return Map.of();
+        }
+        List<GradeEntryEntity> entries = repository.findByHomeworkSubmissionIdInAndStatus(
+                submissionIds, GradeEntryEntity.STATUS_ACTIVE);
+        return entries.stream()
+                .collect(Collectors.groupingBy(GradeEntryEntity::getHomeworkSubmissionId,
+                        Collectors.reducing(BigDecimal.ZERO, GradeEntryEntity::getPoints, BigDecimal::add)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, GradeEntryDto> getGradeEntriesByHomeworkSubmissionIds(List<UUID> submissionIds, UUID requesterId) {
+        ensureCanGrade(requesterId);
+        if (submissionIds == null || submissionIds.isEmpty()) {
+            return Map.of();
+        }
+        List<GradeEntryEntity> entries = repository.findByHomeworkSubmissionIdInAndStatus(
+                submissionIds, GradeEntryEntity.STATUS_ACTIVE);
+        return entries.stream()
+                .collect(Collectors.groupingBy(GradeEntryEntity::getHomeworkSubmissionId))
+                .entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> GradeEntryMappers.toDto(
+                                e.getValue().stream()
+                                        .max((a, b) -> a.getGradedAt().compareTo(b.getGradedAt()))
+                                        .orElseThrow()
+                        )
+                ));
+    }
 }

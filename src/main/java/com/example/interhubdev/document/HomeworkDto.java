@@ -1,11 +1,11 @@
 package com.example.interhubdev.document;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * DTO for homework assignment (linked to a lesson, optional file).
+ * DTO for homework assignment (linked to a lesson, optional list of files).
  */
 public record HomeworkDto(
     UUID id,
@@ -13,7 +13,7 @@ public record HomeworkDto(
     String title,
     String description,
     Integer points,
-    Optional<StoredFileDto> file,
+    List<StoredFileDto> files,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {

@@ -2,12 +2,13 @@ package com.example.interhubdev.document.internal.homework;
 
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
  * Request body for updating homework. All fields optional.
- * Use clearFile=true to remove file reference (file in storage is not deleted).
- * Use storedFileId (when clearFile=false) to set or change the file.
+ * Use clearFiles=true to remove all file links (files in storage are not deleted).
+ * Use storedFileIds (when clearFiles is not true) to replace the file list; order preserved.
  */
 public record UpdateHomeworkRequest(
     @Size(max = 500, message = "title must not exceed 500 characters")
@@ -18,10 +19,10 @@ public record UpdateHomeworkRequest(
 
     Integer points,
 
-    /** If true, clear the file reference. Ignored if storedFileId is set. */
-    Boolean clearFile,
+    /** If true, clear all file links. Ignored if storedFileIds is provided. */
+    Boolean clearFiles,
 
-    /** New stored file id. Used only when clearFile is not true. */
-    UUID storedFileId
+    /** New list of stored file ids (full replacement). Used only when clearFiles is not true; null = no change. */
+    List<UUID> storedFileIds
 ) {
 }

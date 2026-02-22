@@ -1,9 +1,24 @@
 package com.example.interhubdev.submission.internal;
 
+import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.HomeworkApi;
+import com.example.interhubdev.document.HomeworkDto;
+import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.offering.OfferingApi;
+import com.example.interhubdev.offering.OfferingTeacherItemDto;
+import com.example.interhubdev.program.ProgramApi;
+import com.example.interhubdev.schedule.ScheduleApi;
+import com.example.interhubdev.subject.SubjectApi;
+import com.example.interhubdev.subject.SubjectDto;
 import com.example.interhubdev.submission.HomeworkSubmissionDto;
 import com.example.interhubdev.submission.SubmissionApi;
+import com.example.interhubdev.submission.internal.archive.ArchiveData;
+import com.example.interhubdev.submission.internal.archive.ArchiveEntry;
+import com.example.interhubdev.submission.internal.archive.ArchiveInfo;
+import com.example.interhubdev.submission.SubmissionsArchiveHandle;
+import com.example.interhubdev.submission.internal.archive.ArchiveNamingService;
+import com.example.interhubdev.teacher.TeacherApi;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
@@ -14,8 +29,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -34,6 +52,12 @@ class SubmissionServiceImpl implements SubmissionApi {
     private final HomeworkSubmissionFileRepository submissionFileRepository;
     private final HomeworkApi homeworkApi;
     private final UserApi userApi;
+    private final ScheduleApi scheduleApi;
+    private final OfferingApi offeringApi;
+    private final TeacherApi teacherApi;
+    private final ProgramApi programApi;
+    private final SubjectApi subjectApi;
+    private final DocumentApi documentApi;
 
     @Override
     @Transactional
@@ -49,7 +73,17 @@ class SubmissionServiceImpl implements SubmissionApi {
         }
 
         List<UUID> fileIds = storedFileIds != null ? storedFileIds : List.of();
+        List<UUID> distinctFileIds = fileIds.stream().distinct().toList();
+        if (distinctFileIds.size() != fileIds.size()) {
+            throw SubmissionErrors.validationFailed("Duplicate file IDs are not allowed");
+        }
         // File existence is validated by the controller (document API) to avoid circular dependency.
+
+        // One submission per student per homework: replace any existing submission by this author.
+        List<HomeworkSubmission> existing = submissionRepository.findByHomeworkIdAndAuthorId(homeworkId, requesterId);
+        for (HomeworkSubmission old : existing) {
+            submissionRepository.delete(old);
+        }
 
         HomeworkSubmission submission = HomeworkSubmission.builder()
             .homeworkId(homeworkId)
@@ -59,17 +93,16 @@ class SubmissionServiceImpl implements SubmissionApi {
 
         try {
             HomeworkSubmission saved = submissionRepository.save(submission);
-            int order = 0;
-            for (UUID fileId : fileIds) {
+            for (int i = 0; i < distinctFileIds.size(); i++) {
                 HomeworkSubmissionFile f = new HomeworkSubmissionFile();
                 f.setSubmissionId(saved.getId());
-                f.setStoredFileId(fileId);
-                f.setSortOrder(order++);
-                f.setSubmission(saved);
-                saved.getFiles().add(f);
+                f.setStoredFileId(distinctFileIds.get(i));
+                f.setSortOrder(i);
                 submissionFileRepository.save(f);
             }
-            return toDto(saved);
+            HomeworkSubmission withFiles = submissionRepository.findByIdWithFiles(saved.getId())
+                .orElse(saved);
+            return toDto(withFiles);
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save submission (homeworkId={}): {}", homeworkId, e.getMessage());
             throw SubmissionErrors.saveFailed();
@@ -116,6 +149,164 @@ class SubmissionServiceImpl implements SubmissionApi {
     @Transactional(readOnly = true)
     public boolean isStoredFileInUse(UUID storedFileId) {
         return submissionFileRepository.existsByStoredFileId(storedFileId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean canTeacherDownloadSubmissionFile(UUID storedFileId, UUID userId) {
+        List<HomeworkSubmissionFile> files = submissionFileRepository.findByStoredFileId(storedFileId);
+        if (files.isEmpty()) {
+            return false;
+        }
+        HomeworkSubmissionFile first = files.get(0);
+        Optional<HomeworkSubmission> submissionOpt = submissionRepository.findByIdWithFiles(first.getSubmissionId());
+        if (submissionOpt.isEmpty()) {
+            return false;
+        }
+        UUID homeworkId = submissionOpt.get().getHomeworkId();
+        Optional<HomeworkDto> homeworkOpt = homeworkApi.get(homeworkId, userId);
+        if (homeworkOpt.isEmpty()) {
+            return false;
+        }
+        UUID lessonId = homeworkOpt.get().lessonId();
+        var lessonOpt = scheduleApi.findLessonById(lessonId);
+        if (lessonOpt.isEmpty()) {
+            return false;
+        }
+        var offeringOpt = offeringApi.findOfferingById(lessonOpt.get().offeringId());
+        if (offeringOpt.isEmpty()) {
+            return false;
+        }
+        var teacherOpt = teacherApi.findByUserId(userId);
+        if (teacherOpt.isEmpty()) {
+            return false;
+        }
+        UUID teacherId = teacherOpt.get().id();
+        var offering = offeringOpt.get();
+        if (offering.teacherId() != null && offering.teacherId().equals(teacherId)) {
+            return true;
+        }
+        return offeringApi.findTeachersByOfferingId(offering.id()).stream()
+            .anyMatch(t -> t.teacherId().equals(teacherId));
+    }
+
+    @Override
+    public SubmissionsArchiveHandle buildSubmissionsArchive(UUID homeworkId, UUID requesterId) {
+        validateRequester(requesterId);
+        ensureCanDownloadArchiveByHomework(homeworkId, requesterId);
+        ArchiveData data = loadArchiveData(homeworkId, requesterId);
+        String filename = ArchiveNamingService.buildArchiveFilename(data.info());
+        return new SubmissionsArchiveHandleImpl(filename, data, requesterId, documentApi);
+    }
+
+    /**
+     * Ensure requester is teacher of the lesson for this homework or admin/moderator.
+     */
+    private void ensureCanDownloadArchiveByHomework(UUID homeworkId, UUID requesterId) {
+        UserDto user = userApi.findById(requesterId).orElseThrow(SubmissionErrors::permissionDenied);
+        if (user.hasRole(Role.ADMIN) || user.hasRole(Role.MODERATOR) || user.hasRole(Role.SUPER_ADMIN)) {
+            return;
+        }
+        if (!user.hasRole(Role.TEACHER)) {
+            throw SubmissionErrors.permissionDenied();
+        }
+        HomeworkDto homework = homeworkApi.get(homeworkId, requesterId)
+            .orElseThrow(() -> SubmissionErrors.homeworkNotFound(homeworkId));
+        var lessonOpt = scheduleApi.findLessonById(homework.lessonId());
+        if (lessonOpt.isEmpty()) {
+            throw SubmissionErrors.homeworkNotFound(homeworkId);
+        }
+        var offeringOpt = offeringApi.findOfferingById(lessonOpt.get().offeringId());
+        if (offeringOpt.isEmpty()) {
+            throw SubmissionErrors.homeworkNotFound(homeworkId);
+        }
+        var teacherOpt = teacherApi.findByUserId(requesterId);
+        if (teacherOpt.isEmpty()) {
+            throw SubmissionErrors.permissionDenied();
+        }
+        UUID teacherId = teacherOpt.get().id();
+        var offering = offeringOpt.get();
+        if (offering.teacherId() != null && offering.teacherId().equals(teacherId)) {
+            return;
+        }
+        boolean assigned = offeringApi.findTeachersByOfferingId(offering.id()).stream()
+            .anyMatch(t -> t.teacherId().equals(teacherId));
+        if (!assigned) {
+            throw SubmissionErrors.permissionDenied();
+        }
+    }
+
+    /**
+     * Load archive metadata and list of file entries. Runs in read-only transaction.
+     */
+    @Transactional(readOnly = true)
+    public ArchiveData loadArchiveData(UUID homeworkId, UUID requesterId) {
+        HomeworkDto homework = homeworkApi.get(homeworkId, requesterId)
+            .orElseThrow(() -> SubmissionErrors.homeworkNotFound(homeworkId));
+        var lessonOpt = scheduleApi.findLessonById(homework.lessonId());
+        if (lessonOpt.isEmpty()) {
+            throw SubmissionErrors.homeworkNotFound(homeworkId);
+        }
+        var lesson = lessonOpt.get();
+        LocalDate lessonDate = lesson.date();
+        String subjectName = "Subject";
+        var offeringOpt = offeringApi.findOfferingById(lesson.offeringId());
+        if (offeringOpt.isPresent()) {
+            var curriculumOpt = programApi.findCurriculumSubjectById(offeringOpt.get().curriculumSubjectId());
+            if (curriculumOpt.isPresent()) {
+                var subjectOpt = subjectApi.findSubjectById(curriculumOpt.get().subjectId());
+                if (subjectOpt.isPresent()) {
+                    subjectName = subjectDisplayName(subjectOpt.get());
+                }
+            }
+        }
+        ArchiveInfo info = new ArchiveInfo(subjectName, homework.title(), lessonDate);
+
+        List<HomeworkSubmission> submissions = submissionRepository.findByHomeworkIdOrderBySubmittedAtDesc(homeworkId);
+        Set<UUID> authorIds = submissions.stream().map(HomeworkSubmission::getAuthorId).collect(Collectors.toSet());
+        List<UserDto> users = userApi.findByIds(authorIds);
+        var userMap = users.stream().collect(Collectors.toMap(UserDto::id, u -> u.getFullName()));
+
+        List<ArchiveEntry> entries = new ArrayList<>();
+        for (HomeworkSubmission s : submissions) {
+            String studentName = userMap.getOrDefault(s.getAuthorId(), s.getAuthorId().toString());
+            List<HomeworkSubmissionFile> files = s.getFiles() != null ? s.getFiles() : List.of();
+            int fileIndex = 0;
+            for (HomeworkSubmissionFile f : files) {
+                String originalName = null;
+                String extension = "";
+                Optional<StoredFileDto> meta = documentApi.getStoredFile(f.getStoredFileId());
+                if (meta.isPresent()) {
+                    originalName = meta.get().originalName();
+                    extension = extensionFromFilename(originalName);
+                }
+                entries.add(new ArchiveEntry(
+                    s.getAuthorId(),
+                    studentName,
+                    homework.title(),
+                    lessonDate,
+                    f.getStoredFileId(),
+                    originalName != null ? originalName : "",
+                    extension,
+                    fileIndex++
+                ));
+            }
+        }
+        return new ArchiveData(info, entries);
+    }
+
+    private static String subjectDisplayName(SubjectDto subject) {
+        if (subject == null) return "Subject";
+        if (subject.englishName() != null && !subject.englishName().isBlank()) {
+            return subject.englishName();
+        }
+        return subject.chineseName() != null && !subject.chineseName().isBlank() ? subject.chineseName() : "Subject";
+    }
+
+    private static String extensionFromFilename(String filename) {
+        if (filename == null || filename.isBlank()) return "";
+        int i = filename.lastIndexOf('.');
+        return i > 0 && i < filename.length() - 1 ? filename.substring(i + 1) : "";
     }
 
     private HomeworkSubmissionDto toDto(HomeworkSubmission s) {

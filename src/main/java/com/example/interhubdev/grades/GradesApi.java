@@ -5,6 +5,7 @@ import com.example.interhubdev.error.AppException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -184,4 +185,26 @@ public interface GradesApi {
      * @throws AppException NOT_FOUND (lesson/offering/student), BAD_REQUEST (student not in lesson's group, validation), FORBIDDEN
      */
     GradeEntryDto setPointsForLesson(UUID lessonSessionId, UUID studentId, BigDecimal points, UUID requesterId);
+
+    /**
+     * Get points (sum of ACTIVE entries) per homework submission ID.
+     * Used by composition to show grades for each submitted homework in one call.
+     *
+     * @param submissionIds list of homework submission UUIDs (may be empty)
+     * @param requesterId   current user (must have permission to view grades)
+     * @return map submissionId -> total points; only submissions that have at least one ACTIVE entry are present
+     * @throws AppException FORBIDDEN if requester cannot view grades
+     */
+    Map<UUID, BigDecimal> getPointsByHomeworkSubmissionIds(List<UUID> submissionIds, UUID requesterId);
+
+    /**
+     * Get one ACTIVE grade entry per homework submission ID (latest by gradedAt when multiple exist).
+     * Used by composition to return full GradeEntryDto per submission for the homework-submissions endpoint.
+     *
+     * @param submissionIds list of homework submission UUIDs (may be empty)
+     * @param requesterId   current user (must have permission to view grades)
+     * @return map submissionId -> grade entry; only submissions that have at least one ACTIVE entry are present
+     * @throws AppException FORBIDDEN if requester cannot view grades
+     */
+    Map<UUID, GradeEntryDto> getGradeEntriesByHomeworkSubmissionIds(List<UUID> submissionIds, UUID requesterId);
 }

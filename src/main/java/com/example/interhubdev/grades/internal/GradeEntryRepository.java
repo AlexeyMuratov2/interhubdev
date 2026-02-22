@@ -49,4 +49,13 @@ interface GradeEntryRepository extends JpaRepository<GradeEntryEntity, UUID> {
             UUID studentId,
             String status
     );
+
+    /**
+     * ACTIVE grade entries linked to any of the given homework submission IDs.
+     * Used by composition to resolve points per submission in one query.
+     */
+    List<GradeEntryEntity> findByHomeworkSubmissionIdInAndStatus(
+            List<UUID> submissionIds,
+            String status
+    );
 }

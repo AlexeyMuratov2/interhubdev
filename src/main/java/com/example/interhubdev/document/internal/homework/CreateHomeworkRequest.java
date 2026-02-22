@@ -1,9 +1,9 @@
 package com.example.interhubdev.document.internal.homework;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -19,6 +19,12 @@ public record CreateHomeworkRequest(
 
     Integer points,
 
-    UUID storedFileId
+    List<UUID> storedFileIds
 ) {
+    /**
+     * Returns stored file IDs; empty list if null.
+     */
+    public List<UUID> storedFileIds() {
+        return storedFileIds != null ? storedFileIds : List.of();
+    }
 }

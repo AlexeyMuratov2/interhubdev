@@ -61,7 +61,7 @@ class HomeworkController {
                 body.title(),
                 body.description(),
                 body.points(),
-                body.storedFileId(),
+                body.storedFileIds(),
                 requesterId
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);

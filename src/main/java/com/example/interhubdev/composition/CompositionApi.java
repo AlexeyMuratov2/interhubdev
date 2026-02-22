@@ -38,4 +38,17 @@ public interface CompositionApi {
      *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view session attendance
      */
     LessonRosterAttendanceDto getLessonRosterAttendance(UUID lessonId, UUID requesterId, boolean includeCanceled);
+
+    /**
+     * Get all homework submissions for a lesson (Use Case #3: Lesson homework submissions table).
+     * Returns all students in the lesson's group; for each student and each homework of the lesson
+     * either the submission with points and files, or empty (null submission, null points, empty files).
+     *
+     * @param lessonId    lesson (session) ID (must not be null)
+     * @param requesterId current authenticated user ID (must have permission to view submissions and grades)
+     * @return aggregated DTO: lesson, group, homeworks list, and one row per student with items per homework
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if lesson/offering/group not found,
+     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view
+     */
+    LessonHomeworkSubmissionsDto getLessonHomeworkSubmissions(UUID lessonId, UUID requesterId);
 }

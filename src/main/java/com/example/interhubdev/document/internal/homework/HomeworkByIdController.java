@@ -45,7 +45,7 @@ class HomeworkByIdController {
     }
 
     @PutMapping("/{homeworkId}")
-    @Operation(summary = "Update homework", description = "Update homework. Use clearFile=true to remove file reference (file is not deleted). Requires TEACHER or ADMIN role.")
+    @Operation(summary = "Update homework", description = "Update homework. Use clearFiles=true to remove all file links (files are not deleted). Requires TEACHER or ADMIN role.")
     public ResponseEntity<HomeworkDto> update(
             @PathVariable UUID homeworkId,
             @Valid @RequestBody UpdateHomeworkRequest body,
@@ -55,21 +55,21 @@ class HomeworkByIdController {
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        boolean clearFile = Boolean.TRUE.equals(body.clearFile());
+        boolean clearFiles = Boolean.TRUE.equals(body.clearFiles());
         HomeworkDto dto = homeworkApi.update(
                 homeworkId,
                 body.title(),
                 body.description(),
                 body.points(),
-                clearFile,
-                body.storedFileId(),
+                clearFiles,
+                body.storedFileIds(),
                 requesterId
         );
         return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/{homeworkId}")
-    @Operation(summary = "Delete homework", description = "Delete homework. Attached file is not deleted. Requires TEACHER or ADMIN role.")
+    @Operation(summary = "Delete homework", description = "Delete homework. Attached files are not deleted. Requires TEACHER or ADMIN role.")
     public ResponseEntity<Void> delete(
             @PathVariable UUID homeworkId,
             HttpServletRequest request

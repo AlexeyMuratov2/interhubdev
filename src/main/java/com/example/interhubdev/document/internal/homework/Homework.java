@@ -1,6 +1,5 @@
 package com.example.interhubdev.document.internal.homework;
 
-import com.example.interhubdev.document.internal.storedFile.StoredFile;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,9 +7,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,11 +18,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
  * JPA entity for homework assignment linked to a lesson via junction table.
- * Optional file reference: when removed we only clear the reference, we do not delete the file.
+ * One homework has many files via HomeworkFile; clearing file links does not delete stored files.
  */
 @Entity
 @Table(name = "homework")
@@ -47,9 +48,10 @@ class Homework {
     @Column(name = "points")
     private Integer points;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stored_file_id")
-    private StoredFile storedFile;
+    @OneToMany(mappedBy = "homework", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    @Builder.Default
+    private List<HomeworkFile> files = new ArrayList<>();
 
     @OneToOne(mappedBy = "homework", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
     private LessonHomework lessonHomework;

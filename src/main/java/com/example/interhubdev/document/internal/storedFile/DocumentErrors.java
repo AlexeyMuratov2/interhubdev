@@ -35,6 +35,8 @@ public final class DocumentErrors {
     public static final String CODE_FILE_NOT_IN_STORAGE = "FILE_NOT_IN_STORAGE";
     /** Used when DB save fails after successful storage upload (e.g. constraint violation). */
     public static final String CODE_SAVE_FAILED = "SAVE_FAILED";
+    /** Used when batch upload has too many files. */
+    public static final String CODE_BATCH_TOO_LARGE = "BATCH_TOO_LARGE";
 
     public static AppException storedFileNotFound(UUID id) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_STORED_FILE_NOT_FOUND, "Stored file not found: " + id);
@@ -79,5 +81,10 @@ public final class DocumentErrors {
     public static AppException saveFailed() {
         return Errors.of(HttpStatus.INTERNAL_SERVER_ERROR, CODE_SAVE_FAILED,
             "Failed to save file metadata. Please try again.");
+    }
+
+    public static AppException batchTooLarge(int maxFiles) {
+        return Errors.of(HttpStatus.BAD_REQUEST, CODE_BATCH_TOO_LARGE,
+            "Too many files in batch. Maximum allowed: " + maxFiles);
     }
 }

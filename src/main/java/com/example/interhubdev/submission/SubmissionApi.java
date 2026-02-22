@@ -14,7 +14,9 @@ import java.util.UUID;
 public interface SubmissionApi {
 
     /**
-     * Create a submission for a homework assignment. Only students can submit.
+     * Create or replace a submission for a homework assignment. Only students can submit.
+     * At most one submission per student per homework: if the student already has a submission
+     * for this homework, it is replaced by the new one (old submission and its files are removed).
      * Files are optional (can pass empty list; description-only submission).
      *
      * @param homeworkId    homework (assignment) UUID; must exist
@@ -65,4 +67,28 @@ public interface SubmissionApi {
      * @return true if at least one submission references this file
      */
     boolean isStoredFileInUse(UUID storedFileId);
+
+    /**
+     * Check whether the user can download this stored file as a teacher (e.g. when building
+     * submissions archive). Used by document module via {@link com.example.interhubdev.document.api.StoredFileDownloadAccessPort}.
+     * Returns true if the file is attached to a submission whose homework's lesson is taught by the user.
+     *
+     * @param storedFileId stored file UUID
+     * @param userId       user ID (must be teacher of the lesson for that homework, or admin/moderator is not checked here)
+     * @return true if the user is allowed to download this file in teacher context
+     */
+    boolean canTeacherDownloadSubmissionFile(UUID storedFileId, UUID userId);
+
+    /**
+     * Prepare a ZIP archive of all submissions (and their files) for a homework.
+     * Only the teacher of the lesson for this homework (or admin/moderator) can call this.
+     * Use the returned handle to set Content-Disposition with {@link SubmissionsArchiveHandle#getFilename()}
+     * then call {@link SubmissionsArchiveHandle#writeTo(OutputStream)} to stream the ZIP.
+     *
+     * @param homeworkId   homework UUID
+     * @param requesterId  current user (must be teacher of the lesson or admin/moderator)
+     * @return handle with suggested filename and writeTo(OutputStream)
+     * @throws AppException NOT_FOUND if homework not found, FORBIDDEN if requester has no access
+     */
+    SubmissionsArchiveHandle buildSubmissionsArchive(UUID homeworkId, UUID requesterId);
 }

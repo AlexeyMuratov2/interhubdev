@@ -9,15 +9,17 @@
  *   <li>{@link com.example.interhubdev.document.LessonMaterialApi} - lesson materials (one lesson many materials, one material many files)</li>
  *   <li>{@link com.example.interhubdev.document.StoredFileDto} - stored file metadata DTO</li>
  *   <li>{@link com.example.interhubdev.document.CourseMaterialDto} - course material DTO (includes StoredFileDto)</li>
- *   <li>{@link com.example.interhubdev.document.HomeworkDto} - homework DTO</li>
+ *   <li>{@link com.example.interhubdev.document.HomeworkDto} - homework DTO (includes list of StoredFileDto)</li>
  *   <li>{@link com.example.interhubdev.document.LessonMaterialDto} - lesson material DTO (includes list of StoredFileDto)</li>
  *   <li>{@link com.example.interhubdev.document.LessonLookupPort} - port to check lesson existence (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.document.OfferingLookupPort} - port to check offering existence (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.document.api.StoredFileUsagePort} - port to check if stored file is in use by other modules (e.g. submissions)</li>
+ *   <li>{@link com.example.interhubdev.document.api.StoredFileDownloadAccessPort} - port to allow download in specific contexts (e.g. teacher downloading submission files)</li>
  *   <li>{@link com.example.interhubdev.document.StoragePort} - storage port (S3-compatible)</li>
  *   <li>{@link com.example.interhubdev.document.UploadSecurityPort} - upload security (allowed types, malicious file checks)</li>
  *   <li>{@link com.example.interhubdev.document.UploadContext} - context for upload security check</li>
  *   <li>{@link com.example.interhubdev.document.UploadResult} - upload result from storage port</li>
+ *   <li>{@link com.example.interhubdev.document.FileUploadInput} - input for a single file in batch upload</li>
  * </ul>
  * 
  * <h2>Dependencies</h2>

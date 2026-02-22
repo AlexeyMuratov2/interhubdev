@@ -3,6 +3,7 @@ package com.example.interhubdev.document.internal.storedFile;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.StoredFileDto;
+import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
 import com.example.interhubdev.document.internal.uploadSecurity.UploadSecurityErrors;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserDto;
@@ -27,7 +28,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -239,6 +242,91 @@ class DocumentControllerSecurityTest {
             mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload")
                             .file("file", "content".getBytes())
                             .contentType(MediaType.MULTIPART_FORM_DATA))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/documents/upload/batch")
+    class UploadBatch {
+
+        @Test
+        @DisplayName("happy path: multiple files returns 201 and list of DTOs; uploadFiles called with correct inputs")
+        void uploadBatchHappyPath() throws Exception {
+            byte[] pdf1 = "%PDF-1.4 one".getBytes();
+            byte[] pdf2 = "%PDF-1.4 two".getBytes();
+            UUID id1 = UUID.randomUUID();
+            UUID id2 = UUID.randomUUID();
+            StoredFileDto dto1 = new StoredFileDto(id1, pdf1.length, "application/pdf", "a.pdf", LocalDateTime.now(), USER_ID);
+            StoredFileDto dto2 = new StoredFileDto(id2, pdf2.length, "application/pdf", "b.pdf", LocalDateTime.now(), USER_ID);
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+            when(documentApi.uploadFiles(any(), eq(USER_ID))).thenReturn(List.of(dto1, dto2));
+
+            MockMultipartFile file1 = new MockMultipartFile("files", "a.pdf", "application/pdf", pdf1);
+            MockMultipartFile file2 = new MockMultipartFile("files", "b.pdf", "application/pdf", pdf2);
+
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload/batch").file(file1).file(file2))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[0].id").value(id1.toString()))
+                    .andExpect(jsonPath("$[0].originalName").value("a.pdf"))
+                    .andExpect(jsonPath("$[1].id").value(id2.toString()))
+                    .andExpect(jsonPath("$[1].originalName").value("b.pdf"));
+
+            verify(documentApi).uploadFiles(any(), eq(USER_ID));
+        }
+
+        @Test
+        @DisplayName("returns 400 when one file fails security; uploadFiles throws and no partial result")
+        void uploadBatchOneFileFailsSecurity() throws Exception {
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+            when(documentApi.uploadFiles(any(), eq(USER_ID)))
+                    .thenThrow(UploadSecurityErrors.malwareDetected());
+
+            MockMultipartFile file1 = new MockMultipartFile("files", "a.pdf", "application/pdf", "%PDF-1.4 a".getBytes());
+            MockMultipartFile file2 = new MockMultipartFile("files", "b.pdf", "application/pdf", "%PDF-1.4 b".getBytes());
+
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload/batch").file(file1).file(file2))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(UploadSecurityErrors.CODE_MALWARE_DETECTED));
+
+            verify(documentApi).uploadFiles(any(), eq(USER_ID));
+        }
+
+        @Test
+        @DisplayName("returns 400 when no files in request")
+        void uploadBatchEmpty() throws Exception {
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload/batch")
+                            .contentType(MediaType.MULTIPART_FORM_DATA))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("At least one file is required"));
+        }
+
+        @Test
+        @DisplayName("returns 400 BATCH_TOO_LARGE when too many files")
+        void uploadBatchTooManyFiles() throws Exception {
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+
+            MockMultipartFile file = new MockMultipartFile("files", "a.pdf", "application/pdf", "content".getBytes());
+            var request = MockMvcRequestBuilders.multipart("/api/documents/upload/batch");
+            for (int i = 0; i < 51; i++) {
+                request.file(file);
+            }
+
+            mockMvc.perform(request)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(DocumentErrors.CODE_BATCH_TOO_LARGE));
+        }
+
+        @Test
+        @DisplayName("returns 401 when not authenticated")
+        void unauthenticated() throws Exception {
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.empty());
+
+            MockMultipartFile file = new MockMultipartFile("files", "a.pdf", "application/pdf", "content".getBytes());
+            mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload/batch").file(file))
                     .andExpect(status().isUnauthorized());
         }
     }

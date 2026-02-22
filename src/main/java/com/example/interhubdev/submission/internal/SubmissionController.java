@@ -5,15 +5,19 @@ import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.submission.HomeworkSubmissionDto;
 import com.example.interhubdev.submission.SubmissionApi;
+import com.example.interhubdev.submission.SubmissionsArchiveHandle;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -69,5 +73,26 @@ class SubmissionController {
                 requesterId
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    @GetMapping(value = "/{homeworkId}/submissions/archive", produces = "application/zip")
+    @Operation(summary = "Download submissions archive", description = "Download a ZIP of all submitted files for this homework. Requires teacher of the lesson or admin/moderator.")
+    public void downloadArchive(
+            @PathVariable UUID homeworkId,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws Exception {
+        UUID requesterId = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+
+        SubmissionsArchiveHandle handle = submissionApi.buildSubmissionsArchive(homeworkId, requesterId);
+        String filename = handle.getFilename();
+        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+
+        response.setContentType("application/zip");
+        response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + encodedFilename);
+        handle.writeTo(response.getOutputStream());
+        response.getOutputStream().flush();
     }
 }

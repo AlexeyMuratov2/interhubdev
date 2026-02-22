@@ -3,6 +3,7 @@ package com.example.interhubdev.composition.internal;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.composition.CompositionApi;
 import com.example.interhubdev.composition.LessonFullDetailsDto;
+import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
 import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
@@ -70,6 +71,28 @@ class CompositionController {
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         LessonRosterAttendanceDto dto = compositionApi.getLessonRosterAttendance(lessonId, requesterId, includeCanceled);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Get all homework submissions for a lesson: all students in the group with submission/points/files per homework.
+     * For the lesson screen homework submissions table.
+     *
+     * @param lessonId lesson (session) ID
+     * @param request  HTTP request (for authentication)
+     * @return 200 OK with LessonHomeworkSubmissionsDto
+     */
+    @GetMapping("/lessons/{lessonId}/homework-submissions")
+    @Operation(summary = "Get lesson homework submissions", description = "All students in the lesson's group with their submissions, points, and files per homework assignment")
+    public ResponseEntity<LessonHomeworkSubmissionsDto> getLessonHomeworkSubmissions(
+            @PathVariable UUID lessonId,
+            HttpServletRequest request
+    ) {
+        UUID requesterId = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+
+        LessonHomeworkSubmissionsDto dto = compositionApi.getLessonHomeworkSubmissions(lessonId, requesterId);
         return ResponseEntity.ok(dto);
     }
 }

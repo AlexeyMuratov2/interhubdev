@@ -2,6 +2,7 @@ package com.example.interhubdev.document.internal.storedFile;
 
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.document.DocumentApi;
+import com.example.interhubdev.document.FileUploadInput;
 import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.error.AppException;
 import com.example.interhubdev.error.Errors;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,6 +28,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,6 +45,9 @@ class DocumentController {
 
     private final DocumentApi documentApi;
     private final AuthApi authApi;
+
+    @Value("${app.document.max-files-per-batch:50}")
+    private int maxFilesPerBatch;
 
     /**
      * Upload a file. Currently accepts only the file itself.
@@ -84,6 +91,54 @@ class DocumentController {
                 "Failed to upload file. Please try again.");
         } finally {
             if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (Exception e) {
+                    log.warn("Failed to delete temp file: {}", tempFile, e);
+                }
+            }
+        }
+    }
+
+    @PostMapping(value = "/upload/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload multiple files", description = "Upload multiple files in one request; returns list of stored file metadata. All-or-nothing: if any file fails, no files are persisted. Requires authentication.")
+    public ResponseEntity<List<StoredFileDto>> uploadBatch(
+            @RequestPart("files") @Parameter(description = "Files to upload (multipart form, same part name 'files')") List<MultipartFile> files,
+            HttpServletRequest request
+    ) {
+        UUID uploadedBy = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+        if (files == null || files.isEmpty()) {
+            throw Errors.badRequest("At least one file is required");
+        }
+        if (files.size() > maxFilesPerBatch) {
+            throw DocumentErrors.batchTooLarge(maxFilesPerBatch);
+        }
+        List<Path> tempFiles = new ArrayList<>();
+        try {
+            List<FileUploadInput> inputs = new ArrayList<>(files.size());
+            for (MultipartFile file : files) {
+                if (file.isEmpty()) {
+                    throw Errors.badRequest("File is empty");
+                }
+                Path tempFile = Files.createTempFile("upload-", null);
+                tempFiles.add(tempFile);
+                file.transferTo(tempFile.toFile());
+                String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+                String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+                inputs.add(new FileUploadInput(tempFile, originalFilename, contentType, file.getSize()));
+            }
+            List<StoredFileDto> dtos = documentApi.uploadFiles(inputs, uploadedBy);
+            return ResponseEntity.status(HttpStatus.CREATED).body(dtos);
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during batch file upload", e);
+            throw Errors.of(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
+                "Failed to upload files. Please try again.");
+        } finally {
+            for (Path tempFile : tempFiles) {
                 try {
                     Files.deleteIfExists(tempFile);
                 } catch (Exception e) {

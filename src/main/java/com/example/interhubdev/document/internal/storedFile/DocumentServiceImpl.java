@@ -1,16 +1,19 @@
 package com.example.interhubdev.document.internal.storedFile;
 
 import com.example.interhubdev.document.DocumentApi;
+import com.example.interhubdev.document.FileUploadInput;
 import com.example.interhubdev.document.StoredFileDto;
+import com.example.interhubdev.document.api.StoredFileDownloadAccessPort;
 import com.example.interhubdev.document.api.StoredFileUsagePort;
 import com.example.interhubdev.document.StoragePort;
 import com.example.interhubdev.document.UploadContext;
 import com.example.interhubdev.document.UploadResult;
 import com.example.interhubdev.document.UploadSecurityPort;
 import com.example.interhubdev.document.internal.courseMaterial.CourseMaterialRepository;
-import com.example.interhubdev.document.internal.homework.HomeworkRepository;
+import com.example.interhubdev.document.internal.homework.HomeworkFileRepository;
 import com.example.interhubdev.document.internal.lessonMaterial.LessonMaterialFileRepository;
 import com.example.interhubdev.error.AppException;
+import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
@@ -28,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,16 +50,66 @@ class DocumentServiceImpl implements DocumentApi {
     private final FileValidation fileValidation;
     private final UserApi userApi;
     private final CourseMaterialRepository courseMaterialRepository;
-    private final HomeworkRepository homeworkRepository;
+    private final HomeworkFileRepository homeworkFileRepository;
     private final LessonMaterialFileRepository lessonMaterialFileRepository;
     private final List<StoredFileUsagePort> storedFileUsagePorts;
+    private final List<StoredFileDownloadAccessPort> storedFileDownloadAccessPorts;
 
     @Value("${app.storage.preview-url-expires-seconds:3600}")
     private int previewUrlExpiresSeconds;
 
+    @Value("${app.document.max-files-per-batch:50}")
+    private int maxFilesPerBatch;
+
     @Override
     @Transactional
     public StoredFileDto uploadFile(Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy) {
+        StoredFileAndPath result = uploadOneFileToStorageAndDb(tempFile, originalFilename, contentType, size, uploadedBy);
+        return StoredFileMappers.toDto(result.entity());
+    }
+
+    @Override
+    @Transactional
+    public List<StoredFileDto> uploadFiles(List<FileUploadInput> inputs, UUID uploadedBy) {
+        if (inputs == null || inputs.isEmpty()) {
+            throw Errors.badRequest("At least one file is required");
+        }
+        if (inputs.size() > maxFilesPerBatch) {
+            throw DocumentErrors.batchTooLarge(maxFilesPerBatch);
+        }
+        List<StoredFileAndPath> uploaded = new ArrayList<>();
+        try {
+            for (FileUploadInput input : inputs) {
+                StoredFileAndPath result = uploadOneFileToStorageAndDb(
+                    input.tempPath(), input.originalFilename(), input.contentType(), input.size(), uploadedBy);
+                uploaded.add(result);
+            }
+            return uploaded.stream().map(s -> StoredFileMappers.toDto(s.entity())).toList();
+        } catch (Exception e) {
+            for (StoredFileAndPath u : uploaded) {
+                try {
+                    storedFileRepository.deleteById(u.entity().getId());
+                } catch (Exception deleteEx) {
+                    log.warn("Failed to delete StoredFile during batch rollback: {}", u.entity().getId(), deleteEx);
+                }
+                try {
+                    storagePort.delete(u.storagePath());
+                } catch (Exception deleteEx) {
+                    log.warn("Failed to delete file from storage during batch rollback: {}", u.storagePath(), deleteEx);
+                }
+            }
+            if (e instanceof AppException appEx) {
+                throw appEx;
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Upload one file: security check, validation, S3 upload, DB save. Returns entity and storage path for rollback.
+     */
+    private StoredFileAndPath uploadOneFileToStorageAndDb(Path tempFile, String originalFilename,
+                                                          String contentType, long size, UUID uploadedBy) {
         uploadSecurityPort.ensureUploadAllowed(UploadContext.of(uploadedBy, contentType, size, originalFilename), tempFile);
         fileValidation.validateUpload(size, contentType, originalFilename);
         String sanitizedName = sanitizeFilename(originalFilename);
@@ -88,7 +142,7 @@ class DocumentServiceImpl implements DocumentApi {
                 .uploadedBy(uploadedBy)
                 .build();
             storedFileRepository.save(entity);
-            return StoredFileMappers.toDto(entity);
+            return new StoredFileAndPath(entity, path);
         } catch (Exception e) {
             log.warn("Failed to save StoredFile after S3 upload, removing file from storage: {}", path, e);
             try {
@@ -101,6 +155,9 @@ class DocumentServiceImpl implements DocumentApi {
             }
             throw DocumentErrors.saveFailed();
         }
+    }
+
+    private record StoredFileAndPath(StoredFile entity, String storagePath) {
     }
 
     @Override
@@ -180,7 +237,8 @@ class DocumentServiceImpl implements DocumentApi {
 
     /**
      * Check if user has permission to access (read/download/preview) a file.
-     * Rule: uploadedBy == currentUser OR user has ADMIN/MODERATOR role.
+     * Rule: uploadedBy == currentUser OR user has ADMIN/MODERATOR role,
+     * OR any {@link StoredFileDownloadAccessPort} allows download for this file and user.
      */
     private void checkAccessPermission(StoredFile entity, UUID currentUserId) {
         if (entity.getUploadedBy() != null && entity.getUploadedBy().equals(currentUserId)) {
@@ -190,6 +248,11 @@ class DocumentServiceImpl implements DocumentApi {
             .orElseThrow(() -> DocumentErrors.accessDenied());
         if (user.hasRole(Role.ADMIN) || user.hasRole(Role.MODERATOR) || user.hasRole(Role.SUPER_ADMIN)) {
             return; // Admin/Moderator can access
+        }
+        for (StoredFileDownloadAccessPort port : storedFileDownloadAccessPorts) {
+            if (port.canDownload(entity.getId(), currentUserId)) {
+                return;
+            }
         }
         throw DocumentErrors.accessDenied();
     }
@@ -218,7 +281,7 @@ class DocumentServiceImpl implements DocumentApi {
         if (courseMaterialRepository.existsByStoredFileId(storedFileId)) {
             throw DocumentErrors.fileInUse();
         }
-        if (homeworkRepository.existsByStoredFileId(storedFileId)) {
+        if (homeworkFileRepository.existsByStoredFileId(storedFileId)) {
             throw DocumentErrors.fileInUse();
         }
         if (lessonMaterialFileRepository.existsByStoredFileId(storedFileId)) {

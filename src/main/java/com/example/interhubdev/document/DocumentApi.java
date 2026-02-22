@@ -4,6 +4,7 @@ import com.example.interhubdev.error.AppException;
 
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,6 +31,19 @@ public interface DocumentApi {
      * @throws AppException e.g. FILE_TOO_LARGE, FORBIDDEN_FILE_TYPE, MALWARE_DETECTED, etc.
      */
     StoredFileDto uploadFile(Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy);
+
+    /**
+     * Upload multiple files to storage and persist metadata. All-or-nothing: if any file fails
+     * (security, validation, storage, or DB), all already-uploaded files in this call are removed
+     * from storage and DB, then the exception is rethrown.
+     *
+     * @param inputs    list of file inputs (temp path, filename, contentType, size); caller deletes temp files after
+     * @param uploadedBy user id of uploader
+     * @return list of created stored file DTOs in the same order as inputs
+     * @throws AppException e.g. BAD_REQUEST if list empty or exceeds max-files-per-batch,
+     *                      FILE_TOO_LARGE, FORBIDDEN_FILE_TYPE, MALWARE_DETECTED, etc.
+     */
+    List<StoredFileDto> uploadFiles(List<FileUploadInput> inputs, UUID uploadedBy);
 
     /**
      * Get stored file metadata by id.

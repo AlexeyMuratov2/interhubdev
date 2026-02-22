@@ -204,7 +204,7 @@
 
 ### 2.10 StoredFileDto (файл в хранилище)
 
-Используется внутри **LessonMaterialDto** (поле `files`) и **HomeworkDto** (поле `file`).
+Используется внутри **LessonMaterialDto** (поле `files`) и **HomeworkDto** (поле `files`).
 
 | Поле | Тип | Описание |
 |------|-----|----------|
@@ -236,9 +236,39 @@
 | `title` | string \| null | Заголовок |
 | `description` | string \| null | Описание |
 | `points` | integer \| null | Максимальное количество баллов |
-| `file` | **StoredFileDto** \| null | Прикреплённый файл (может отсутствовать или быть пустым объектом в зависимости от сериализации Optional) |
+| `files` | array of **StoredFileDto** | Прикреплённые файлы (порядок сохранён) |
 | `createdAt` | string | Дата создания (ISO-8601) |
 | `updatedAt` | string | Дата обновления (ISO-8601) |
+
+### 2.13 StudentDto (студент)
+
+Используется в **LessonHomeworkSubmissionsDto** и **LessonRosterAttendanceDto**.
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `id` | UUID | Id профиля студента |
+| `userId` | UUID | Id пользователя (аккаунта) |
+| `studentId` | string | Внешний идентификатор студента |
+| `chineseName` | string \| null | Имя на китайском |
+| `faculty` | string \| null | Факультет |
+| `course` | string \| null | Курс |
+| `enrollmentYear` | integer \| null | Год поступления |
+| `groupName` | string \| null | Название группы |
+| `createdAt` | string | Дата создания (ISO-8601) |
+| `updatedAt` | string | Дата обновления (ISO-8601) |
+
+### 2.14 HomeworkSubmissionDto (отправка домашнего задания)
+
+Модуль submission. Используется в **StudentHomeworkItemDto**.
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `id` | UUID | Id отправки |
+| `homeworkId` | UUID | Id домашнего задания |
+| `authorId` | UUID | Id студента (автора) |
+| `submittedAt` | string | Дата и время отправки (ISO-8601) |
+| `description` | string \| null | Текстовое описание (если есть) |
+| `storedFileIds` | array of UUID | Id файлов в хранилище (порядок сохранён) |
 
 ---
 
@@ -298,12 +328,71 @@
 
 ---
 
+## 3.2 GET /api/composition/lessons/{lessonId}/homework-submissions — отправленные домашние задания по уроку
+
+**Назначение:** получить одной ручкой все данные для таблицы «Домашние задания по уроку»: список всех студентов группы, которая посещает урок; для каждого студента и каждого домашнего задания урока — отправка (если есть), выставленные баллы и список файлов. Если студент не отправил ДЗ — в ячейке пустой объект (null submission, null points, пустой массив files). Если по уроку задано несколько домашних заданий, порядок колонок совпадает с порядком в массиве `homeworks`.
+
+**Метод и путь:** `GET /api/composition/lessons/{lessonId}/homework-submissions`
+
+**Права доступа:** аутентифицированный пользователь с правом просмотра отправок и оценок (преподаватель урока или администратор). Требуется валидный JWT.
+
+**Параметры пути:**
+
+| Параметр | Тип | Описание |
+|----------|-----|----------|
+| `lessonId` | UUID | Id урока |
+
+**Query-параметры:** нет.
+
+**Тело запроса:** не используется (GET).
+
+**Успешный ответ:** `200 OK`
+
+Тело ответа — объект **LessonHomeworkSubmissionsDto**:
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `lesson` | object | Информация об уроке — **LessonDto** (см. п. 2.1) |
+| `group` | object | Группа, которая посещает урок — **StudentGroupDto** (см. п. 2.3) |
+| `homeworks` | array | Все домашние задания урока (порядок задаёт порядок колонок в таблице) — массив **HomeworkDto** (см. п. 2.12) |
+| `studentRows` | array | Строки таблицы: по одной на каждого студента группы — массив **StudentHomeworkRowDto** (см. ниже) |
+
+**StudentHomeworkRowDto** (одна строка — один студент):
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `student` | object | Данные студента — **StudentDto** (см. п. 2.13; модуль student) |
+| `items` | array | Ячейки по домашним заданиям (один элемент на каждое ДЗ из `homeworks`, в том же порядке) — массив **StudentHomeworkItemDto** (см. ниже) |
+
+**StudentHomeworkItemDto** (одна ячейка — одно ДЗ для данного студента):
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `homeworkId` | UUID | Id домашнего задания |
+| `submission` | object \| null | Отправка студента — **HomeworkSubmissionDto** (см. п. 2.14); `null`, если студент не отправил |
+| `points` | number \| null | Баллы, выставленные за эту отправку; `null`, если нет отправки или оценка ещё не выставлена |
+| `files` | array | Метаданные файлов отправки (массив **StoredFileDto**, см. п. 2.10); пустой массив, если нет отправки или нет файлов |
+
+**Ошибки:**
+
+| HTTP | code | Когда возникает | Пример сообщения |
+|------|------|------------------|------------------|
+| 401 | UNAUTHORIZED | Нет JWT или токен невалиден | `"Authentication required"` |
+| 403 | FORBIDDEN | Нет прав на просмотр отправок или оценок (модуль submission/grades отклонил доступ) | Сообщение от модуля |
+| 404 | NOT_FOUND | Урок не найден | `"Lesson not found: <lessonId>"` |
+| 404 | NOT_FOUND | Офферинг не найден | `"Offering not found: <offeringId>"` |
+| 404 | NOT_FOUND | Группа не найдена | `"Group not found: <groupId>"` |
+
+При отсутствии домашних заданий по уроку массив `homeworks` пустой, в каждой строке `items` — пустой массив. При отсутствии отправок у студента по конкретному ДЗ в соответствующем элементе `items`: `submission` = null, `points` = null, `files` = [].
+
+---
+
 ## 4. Сводная таблица кодов ошибок и HTTP-статусов
 
 | HTTP | code | Когда возникает |
 |------|------|------------------|
 | 401 | UNAUTHORIZED | Требуется аутентификация (нет или невалидный JWT) |
-| 403 | FORBIDDEN | Нет прав на просмотр материалов/домашних заданий урока |
+| 403 | FORBIDDEN | Нет прав на просмотр материалов/домашних заданий урока; нет прав на просмотр отправок или оценок (homework-submissions) |
 | 404 | NOT_FOUND | Урок, офферинг, элемент учебного плана, предмет или группа не найдены |
 
 ---
@@ -524,3 +613,169 @@ Authorization: Bearer <JWT>
 ```
 
 Фронтенд может использовать эти данные для отображения пустых состояний блоков «Материалы урока» и «Домашние задания».
+
+### 5.5 Успешный запрос отправленных домашних заданий по уроку
+
+**Запрос:**
+
+```
+GET /api/composition/lessons/550e8400-e29b-41d4-a716-446655440000/homework-submissions
+Authorization: Bearer <JWT>
+```
+
+**Ответ:** `200 OK`
+
+Урок с двумя домашними заданиями; в группе два студента: один отправил оба ДЗ с оценками и файлами, второй — только первое ДЗ.
+
+```json
+{
+  "lesson": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "offeringId": "660e8400-e29b-41d4-a716-446655440001",
+    "offeringSlotId": null,
+    "date": "2025-02-19",
+    "startTime": "13:00:00",
+    "endTime": "14:30:00",
+    "timeslotId": null,
+    "roomId": "990e8400-e29b-41d4-a716-446655440004",
+    "topic": "Algorithms",
+    "status": "DONE",
+    "createdAt": "2025-02-01T10:00:00",
+    "updatedAt": "2025-02-01T10:00:00"
+  },
+  "group": {
+    "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+    "programId": "d4e5f6a7-b8c9-0123-def0-234567890123",
+    "curriculumId": "e5f6a7b8-c9d0-1234-ef01-345678901234",
+    "code": "CS-2024-1",
+    "name": "Group A",
+    "description": null,
+    "startYear": 2024,
+    "graduationYear": null,
+    "curatorUserId": null,
+    "createdAt": "2024-09-01T00:00:00",
+    "updatedAt": "2024-09-01T00:00:00"
+  },
+  "homeworks": [
+    {
+      "id": "dd0e8400-e29b-41d4-a716-446655440008",
+      "lessonId": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Homework 1",
+      "description": "Exercises 1-5",
+      "points": 10,
+      "file": null,
+      "createdAt": "2025-02-18T12:00:00",
+      "updatedAt": "2025-02-18T12:00:00"
+    },
+    {
+      "id": "ee0e8400-e29b-41d4-a716-446655440009",
+      "lessonId": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Homework 2",
+      "description": "Project draft",
+      "points": 20,
+      "file": null,
+      "createdAt": "2025-02-18T14:00:00",
+      "updatedAt": "2025-02-18T14:00:00"
+    }
+  ],
+  "studentRows": [
+    {
+      "student": {
+        "id": "11111111-2222-3333-4444-555555555551",
+        "userId": "aaaa1111-2222-3333-4444-555555555551",
+        "studentId": "S001",
+        "chineseName": "张三",
+        "faculty": "CS",
+        "course": "1",
+        "enrollmentYear": 2024,
+        "groupName": "Group A",
+        "createdAt": "2024-09-01T00:00:00",
+        "updatedAt": "2024-09-01T00:00:00"
+      },
+      "items": [
+        {
+          "homeworkId": "dd0e8400-e29b-41d4-a716-446655440008",
+          "submission": {
+            "id": "sub1111-2222-3333-4444-555555555551",
+            "homeworkId": "dd0e8400-e29b-41d4-a716-446655440008",
+            "authorId": "11111111-2222-3333-4444-555555555551",
+            "submittedAt": "2025-02-19T10:00:00",
+            "description": "Done",
+            "storedFileIds": ["file-aaa-111"]
+          },
+          "points": 8,
+          "files": [
+            {
+              "id": "file-aaa-111",
+              "size": 1024,
+              "contentType": "application/pdf",
+              "originalName": "hw1.pdf",
+              "uploadedAt": "2025-02-19T10:00:00",
+              "uploadedBy": "aaaa1111-2222-3333-4444-555555555551"
+            }
+          ]
+        },
+        {
+          "homeworkId": "ee0e8400-e29b-41d4-a716-446655440009",
+          "submission": {
+            "id": "sub2222-3333-4444-5555-666666666662",
+            "homeworkId": "ee0e8400-e29b-41d4-a716-446655440009",
+            "authorId": "11111111-2222-3333-4444-555555555551",
+            "submittedAt": "2025-02-20T11:00:00",
+            "description": null,
+            "storedFileIds": ["file-bbb-222"]
+          },
+          "points": 15,
+          "files": [
+            {
+              "id": "file-bbb-222",
+              "size": 2048,
+              "contentType": "application/pdf",
+              "originalName": "draft.pdf",
+              "uploadedAt": "2025-02-20T11:00:00",
+              "uploadedBy": "aaaa1111-2222-3333-4444-555555555551"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "student": {
+        "id": "11111111-2222-3333-4444-555555555552",
+        "userId": "aaaa1111-2222-3333-4444-555555555552",
+        "studentId": "S002",
+        "chineseName": "李四",
+        "faculty": "CS",
+        "course": "1",
+        "enrollmentYear": 2024,
+        "groupName": "Group A",
+        "createdAt": "2024-09-01T00:00:00",
+        "updatedAt": "2024-09-01T00:00:00"
+      },
+      "items": [
+        {
+          "homeworkId": "dd0e8400-e29b-41d4-a716-446655440008",
+          "submission": {
+            "id": "sub3333-4444-5555-6666-777777777773",
+            "homeworkId": "dd0e8400-e29b-41d4-a716-446655440008",
+            "authorId": "11111111-2222-3333-4444-555555555552",
+            "submittedAt": "2025-02-19T12:00:00",
+            "description": null,
+            "storedFileIds": []
+          },
+          "points": null,
+          "files": []
+        },
+        {
+          "homeworkId": "ee0e8400-e29b-41d4-a716-446655440009",
+          "submission": null,
+          "points": null,
+          "files": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+В первом студенте оба ДЗ отправлены (есть submission, баллы и файлы где есть). У второго студента: по первому ДЗ — отправка без файлов и без выставленных баллов (`points`: null); по второму ДЗ — нет отправки (`submission`: null, `points`: null, `files`: []).
