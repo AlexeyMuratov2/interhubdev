@@ -2,6 +2,7 @@ package com.example.interhubdev.composition.internal;
 
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.composition.CompositionApi;
+import com.example.interhubdev.composition.GroupSubjectInfoDto;
 import com.example.interhubdev.composition.LessonFullDetailsDto;
 import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -112,6 +114,33 @@ class CompositionController {
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         TeacherStudentGroupsDto dto = compositionApi.getTeacherStudentGroups(requesterId);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Get full info for a group and subject (teacher's "Group subject info" screen).
+     * Only teachers assigned to an offering slot for this subject and group (or admin) can view.
+     *
+     * @param groupId   group ID (path)
+     * @param subjectId subject ID (path)
+     * @param semesterId optional semester; if absent, current semester is used
+     * @param request   HTTP request (for authentication)
+     * @return 200 OK with GroupSubjectInfoDto
+     */
+    @GetMapping("/groups/{groupId}/subjects/{subjectId}/info")
+    @Operation(summary = "Get group subject info", description = "Full info for group and subject: offering, slots, curriculum, students with points, homework submissions, attendance. Only for teacher of this offering or admin.")
+    public ResponseEntity<GroupSubjectInfoDto> getGroupSubjectInfo(
+            @PathVariable UUID groupId,
+            @PathVariable UUID subjectId,
+            @RequestParam(required = false) UUID semesterId,
+            HttpServletRequest request
+    ) {
+        UUID requesterId = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+
+        GroupSubjectInfoDto dto = compositionApi.getGroupSubjectInfo(
+                groupId, subjectId, requesterId, Optional.ofNullable(semesterId));
         return ResponseEntity.ok(dto);
     }
 }

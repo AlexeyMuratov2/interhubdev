@@ -57,6 +57,15 @@ public interface GroupApi {
     List<StudentGroupDto> findGroupsByProgramId(UUID programId);
 
     /**
+     * List groups where the given teacher has at least one lesson (offering slot with at least one lesson).
+     * Resolves group IDs via {@link com.example.interhubdev.group.port.GroupIdsByTeacherPort}, then returns group entities only.
+     *
+     * @param teacherId teacher entity ID
+     * @return list of group DTOs (never null)
+     */
+    List<StudentGroupDto> findGroupsByTeacherId(UUID teacherId);
+
+    /**
      * Create a new student group.
      *
      * @param programId      program id (required)

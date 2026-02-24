@@ -1,5 +1,6 @@
 package com.example.interhubdev.composition;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -62,4 +63,21 @@ public interface CompositionApi {
      *         FORBIDDEN if requester is not a teacher
      */
     TeacherStudentGroupsDto getTeacherStudentGroups(UUID requesterId);
+
+    /**
+     * Get full info for a group and subject (Use Case: Group subject info).
+     * For the teacher's "Group subject info" screen. Data returned only if the requester is a teacher
+     * assigned to an offering slot for this subject and group. Includes subject, offering, slots, curriculum,
+     * semester, total homework count, and per-student stats (points, submitted homework count, attendance percent).
+     * Attendance: LATE is not counted as absence; EXCUSED is counted as absence.
+     *
+     * @param groupId     group ID (must not be null)
+     * @param subjectId   subject ID (must not be null)
+     * @param requesterId current authenticated user ID (must be teacher of this offering or admin)
+     * @param semesterId  optional semester; if empty, current semester is used
+     * @return aggregated DTO
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if group or offering for this group+subject not found,
+     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester is not a teacher of this offering
+     */
+    GroupSubjectInfoDto getGroupSubjectInfo(UUID groupId, UUID subjectId, UUID requesterId, Optional<UUID> semesterId);
 }

@@ -2,6 +2,7 @@ package com.example.interhubdev.document;
 
 import com.example.interhubdev.error.AppException;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,6 +40,17 @@ public interface HomeworkApi {
      * @throws AppException NOT_FOUND if lesson not found, FORBIDDEN if access denied
      */
     List<HomeworkDto> listByLesson(UUID lessonId, UUID requesterId);
+
+    /**
+     * List all homework IDs linked to any of the given lessons. Single batch query; no N+1.
+     * Used by composition to get total homework count and submission counts per student for a semester.
+     *
+     * @param lessonIds   lesson UUIDs (must not be null; empty returns empty list)
+     * @param requesterId current user (must be authenticated)
+     * @return list of homework IDs (distinct)
+     * @throws AppException UNAUTHORIZED if requester not authenticated
+     */
+    List<UUID> listHomeworkIdsByLessonIds(Collection<UUID> lessonIds, UUID requesterId);
 
     /**
      * Get homework by id.

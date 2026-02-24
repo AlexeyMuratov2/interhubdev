@@ -59,6 +59,8 @@
  *   <li>{@link com.example.interhubdev.adapter.GroupCurriculumIdAdapter} - implements Program's
  *       {@link com.example.interhubdev.program.GroupCurriculumIdPort} using Group's
  *       {@link com.example.interhubdev.group.GroupCurriculumIdPort} (so Program can get curriculum ID from group without depending on Group).</li>
+ *   <li>{@link com.example.interhubdev.adapter.GroupIdsByTeacherAdapter} - implements Group's
+ *       {@link com.example.interhubdev.group.port.GroupIdsByTeacherPort} using Offering and Schedule (group IDs where teacher has at least one lesson).</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
@@ -70,6 +72,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Adapter",
-    allowedDependencies = {"schedule", "offering", "group", "document", "document :: api", "subject", "program", "academic", "submission", "error"}
+    allowedDependencies = {"schedule", "offering", "group", "group :: port", "document", "document :: api", "subject", "program", "academic", "submission", "error"}
 )
 package com.example.interhubdev.adapter;

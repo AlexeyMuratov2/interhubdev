@@ -15,6 +15,8 @@
  *   <li>{@link com.example.interhubdev.composition.LessonFullDetailsDto} - aggregated lesson details container</li>
  *   <li>{@link com.example.interhubdev.composition.LessonRosterAttendanceDto} - roster attendance for lesson screen table</li>
  *   <li>{@link com.example.interhubdev.composition.LessonHomeworkSubmissionsDto} - homework submissions per student per homework for lesson screen table</li>
+ *   <li>{@link com.example.interhubdev.composition.GroupSubjectInfoDto} - group subject info for teacher screen</li>
+ *   <li>{@link com.example.interhubdev.composition.GroupSubjectStudentItemDto} - one student row in group subject info</li>
  * </ul>
  *
  * <h2>Architecture</h2>
@@ -27,6 +29,7 @@
  *   <li>Use Case #1: Lesson Full Details - aggregates all data needed for the "Full Lesson Information" screen</li>
  *   <li>Use Case #2: Lesson Roster Attendance - students in group + attendance status + absence notices for lesson screen table</li>
  *   <li>Use Case #3: Lesson Homework Submissions - all students in group + submissions, points, and files per homework for lesson screen table</li>
+ *   <li>Use Case #4: Group Subject Info - full info for group and subject (offering, slots, curriculum, students with points, submissions, attendance) for teacher screen</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
@@ -45,6 +48,7 @@
  *   <li>attendance - session attendance and absence notices</li>
  *   <li>grades - points per student for this lesson</li>
  *   <li>submission - homework submissions by students</li>
+ *   <li>user - UserDto for student display in group subject info</li>
  * </ul>
  *
  * <h2>Error codes (via {@link com.example.interhubdev.error.Errors})</h2>
@@ -55,6 +59,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Composition",
-    allowedDependencies = {"academic", "schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "grades", "submission"}
+    allowedDependencies = {"academic", "schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "grades", "submission", "user"}
 )
 package com.example.interhubdev.composition;

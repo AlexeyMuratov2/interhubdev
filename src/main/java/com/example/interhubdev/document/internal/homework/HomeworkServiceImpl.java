@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -105,6 +106,16 @@ class HomeworkServiceImpl implements HomeworkApi {
         }
         List<Homework> list = homeworkRepository.findByLessonIdOrderByCreatedAtDescWithFiles(lessonId);
         return list.stream().map(HomeworkMappers::toDto).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> listHomeworkIdsByLessonIds(Collection<UUID> lessonIds, UUID requesterId) {
+        validateRequester(requesterId);
+        if (lessonIds == null || lessonIds.isEmpty()) {
+            return List.of();
+        }
+        return lessonHomeworkRepository.findHomeworkIdsByLessonIdIn(lessonIds).stream().distinct().toList();
     }
 
     @Override

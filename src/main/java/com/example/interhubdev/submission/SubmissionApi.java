@@ -2,6 +2,7 @@ package com.example.interhubdev.submission;
 
 import com.example.interhubdev.error.AppException;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +39,17 @@ public interface SubmissionApi {
      * @throws AppException NOT_FOUND if homework not found, FORBIDDEN if not teacher/admin
      */
     List<HomeworkSubmissionDto> listByHomework(UUID homeworkId, UUID requesterId);
+
+    /**
+     * List all submissions for any of the given homework IDs. Single batch query; no N+1.
+     * Used by composition to count submitted homeworks per student for a semester.
+     *
+     * @param homeworkIds homework UUIDs (must not be null; empty returns empty list)
+     * @param requesterId  current user (must be TEACHER or ADMIN/MODERATOR/SUPER_ADMIN)
+     * @return list of submission DTOs
+     * @throws AppException UNAUTHORIZED if not authenticated, FORBIDDEN if not teacher/admin
+     */
+    List<HomeworkSubmissionDto> listByHomeworkIds(Collection<UUID> homeworkIds, UUID requesterId);
 
     /**
      * Get one submission by id. Only teachers and admins can view.

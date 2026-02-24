@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -119,6 +120,18 @@ class SubmissionServiceImpl implements SubmissionApi {
             throw SubmissionErrors.homeworkNotFound(homeworkId);
         }
         List<HomeworkSubmission> list = submissionRepository.findByHomeworkIdOrderBySubmittedAtDesc(homeworkId);
+        return list.stream().map(this::toDto).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<HomeworkSubmissionDto> listByHomeworkIds(Collection<UUID> homeworkIds, UUID requesterId) {
+        validateRequester(requesterId);
+        checkTeacherOrAdmin(requesterId);
+        if (homeworkIds == null || homeworkIds.isEmpty()) {
+            return List.of();
+        }
+        List<HomeworkSubmission> list = submissionRepository.findByHomeworkIdIn(homeworkIds);
         return list.stream().map(this::toDto).toList();
     }
 

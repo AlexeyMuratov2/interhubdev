@@ -8,6 +8,7 @@
  *   <li>{@link com.example.interhubdev.group.GroupSummaryPort} - lightweight port for getting group summaries (id, code, name) (avoids circular dependencies)</li>
  *   <li>{@link com.example.interhubdev.group.GroupStartYearPort} - lightweight port for getting group start year (avoids circular dependencies)</li>
  *   <li>{@link com.example.interhubdev.group.GroupCurriculumIdPort} - lightweight port for getting group curriculum ID (avoids circular dependencies)</li>
+ *   <li>{@link com.example.interhubdev.group.port.GroupIdsByTeacherPort} - port for resolving group IDs by teacher ID (implemented by adapter using Offering/Schedule)</li>
  *   <li>{@link com.example.interhubdev.group.StudentGroupDto}, {@link com.example.interhubdev.group.GroupLeaderDto}, {@link com.example.interhubdev.group.GroupCurriculumOverrideDto} - DTOs</li>
  * </ul>
  *

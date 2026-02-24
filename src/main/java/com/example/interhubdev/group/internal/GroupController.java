@@ -58,6 +58,12 @@ class GroupController {
         return ResponseEntity.ok(groupApi.findGroupsByProgramId(programId));
     }
 
+    @GetMapping("/by-teacher/{teacherId}")
+    @Operation(summary = "Get groups by teacher ID", description = "Returns only group entities where the teacher has at least one lesson (offering slot with at least one lesson)")
+    public ResponseEntity<List<StudentGroupDto>> findGroupsByTeacherId(@PathVariable UUID teacherId) {
+        return ResponseEntity.ok(groupApi.findGroupsByTeacherId(teacherId));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "Create group", description = "Only MODERATOR, ADMIN, SUPER_ADMIN can create groups")

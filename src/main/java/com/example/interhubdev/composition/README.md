@@ -62,6 +62,25 @@ All this data is returned in a single request and is sufficient to display full 
 
 **Empty Results Handling**: If some data is missing (e.g., no materials or no homework), the endpoint returns a correct "empty result" for the corresponding part, so the UI can render an empty state.
 
+### Use Case #4: Group Subject Info
+
+**Endpoint**: `GET /api/composition/groups/{groupId}/subjects/{subjectId}/info`
+
+**Purpose**: Aggregates all data needed for the teacher's "Group subject info" screen in a single request. Data is returned only if the requester is a teacher assigned to an offering slot for this subject and group (or an administrator).
+
+**Query parameters**: Optional `semesterId`; if omitted, the current semester is used for homework count and attendance.
+
+**What the endpoint returns**:
+
+1. **Subject, group, program** – SubjectDto, StudentGroupDto, ProgramDto
+2. **Offering and slots** – GroupSubjectOfferingDto, list of OfferingSlotDto, list of OfferingTeacherItemDto
+3. **Curriculum** – CurriculumSubjectDto for this subject, CurriculumDto, and full list of CurriculumSubjectDto (study plan)
+4. **Semester** – SemesterDto used for the report period
+5. **Total homework count** – Number of homework assignments for this offering in the semester
+6. **Students** – For each student in the group: StudentDto, UserDto, total points for the subject, number of submitted homeworks in the semester, and attendance percentage. Attendance rules: LATE is not counted as absence; EXCUSED is counted as absence; percentage = (PRESENT + LATE) / totalSessions × 100 (null if no sessions).
+
+**Authorization**: Requester must be authenticated. Only teachers who are assigned to the offering (main teacher or slot teacher) for this group and subject, or users with ADMIN/MODERATOR/SUPER_ADMIN role, can view.
+
 ## Internal Logic
 
 The endpoint works as follows:
@@ -81,21 +100,28 @@ The internal orchestration is simple and predictable: the module does not solve 
 ## Dependencies
 
 The module depends on:
+- `academic` - semesters for teacher student groups and group subject info
 - `schedule` - lesson and room information
 - `offering` - offering information and offering teachers
 - `subject` - subject information
-- `group` - group information
-- `document` - lesson materials and homework
+- `group` - group information and group members with users
+- `document` - lesson materials and homework (including batch homework IDs by lesson IDs)
 - `teacher` - teacher information
 - `program` - curriculum subject information
 - `auth` - current user for authentication
 - `error` - error handling
+- `student` - roster by group
+- `attendance` - session attendance and group attendance summary
+- `grades` - points per student per offering
+- `submission` - homework submissions (including batch by homework IDs)
+- `user` - UserDto for student display in group subject info
 
 ## Error Handling
 
 All errors are thrown as `AppException` via `Errors` and handled by the global exception handler:
-- `NOT_FOUND (404)` - lesson, offering, subject, group, room, teacher, or curriculum subject not found
+- `NOT_FOUND (404)` - lesson, offering, subject, group, room, teacher, curriculum subject, or semester not found
 - `UNAUTHORIZED (401)` - authentication required
+- `FORBIDDEN (403)` - requester is not a teacher of the offering (for group subject info / roster attendance / homework submissions)
 
 ## Future Extensions
 

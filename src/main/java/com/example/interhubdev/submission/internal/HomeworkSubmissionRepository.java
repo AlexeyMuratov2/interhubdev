@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,4 +23,13 @@ interface HomeworkSubmissionRepository extends JpaRepository<HomeworkSubmission,
      * Find all submissions by a given author for a homework (at most one expected after replace-on-create policy).
      */
     List<HomeworkSubmission> findByHomeworkIdAndAuthorId(UUID homeworkId, UUID authorId);
+
+    /**
+     * Find all submissions for any of the given homework IDs. Single batch query; no N+1.
+     *
+     * @param homeworkIds homework UUIDs (must not be null; empty returns empty list)
+     * @return list of submissions (order not guaranteed)
+     */
+    @Query("SELECT s FROM HomeworkSubmission s LEFT JOIN FETCH s.files WHERE s.homeworkId IN :homeworkIds")
+    List<HomeworkSubmission> findByHomeworkIdIn(@Param("homeworkIds") Collection<UUID> homeworkIds);
 }

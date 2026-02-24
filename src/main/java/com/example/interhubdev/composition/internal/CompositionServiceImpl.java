@@ -1,6 +1,7 @@
 package com.example.interhubdev.composition.internal;
 
 import com.example.interhubdev.composition.CompositionApi;
+import com.example.interhubdev.composition.GroupSubjectInfoDto;
 import com.example.interhubdev.composition.LessonFullDetailsDto;
 import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
@@ -8,6 +9,7 @@ import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -22,6 +24,7 @@ class CompositionServiceImpl implements CompositionApi {
     private final LessonRosterAttendanceService lessonRosterAttendanceService;
     private final LessonHomeworkSubmissionsService lessonHomeworkSubmissionsService;
     private final TeacherStudentGroupsService teacherStudentGroupsService;
+    private final GroupSubjectInfoService groupSubjectInfoService;
 
     @Override
     public LessonFullDetailsDto getLessonFullDetails(UUID lessonId, UUID requesterId) {
@@ -41,5 +44,10 @@ class CompositionServiceImpl implements CompositionApi {
     @Override
     public TeacherStudentGroupsDto getTeacherStudentGroups(UUID requesterId) {
         return teacherStudentGroupsService.execute(requesterId);
+    }
+
+    @Override
+    public GroupSubjectInfoDto getGroupSubjectInfo(UUID groupId, UUID subjectId, UUID requesterId, Optional<UUID> semesterId) {
+        return groupSubjectInfoService.execute(groupId, subjectId, requesterId, semesterId);
     }
 }

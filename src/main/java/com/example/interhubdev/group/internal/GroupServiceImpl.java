@@ -1,6 +1,7 @@
 package com.example.interhubdev.group.internal;
 
 import com.example.interhubdev.group.*;
+import com.example.interhubdev.group.port.GroupIdsByTeacherPort;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
 import com.example.interhubdev.user.UserApi;
@@ -27,6 +28,7 @@ class GroupServiceImpl implements GroupApi {
     private final GroupCatalogService groupCatalogService;
     private final GroupLeaderService groupLeaderService;
     private final GroupOverrideService groupOverrideService;
+    private final GroupIdsByTeacherPort groupIdsByTeacherPort;
     private final StudentApi studentApi;
     private final UserApi userApi;
 
@@ -53,6 +55,12 @@ class GroupServiceImpl implements GroupApi {
     @Override
     public List<StudentGroupDto> findGroupsByProgramId(UUID programId) {
         return groupCatalogService.findGroupsByProgramId(programId);
+    }
+
+    @Override
+    public List<StudentGroupDto> findGroupsByTeacherId(UUID teacherId) {
+        List<UUID> groupIds = groupIdsByTeacherPort.findGroupIdsByTeacherId(teacherId);
+        return groupCatalogService.findGroupsByIds(groupIds);
     }
 
     @Override

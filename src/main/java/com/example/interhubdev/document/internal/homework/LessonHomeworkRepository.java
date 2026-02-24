@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +22,16 @@ public interface LessonHomeworkRepository extends JpaRepository<LessonHomework, 
      */
     @Query("SELECT lh.homeworkId FROM LessonHomework lh WHERE lh.lessonId = :lessonId")
     List<UUID> findHomeworkIdsByLessonId(@Param("lessonId") UUID lessonId);
+
+    /**
+     * Find all homework IDs for lessons in the given set.
+     * Single query; empty collection returns empty list.
+     *
+     * @param lessonIds lesson UUIDs (must not be null)
+     * @return list of homework IDs (may contain duplicates if same homework linked to multiple lessons; caller may distinct)
+     */
+    @Query("SELECT lh.homeworkId FROM LessonHomework lh WHERE lh.lessonId IN :lessonIds")
+    List<UUID> findHomeworkIdsByLessonIdIn(@Param("lessonIds") Collection<UUID> lessonIds);
 
     /**
      * Find lesson ID for a given homework.
