@@ -160,6 +160,11 @@ class ScheduleServiceImpl implements ScheduleApi {
     }
 
     @Override
+    public java.util.Map<UUID, java.util.Set<LocalDate>> findLessonDatesByOfferingIds(Collection<UUID> offeringIds) {
+        return lessonService.findLessonDatesByOfferingIds(offeringIds);
+    }
+
+    @Override
     public List<LessonForScheduleDto> findLessonsByDate(LocalDate date) {
         return lessonService.findByDateEnriched(date);
     }

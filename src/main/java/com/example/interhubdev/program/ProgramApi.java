@@ -72,6 +72,14 @@ public interface ProgramApi {
     Optional<CurriculumSubjectDto> findCurriculumSubjectById(UUID id);
 
     /**
+     * Find curriculum subjects by IDs. Missing IDs are skipped.
+     *
+     * @param ids curriculum subject IDs (empty collection returns empty list)
+     * @return list of curriculum subject DTOs for found IDs
+     */
+    List<CurriculumSubjectDto> findCurriculumSubjectsByIds(java.util.Collection<UUID> ids);
+
+    /**
      * Get subject display names by curriculum subject ids (batch). Name is englishName or chineseName or code.
      *
      * @param curriculumSubjectIds curriculum subject ids (must not be null)

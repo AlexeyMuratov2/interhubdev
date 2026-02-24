@@ -9,8 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -26,6 +30,16 @@ class AcademicServiceImpl implements AcademicApi {
     @Override
     public Optional<AcademicYearDto> findAcademicYearById(UUID id) {
         return academicYearRepository.findById(id).map(this::toAcademicYearDto);
+    }
+
+    @Override
+    public List<AcademicYearDto> findAcademicYearsByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return academicYearRepository.findAllById(ids).stream()
+                .map(this::toAcademicYearDto)
+                .toList();
     }
 
     @Override
@@ -123,6 +137,34 @@ class AcademicServiceImpl implements AcademicApi {
         }
         return semesterRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqual(date, date)
                 .map(this::toSemesterDto);
+    }
+
+    @Override
+    public List<SemesterDto> findSemestersByDates(Set<LocalDate> dates) {
+        if (dates == null || dates.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> semesterIds = new LinkedHashSet<>();
+        for (LocalDate date : dates) {
+            semesterRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqual(date, date)
+                    .map(Semester::getId)
+                    .ifPresent(semesterIds::add);
+        }
+        if (semesterIds.isEmpty()) {
+            return List.of();
+        }
+        return semesterRepository.findAllById(semesterIds).stream()
+                .map(this::toSemesterDto)
+                .toList();
+    }
+
+    @Override
+    public List<SemesterDto> findSemestersByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        List<Semester> list = semesterRepository.findAllById(ids);
+        return list.stream().map(this::toSemesterDto).toList();
     }
 
     @Override

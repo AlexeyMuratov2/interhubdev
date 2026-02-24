@@ -67,4 +67,12 @@ interface LessonRepository extends JpaRepository<Lesson, UUID> {
      */
     @Query("SELECT DISTINCT l.offeringSlotId FROM Lesson l WHERE l.offeringSlotId IS NOT NULL AND l.offeringSlotId IN :ids")
     Set<UUID> findDistinctOfferingSlotIdsByOfferingSlotIdIn(Collection<UUID> ids);
+
+    /**
+     * Pairs (offeringId, date) for all lessons whose offeringId is in the given set.
+     * Used to resolve semesters per offering/group without loading full lesson entities.
+     * Do not call with empty collection.
+     */
+    @Query("SELECT l.offeringId, l.date FROM Lesson l WHERE l.offeringId IN :ids")
+    List<Object[]> findOfferingIdAndDateByOfferingIdIn(Collection<UUID> ids);
 }

@@ -195,6 +195,14 @@ public interface ScheduleApi {
     Set<UUID> findOfferingSlotIdsWithAtLeastOneLesson(Collection<UUID> offeringSlotIds);
 
     /**
+     * For each offering ID, the set of distinct lesson dates. Used to resolve semesters per offering (e.g. composition teacher student groups).
+     *
+     * @param offeringIds offering IDs to check (empty collection returns empty map)
+     * @return map from offering ID to set of lesson dates
+     */
+    java.util.Map<UUID, java.util.Set<LocalDate>> findLessonDatesByOfferingIds(Collection<UUID> offeringIds);
+
+    /**
      * List lessons by date with full context for schedule UI (offering, slot, teachers). Ordered by startTime.
      *
      * @param date date

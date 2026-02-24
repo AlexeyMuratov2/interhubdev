@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +27,15 @@ class CurriculumSubjectService {
 
     Optional<CurriculumSubjectDto> findCurriculumSubjectById(UUID id) {
         return curriculumSubjectRepository.findById(id).map(ProgramMappers::toCurriculumSubjectDto);
+    }
+
+    List<CurriculumSubjectDto> findCurriculumSubjectsByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return curriculumSubjectRepository.findAllById(ids).stream()
+                .map(ProgramMappers::toCurriculumSubjectDto)
+                .toList();
     }
 
     /**

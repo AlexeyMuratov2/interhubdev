@@ -63,6 +63,22 @@ class ScheduleLessonService {
         return lessonRepository.findDistinctOfferingSlotIdsByOfferingSlotIdIn(offeringSlotIds);
     }
 
+    /**
+     * For each offering, the set of distinct lesson dates. Used to resolve semesters per offering (e.g. teacher student groups).
+     * Do not call with empty collection.
+     */
+    Map<UUID, Set<LocalDate>> findLessonDatesByOfferingIds(Collection<UUID> offeringIds) {
+        if (offeringIds == null || offeringIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Object[]> rows = lessonRepository.findOfferingIdAndDateByOfferingIdIn(offeringIds);
+        return rows.stream()
+                .collect(Collectors.groupingBy(
+                        row -> (UUID) row[0],
+                        Collectors.mapping(row -> (LocalDate) row[1], Collectors.toSet())
+                ));
+    }
+
     List<LessonDto> findByDate(LocalDate date) {
         return lessonRepository.findByDateOrderByStartTimeAsc(date).stream()
                 .map(ScheduleMappers::toLessonDto)

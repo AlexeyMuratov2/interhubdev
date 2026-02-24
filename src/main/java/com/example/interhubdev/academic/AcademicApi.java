@@ -1,8 +1,10 @@
 package com.example.interhubdev.academic;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -12,6 +14,14 @@ public interface AcademicApi {
 
     // --- Academic Year ---
     Optional<AcademicYearDto> findAcademicYearById(UUID id);
+
+    /**
+     * Find academic years by IDs. Missing IDs are skipped; result may be smaller than input size.
+     *
+     * @param ids academic year IDs (empty collection returns empty list)
+     * @return list of academic year DTOs for found IDs
+     */
+    List<AcademicYearDto> findAcademicYearsByIds(Collection<UUID> ids);
 
     Optional<AcademicYearDto> findCurrentAcademicYear();
 
@@ -35,6 +45,23 @@ public interface AcademicApi {
      * @return optional semester DTO if a semester exists for that date
      */
     Optional<SemesterDto> findSemesterByDate(LocalDate date);
+
+    /**
+     * Find distinct semesters that contain any of the given dates (startDate &lt;= date &lt;= endDate).
+     * Used when resolving semesters for a set of lesson dates (e.g. composition teacher student groups).
+     *
+     * @param dates dates to resolve (empty set returns empty list)
+     * @return list of distinct semester DTOs, order not specified
+     */
+    List<SemesterDto> findSemestersByDates(Set<LocalDate> dates);
+
+    /**
+     * Find semesters by IDs. Missing IDs are skipped; result may be smaller than input size.
+     *
+     * @param ids semester IDs (empty collection returns empty list)
+     * @return list of semester DTOs for found IDs
+     */
+    List<SemesterDto> findSemestersByIds(Collection<UUID> ids);
 
     List<SemesterDto> findSemestersByAcademicYearId(UUID academicYearId);
 

@@ -148,6 +148,11 @@ class ProgramServiceImpl implements ProgramApi {
     }
 
     @Override
+    public List<CurriculumSubjectDto> findCurriculumSubjectsByIds(java.util.Collection<UUID> ids) {
+        return curriculumSubjectService.findCurriculumSubjectsByIds(ids);
+    }
+
+    @Override
     public Map<UUID, String> getSubjectNamesByCurriculumSubjectIds(List<UUID> curriculumSubjectIds) {
         return curriculumSubjectService.getSubjectNamesByCurriculumSubjectIds(curriculumSubjectIds);
     }

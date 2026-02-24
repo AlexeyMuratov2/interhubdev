@@ -1,6 +1,9 @@
 /**
  * Composition module - read-only data aggregation for complex UI screens.
  *
+ * <p>Architecture and instructions for adding new endpoints: see
+ * <code>docs/composition-module-architecture.md</code>.</p>
+ *
  * <h2>Purpose</h2>
  * This module aggregates data from multiple modules into a single response to reduce
  * the number of frontend requests in complex scenarios. It follows a "read-only composition"
@@ -28,6 +31,7 @@
  *
  * <h2>Dependencies</h2>
  * <ul>
+ *   <li>academic - semesters for teacher student groups filter</li>
  *   <li>schedule - lesson, room information</li>
  *   <li>offering - offering information and offering teachers</li>
  *   <li>subject - subject information</li>
@@ -51,6 +55,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Composition",
-    allowedDependencies = {"schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "grades", "submission"}
+    allowedDependencies = {"academic", "schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "grades", "submission"}
 )
 package com.example.interhubdev.composition;
