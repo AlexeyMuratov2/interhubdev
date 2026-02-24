@@ -65,6 +65,17 @@ public interface CompositionApi {
     TeacherStudentGroupsDto getTeacherStudentGroups(UUID requesterId);
 
     /**
+     * Get all subjects for which the current student has at least one lesson.
+     * For student dashboard / subject list. Structure mirrors the "subjects" part of teacher student-groups.
+     *
+     * @param requesterId current authenticated user ID (must be a student)
+     * @return DTO with list of subject DTOs
+     * @throws com.example.interhubdev.error.AppException UNAUTHORIZED if requesterId is null,
+     *         FORBIDDEN if requester is not a student
+     */
+    StudentSubjectsDto getStudentSubjects(UUID requesterId);
+
+    /**
      * Get full info for a group and subject (Use Case: Group subject info).
      * For the teacher's "Group subject info" screen. Data returned only if the requester is a teacher
      * assigned to an offering slot for this subject and group. Includes subject, offering, slots, curriculum,

@@ -9,6 +9,7 @@ import com.example.interhubdev.composition.LessonRosterAttendanceDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryDto;
 import com.example.interhubdev.composition.StudentGradeHistoryDto;
 import com.example.interhubdev.composition.StudentHomeworkHistoryDto;
+import com.example.interhubdev.composition.StudentSubjectsDto;
 import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
@@ -117,6 +118,24 @@ class CompositionController {
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         TeacherStudentGroupsDto dto = compositionApi.getTeacherStudentGroups(requesterId);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Get all subjects for which the current student has at least one lesson.
+     * For student dashboard / subject list.
+     *
+     * @param request HTTP request (for authentication)
+     * @return 200 OK with StudentSubjectsDto
+     */
+    @GetMapping("/student/subjects")
+    @Operation(summary = "Get student subjects", description = "All subjects for which the student has at least one lesson")
+    public ResponseEntity<StudentSubjectsDto> getStudentSubjects(HttpServletRequest request) {
+        UUID requesterId = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+
+        StudentSubjectsDto dto = compositionApi.getStudentSubjects(requesterId);
         return ResponseEntity.ok(dto);
     }
 
