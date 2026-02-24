@@ -26,6 +26,7 @@ public final class AccountErrors {
     public static final String CODE_TEACHER_PROFILE_REQUIRES_ROLE = "ACCOUNT_TEACHER_PROFILE_REQUIRES_ROLE";
     public static final String CODE_STUDENT_PROFILE_CREATE_REQUIRED_FIELDS = "ACCOUNT_STUDENT_PROFILE_CREATE_REQUIRED_FIELDS";
     public static final String CODE_TEACHER_PROFILE_CREATE_REQUIRED_FIELDS = "ACCOUNT_TEACHER_PROFILE_CREATE_REQUIRED_FIELDS";
+    public static final String CODE_ONLY_SUPER_ADMIN_CAN_CHANGE_PROFILE_ID = "ACCOUNT_ONLY_SUPER_ADMIN_CAN_CHANGE_PROFILE_ID";
 
     public static AppException userNotFound(UUID id) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_USER_NOT_FOUND,
@@ -80,5 +81,10 @@ public final class AccountErrors {
     public static AppException teacherProfileCreateRequiredFields(String missing) {
         return Errors.of(HttpStatus.BAD_REQUEST, CODE_TEACHER_PROFILE_CREATE_REQUIRED_FIELDS,
                 "При создании профиля преподавателя обязательны поля: " + missing);
+    }
+
+    public static AppException onlySuperAdminCanChangeProfileId() {
+        return Errors.of(HttpStatus.FORBIDDEN, CODE_ONLY_SUPER_ADMIN_CAN_CHANGE_PROFILE_ID,
+                "Изменять идентификатор (teacherId / studentId) может только супер-администратор.");
     }
 }

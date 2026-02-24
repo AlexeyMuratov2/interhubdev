@@ -86,12 +86,15 @@ class AccountController {
 
     @PatchMapping("/users/{id}")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Update user", description = "Update profile and/or roles. Email cannot be changed.")
+    @Operation(summary = "Update user", description = "Update profile and/or roles. Email cannot be changed. Only SUPER_ADMIN can change teacherId/studentId.")
     public ResponseEntity<UserDto> updateUser(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateUserRequest body
+            @Valid @RequestBody UpdateUserRequest body,
+            HttpServletRequest request
     ) {
-        UserDto updated = accountApi.updateUser(id, body);
+        UserDto current = accountApi.getCurrentUser(request)
+                .orElseThrow(() -> Errors.unauthorized("Требуется вход в систему."));
+        UserDto updated = accountApi.updateUser(id, body, current.id());
         return ResponseEntity.ok(updated);
     }
 
@@ -119,6 +122,17 @@ class AccountController {
     ) {
         int size = limit <= 0 ? DEFAULT_PAGE_SIZE : Math.min(limit, MAX_PAGE_SIZE);
         return ResponseEntity.ok(accountApi.listTeachers(cursor.orElse(null), size));
+    }
+
+    @GetMapping("/teachers/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get my teacher profile", description = "Returns current user's teacher profile. 404 if user is not a teacher.")
+    public ResponseEntity<TeacherProfileItem> getMyTeacher(HttpServletRequest request) {
+        UserDto current = accountApi.getCurrentUser(request)
+                .orElseThrow(() -> Errors.unauthorized("Требуется вход в систему."));
+        TeacherProfileItem item = accountApi.getTeacher(current.id())
+                .orElseThrow(() -> AccountErrors.teacherProfileNotFound(current.id()));
+        return ResponseEntity.ok(item);
     }
 
     @GetMapping("/teachers/{userId}")

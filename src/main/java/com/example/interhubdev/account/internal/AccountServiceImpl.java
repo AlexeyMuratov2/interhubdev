@@ -95,7 +95,7 @@ class AccountServiceImpl implements AccountApi {
 
     @Override
     @Transactional
-    public UserDto updateUser(UUID userId, UpdateUserRequest request) {
+    public UserDto updateUser(UUID userId, UpdateUserRequest request, UUID editorUserId) {
         if (request == null) {
             return userApi.findById(userId).orElseThrow(() -> AccountErrors.userNotFound(userId));
         }
@@ -103,8 +103,8 @@ class AccountServiceImpl implements AccountApi {
 
         updateBasicProfileIfPresent(userId, request);
         UserDto updated = applyRolesAndCleanupProfiles(userId, request);
-        applyStudentProfileIfPresent(userId, request, updated);
-        applyTeacherProfileIfPresent(userId, request, updated);
+        applyStudentProfileIfPresent(userId, request, updated, editorUserId);
+        applyTeacherProfileIfPresent(userId, request, updated, editorUserId);
 
         return userApi.findById(userId).orElseThrow(() -> AccountErrors.userNotFound(userId));
     }
@@ -137,7 +137,7 @@ class AccountServiceImpl implements AccountApi {
         return updated;
     }
 
-    private void applyStudentProfileIfPresent(UUID userId, UpdateUserRequest request, UserDto updated) {
+    private void applyStudentProfileIfPresent(UUID userId, UpdateUserRequest request, UserDto updated, UUID editorUserId) {
         if (request.studentProfile() == null) {
             return;
         }
@@ -151,11 +151,19 @@ class AccountServiceImpl implements AccountApi {
             }
             studentApi.create(userId, request.studentProfile());
         } else {
+            StudentDto existing = studentApi.findByUserId(userId).orElseThrow();
+            String newStudentId = request.studentProfile().studentId();
+            if (newStudentId != null && !newStudentId.equals(existing.studentId())) {
+                UserDto editor = userApi.findById(editorUserId).orElseThrow(() -> AccountErrors.userNotFound(editorUserId));
+                if (!editor.hasRole(Role.SUPER_ADMIN)) {
+                    throw AccountErrors.onlySuperAdminCanChangeProfileId();
+                }
+            }
             studentApi.update(userId, request.studentProfile());
         }
     }
 
-    private void applyTeacherProfileIfPresent(UUID userId, UpdateUserRequest request, UserDto updated) {
+    private void applyTeacherProfileIfPresent(UUID userId, UpdateUserRequest request, UserDto updated, UUID editorUserId) {
         if (request.teacherProfile() == null) {
             return;
         }
@@ -169,6 +177,14 @@ class AccountServiceImpl implements AccountApi {
             }
             teacherApi.create(userId, request.teacherProfile());
         } else {
+            TeacherDto existing = teacherApi.findByUserId(userId).orElseThrow();
+            String newTeacherId = request.teacherProfile().teacherId();
+            if (newTeacherId != null && !newTeacherId.equals(existing.teacherId())) {
+                UserDto editor = userApi.findById(editorUserId).orElseThrow(() -> AccountErrors.userNotFound(editorUserId));
+                if (!editor.hasRole(Role.SUPER_ADMIN)) {
+                    throw AccountErrors.onlySuperAdminCanChangeProfileId();
+                }
+            }
             teacherApi.update(userId, request.teacherProfile());
         }
     }
@@ -232,8 +248,14 @@ class AccountServiceImpl implements AccountApi {
     @Override
     @Transactional
     public TeacherDto updateMyTeacherProfile(UUID currentUserId, CreateTeacherRequest request) {
-        if (teacherApi.findByUserId(currentUserId).isEmpty()) {
-            throw AccountErrors.teacherProfileNotFound(currentUserId);
+        TeacherDto existing = teacherApi.findByUserId(currentUserId)
+                .orElseThrow(() -> AccountErrors.teacherProfileNotFound(currentUserId));
+        String newTeacherId = request != null ? request.teacherId() : null;
+        if (newTeacherId != null && !newTeacherId.equals(existing.teacherId())) {
+            UserDto editor = userApi.findById(currentUserId).orElseThrow(() -> AccountErrors.userNotFound(currentUserId));
+            if (!editor.hasRole(Role.SUPER_ADMIN)) {
+                throw AccountErrors.onlySuperAdminCanChangeProfileId();
+            }
         }
         return teacherApi.update(currentUserId, request);
     }
@@ -264,8 +286,14 @@ class AccountServiceImpl implements AccountApi {
     @Override
     @Transactional
     public StudentDto updateMyStudentProfile(UUID currentUserId, CreateStudentRequest request) {
-        if (studentApi.findByUserId(currentUserId).isEmpty()) {
-            throw AccountErrors.studentProfileNotFound(currentUserId);
+        StudentDto existing = studentApi.findByUserId(currentUserId)
+                .orElseThrow(() -> AccountErrors.studentProfileNotFound(currentUserId));
+        String newStudentId = request != null ? request.studentId() : null;
+        if (newStudentId != null && !newStudentId.equals(existing.studentId())) {
+            UserDto editor = userApi.findById(currentUserId).orElseThrow(() -> AccountErrors.userNotFound(currentUserId));
+            if (!editor.hasRole(Role.SUPER_ADMIN)) {
+                throw AccountErrors.onlySuperAdminCanChangeProfileId();
+            }
         }
         return studentApi.update(currentUserId, request);
     }

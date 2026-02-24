@@ -54,12 +54,14 @@ public interface AccountApi {
 
     /**
      * Update user (profile + roles) by moderator/admin. Email is never changed.
+     * Only SUPER_ADMIN can change teacherId/studentId in role profiles.
      *
-     * @param userId  user ID
-     * @param request profile fields and roles (all optional)
+     * @param userId      user ID to update
+     * @param request     profile fields and roles (all optional)
+     * @param editorUserId ID of the user performing the update (for profile-id change permission)
      * @return updated user
      */
-    UserDto updateUser(UUID userId, UpdateUserRequest request);
+    UserDto updateUser(UUID userId, UpdateUserRequest request, UUID editorUserId);
 
     /**
      * Delete user. Only ADMIN/SUPER_ADMIN. Cannot delete self. SUPER_ADMIN can only be deleted by another SUPER_ADMIN.
