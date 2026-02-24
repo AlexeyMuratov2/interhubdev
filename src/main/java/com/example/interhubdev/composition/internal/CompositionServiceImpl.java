@@ -55,8 +55,8 @@ class CompositionServiceImpl implements CompositionApi {
     }
 
     @Override
-    public StudentSubjectsDto getStudentSubjects(UUID requesterId) {
-        return studentSubjectsService.execute(requesterId);
+    public StudentSubjectsDto getStudentSubjects(UUID requesterId, Optional<Integer> semesterNo) {
+        return studentSubjectsService.execute(requesterId, semesterNo);
     }
 
     @Override

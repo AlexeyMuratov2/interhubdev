@@ -125,17 +125,21 @@ class CompositionController {
      * Get all subjects for which the current student has at least one lesson.
      * For student dashboard / subject list.
      *
-     * @param request HTTP request (for authentication)
+     * @param semesterNo optional curriculum semester number (1, 2, 3, …); if absent, all semesters
+     * @param request    HTTP request (for authentication)
      * @return 200 OK with StudentSubjectsDto
      */
     @GetMapping("/student/subjects")
-    @Operation(summary = "Get student subjects", description = "All subjects for which the student has at least one lesson")
-    public ResponseEntity<StudentSubjectsDto> getStudentSubjects(HttpServletRequest request) {
+    @Operation(summary = "Get student subjects", description = "All subjects for which the student has at least one lesson; optional semesterNo filter")
+    public ResponseEntity<StudentSubjectsDto> getStudentSubjects(
+            @RequestParam(required = false) Integer semesterNo,
+            HttpServletRequest request
+    ) {
         UUID requesterId = authApi.getCurrentUser(request)
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        StudentSubjectsDto dto = compositionApi.getStudentSubjects(requesterId);
+        StudentSubjectsDto dto = compositionApi.getStudentSubjects(requesterId, Optional.ofNullable(semesterNo));
         return ResponseEntity.ok(dto);
     }
 

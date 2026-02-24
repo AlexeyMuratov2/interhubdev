@@ -69,11 +69,12 @@ public interface CompositionApi {
      * For student dashboard / subject list. Structure mirrors the "subjects" part of teacher student-groups.
      *
      * @param requesterId current authenticated user ID (must be a student)
+     * @param semesterNo  optional curriculum semester number (1, 2, 3, …); if empty, all semesters are returned
      * @return DTO with list of subject DTOs
      * @throws com.example.interhubdev.error.AppException UNAUTHORIZED if requesterId is null,
      *         FORBIDDEN if requester is not a student
      */
-    StudentSubjectsDto getStudentSubjects(UUID requesterId);
+    StudentSubjectsDto getStudentSubjects(UUID requesterId, Optional<Integer> semesterNo);
 
     /**
      * Get full info for a group and subject (Use Case: Group subject info).

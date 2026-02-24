@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -49,7 +50,7 @@ class StudentSubjectsService {
     private final TeacherApi teacherApi;
     private final UserApi userApi;
 
-    StudentSubjectsDto execute(UUID requesterId) {
+    StudentSubjectsDto execute(UUID requesterId, Optional<Integer> semesterNo) {
         if (requesterId == null) {
             throw Errors.unauthorized("Authentication required");
         }
@@ -92,6 +93,15 @@ class StudentSubjectsService {
                 programApi.findCurriculumSubjectsByIds(curriculumSubjectIdsSet);
         Map<UUID, CurriculumSubjectDto> curriculumSubjectById = curriculumSubjects.stream()
                 .collect(Collectors.toMap(CurriculumSubjectDto::id, cs -> cs));
+        if (semesterNo.isPresent()) {
+            int no = semesterNo.get();
+            offeringsWithLessons = offeringsWithLessons.stream()
+                    .filter(o -> {
+                        CurriculumSubjectDto cs = curriculumSubjectById.get(o.curriculumSubjectId());
+                        return cs != null && cs.semesterNo() == no;
+                    })
+                    .toList();
+        }
         Set<UUID> subjectIdsSet = curriculumSubjects.stream()
                 .map(CurriculumSubjectDto::subjectId)
                 .collect(Collectors.toSet());
