@@ -127,6 +127,20 @@ class HomeworkServiceImpl implements HomeworkApi {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<HomeworkDto> getByIds(Collection<UUID> homeworkIds, UUID requesterId) {
+        validateRequester(requesterId);
+        if (homeworkIds == null || homeworkIds.isEmpty()) {
+            return List.of();
+        }
+        return homeworkIds.stream()
+                .map(id -> homeworkRepository.findByIdWithLessonAndFiles(id).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .map(HomeworkMappers::toDto)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public HomeworkDto update(UUID homeworkId, String title, String description, Integer points,
                               boolean clearFiles, List<UUID> storedFileIds, UUID requesterId) {

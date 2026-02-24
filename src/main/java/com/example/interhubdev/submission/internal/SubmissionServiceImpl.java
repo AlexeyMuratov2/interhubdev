@@ -146,6 +146,18 @@ class SubmissionServiceImpl implements SubmissionApi {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<HomeworkSubmissionDto> getByIds(Collection<UUID> submissionIds, UUID requesterId) {
+        validateRequester(requesterId);
+        checkTeacherOrAdmin(requesterId);
+        if (submissionIds == null || submissionIds.isEmpty()) {
+            return List.of();
+        }
+        List<HomeworkSubmission> list = submissionRepository.findByIdInWithFiles(submissionIds);
+        return list.stream().map(this::toDto).toList();
+    }
+
+    @Override
     @Transactional
     public void delete(UUID submissionId, UUID requesterId) {
         validateRequester(requesterId);

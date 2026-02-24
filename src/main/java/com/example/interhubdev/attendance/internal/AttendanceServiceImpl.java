@@ -521,7 +521,8 @@ class AttendanceServiceImpl implements AttendanceApi {
                                     Map.of(AttendanceStatus.PRESENT, 0, AttendanceStatus.ABSENT, 0,
                                             AttendanceStatus.LATE, 0, AttendanceStatus.EXCUSED, 0),
                                     0,
-                                    lessonIds.size()
+                                    0,
+                                    null
                             ))
                             .toList());
         }
@@ -529,11 +530,17 @@ class AttendanceServiceImpl implements AttendanceApi {
         // Get all attendance records for these lessons
         List<AttendanceRecord> records = repository.findByLessonSessionIdIn(new ArrayList<>(lessonIds));
 
+        // Lessons that have at least one attendance mark (any student) — only these count for percent
+        Set<UUID> lessonIdsWithAnyMark = records.stream()
+                .map(AttendanceRecord::getLessonSessionId)
+                .collect(Collectors.toSet());
+
         // Group by student
         Map<UUID, List<AttendanceRecord>> byStudent = records.stream()
                 .collect(Collectors.groupingBy(AttendanceRecord::getStudentId));
 
         // Build summary rows
+        int sessionsWithAtLeastOneMark = lessonIdsWithAnyMark.size();
         List<GroupAttendanceSummaryDto.GroupAttendanceRowDto> rows = new ArrayList<>();
         for (StudentDto student : roster) {
             List<AttendanceRecord> studentRecords = byStudent.getOrDefault(student.id(), List.of());
@@ -553,11 +560,19 @@ class AttendanceServiceImpl implements AttendanceApi {
                             .noneMatch(r -> r.getLessonSessionId().equals(lid)))
                     .count();
 
+            // Attendance percent: (PRESENT + LATE) / sessionsWithAtLeastOneMark * 100; null if no marked lessons
+            int present = summary.getOrDefault(AttendanceStatus.PRESENT, 0);
+            int late = summary.getOrDefault(AttendanceStatus.LATE, 0);
+            Double attendancePercent = sessionsWithAtLeastOneMark > 0
+                    ? (present + late) * 100.0 / sessionsWithAtLeastOneMark
+                    : null;
+
             rows.add(new GroupAttendanceSummaryDto.GroupAttendanceRowDto(
                     student.id(),
                     summary,
                     totalMarked,
-                    unmarkedCount
+                    unmarkedCount,
+                    attendancePercent
             ));
         }
 

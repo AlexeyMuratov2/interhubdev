@@ -61,6 +61,8 @@
  *       {@link com.example.interhubdev.group.GroupCurriculumIdPort} (so Program can get curriculum ID from group without depending on Group).</li>
  *   <li>{@link com.example.interhubdev.adapter.GroupIdsByTeacherAdapter} - implements Group's
  *       {@link com.example.interhubdev.group.port.GroupIdsByTeacherPort} using Offering and Schedule (group IDs where teacher has at least one lesson).</li>
+ *   <li>{@link com.example.interhubdev.adapter.SubjectSlotLessonsCheckAdapter} - implements Subject's
+ *       {@link com.example.interhubdev.subject.SlotLessonsCheckPort} using Offering and Schedule (checks that offerings have at least one lesson by slot).</li>
  * </ul>
  *
  * <h2>Dependencies</h2>

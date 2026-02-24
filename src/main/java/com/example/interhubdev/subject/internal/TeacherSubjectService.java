@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 class TeacherSubjectService {
 
     private final OfferingLookupPort offeringLookupPort;
+    private final SlotLessonsCheckPort slotLessonsCheckPort;
     private final CurriculumSubjectLookupPort curriculumSubjectLookupPort;
     private final SubjectApi subjectApi;
     private final GroupApi groupApi;
@@ -39,6 +40,7 @@ class TeacherSubjectService {
 
     public TeacherSubjectService(
             OfferingLookupPort offeringLookupPort,
+            SlotLessonsCheckPort slotLessonsCheckPort,
             CurriculumSubjectLookupPort curriculumSubjectLookupPort,
             @Lazy SubjectApi subjectApi,
             @Lazy GroupApi groupApi,
@@ -48,6 +50,7 @@ class TeacherSubjectService {
             UserApi userApi
     ) {
         this.offeringLookupPort = offeringLookupPort;
+        this.slotLessonsCheckPort = slotLessonsCheckPort;
         this.curriculumSubjectLookupPort = curriculumSubjectLookupPort;
         this.subjectApi = subjectApi;
         this.groupApi = groupApi;
@@ -164,6 +167,12 @@ class TeacherSubjectService {
                 .findOfferingsByCurriculumSubjectIdAndTeacherId(curriculumSubjectId, teacherId);
         if (teacherOfferings.isEmpty()) {
             throw SubjectErrors.accessDenied();
+        }
+
+        // Verify at least one lesson exists for the offering slots
+        List<UUID> offeringIds = teacherOfferings.stream().map(GroupSubjectOfferingDto::id).toList();
+        if (!slotLessonsCheckPort.hasAtLeastOneLessonForOfferings(offeringIds)) {
+            throw SubjectErrors.noLessonsForSlots();
         }
 
         // Get subject

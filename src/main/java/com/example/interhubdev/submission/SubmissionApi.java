@@ -62,6 +62,17 @@ public interface SubmissionApi {
     Optional<HomeworkSubmissionDto> get(UUID submissionId, UUID requesterId);
 
     /**
+     * Get submissions by IDs. Single batch query; no N+1.
+     * Used by composition to enrich grade history with submission and homework context.
+     *
+     * @param submissionIds submission UUIDs (empty returns empty list)
+     * @param requesterId   current user (must be TEACHER or ADMIN/MODERATOR/SUPER_ADMIN)
+     * @return list of submission DTOs; missing IDs are skipped
+     * @throws AppException FORBIDDEN if not teacher/admin
+     */
+    List<HomeworkSubmissionDto> getByIds(Collection<UUID> submissionIds, UUID requesterId);
+
+    /**
      * Delete a submission. Only the author (student who submitted) can delete.
      * Attached files in storage are not deleted.
      *

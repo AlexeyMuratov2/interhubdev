@@ -84,14 +84,16 @@ public interface AttendanceApi {
     );
 
     /**
-     * Get attendance summary for a group (per-student counts).
+     * Get attendance summary for a group (per-student counts and attendance percent).
+     * Attendance percent is computed only from lessons that had at least one attendance mark;
+     * lessons with no marks are excluded from the denominator (single source of truth).
      *
      * @param groupId     student group ID
      * @param from        optional filter: session date >= from
      * @param to          optional filter: session date <= to
      * @param offeringId optional filter: only sessions for this offering
      * @param requesterId current user ID (must be teacher of group or admin)
-     * @return group attendance summary DTO with per-student counts
+     * @return group attendance summary DTO with per-student counts and attendancePercent per row
      * @throws AppException NOT_FOUND (group), FORBIDDEN (not teacher of group)
      */
     GroupAttendanceSummaryDto getGroupAttendanceSummary(

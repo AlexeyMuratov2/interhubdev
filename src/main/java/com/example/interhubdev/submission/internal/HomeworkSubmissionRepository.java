@@ -20,6 +20,12 @@ interface HomeworkSubmissionRepository extends JpaRepository<HomeworkSubmission,
     java.util.Optional<HomeworkSubmission> findByIdWithFiles(@Param("id") UUID id);
 
     /**
+     * Find submissions by IDs with files loaded. Single batch query; no N+1.
+     */
+    @Query("SELECT DISTINCT s FROM HomeworkSubmission s LEFT JOIN FETCH s.files WHERE s.id IN :ids")
+    List<HomeworkSubmission> findByIdInWithFiles(@Param("ids") Collection<UUID> ids);
+
+    /**
      * Find all submissions by a given author for a homework (at most one expected after replace-on-create policy).
      */
     List<HomeworkSubmission> findByHomeworkIdAndAuthorId(UUID homeworkId, UUID authorId);

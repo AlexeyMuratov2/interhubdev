@@ -3,7 +3,6 @@ package com.example.interhubdev.composition.internal;
 import com.example.interhubdev.academic.AcademicApi;
 import com.example.interhubdev.academic.SemesterDto;
 import com.example.interhubdev.attendance.AttendanceApi;
-import com.example.interhubdev.attendance.AttendanceStatus;
 import com.example.interhubdev.attendance.GroupAttendanceSummaryDto;
 import com.example.interhubdev.composition.GroupSubjectInfoDto;
 import com.example.interhubdev.composition.GroupSubjectStudentItemDto;
@@ -54,7 +53,7 @@ import java.util.stream.Collectors;
 /**
  * Use-case service: aggregates group subject info for the teacher's "Group subject info" screen.
  * Only teachers assigned to an offering slot for this group and subject (or admin) can view.
- * Attendance percent: (PRESENT + LATE) / totalSessions * 100; LATE is not absence, EXCUSED counts as absence.
+ * Attendance percent is obtained from attendance module (only lessons with at least one mark count).
  */
 @Service
 @RequiredArgsConstructor
@@ -181,18 +180,7 @@ class GroupSubjectInfoService {
             BigDecimal totalPoints = pointsByStudentId.getOrDefault(student.id(), BigDecimal.ZERO);
             int submittedHomeworkCount = submittedCountByUserId.getOrDefault(user.id(), 0L).intValue();
             GroupAttendanceSummaryDto.GroupAttendanceRowDto attRow = attendanceByStudentId.get(student.id());
-            Double attendancePercent = null;
-            if (attRow != null) {
-                int totalMarked = attRow.totalMarked() != null ? attRow.totalMarked() : 0;
-                int unmarkedCount = attRow.unmarkedCount() != null ? attRow.unmarkedCount() : 0;
-                int totalSessions = totalMarked + unmarkedCount;
-                if (totalSessions > 0) {
-                    Map<AttendanceStatus, Integer> summary = attRow.summary();
-                    int present = summary.getOrDefault(AttendanceStatus.PRESENT, 0);
-                    int late = summary.getOrDefault(AttendanceStatus.LATE, 0);
-                    attendancePercent = (present + late) * 100.0 / totalSessions;
-                }
-            }
+            Double attendancePercent = attRow != null ? attRow.attendancePercent() : null;
             studentItems.add(new GroupSubjectStudentItemDto(student, user, totalPoints, submittedHomeworkCount, attendancePercent));
         }
 

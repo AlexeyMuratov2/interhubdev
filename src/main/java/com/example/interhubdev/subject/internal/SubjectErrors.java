@@ -17,7 +17,16 @@ public final class SubjectErrors {
     public static final String CODE_TEACHER_PROFILE_NOT_FOUND = "SUBJECT_TEACHER_PROFILE_NOT_FOUND";
     public static final String CODE_CURRICULUM_SUBJECT_NOT_FOUND = "SUBJECT_CURRICULUM_SUBJECT_NOT_FOUND";
     public static final String CODE_ACCESS_DENIED = "SUBJECT_ACCESS_DENIED";
-    
+    public static final String CODE_NO_LESSONS_FOR_SLOTS = "SUBJECT_NO_LESSONS_FOR_SLOTS";
+
+    /**
+     * No lessons exist for the teacher's offering slots (detail not available).
+     */
+    public static AppException noLessonsForSlots() {
+        return Errors.of(HttpStatus.UNPROCESSABLE_ENTITY, CODE_NO_LESSONS_FOR_SLOTS,
+            "По данному предмету нет ни одного занятия по слотам расписания");
+    }
+
     /**
      * Teacher profile not found for user.
      */

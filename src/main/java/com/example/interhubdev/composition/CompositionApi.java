@@ -69,7 +69,7 @@ public interface CompositionApi {
      * For the teacher's "Group subject info" screen. Data returned only if the requester is a teacher
      * assigned to an offering slot for this subject and group. Includes subject, offering, slots, curriculum,
      * semester, total homework count, and per-student stats (points, submitted homework count, attendance percent).
-     * Attendance: LATE is not counted as absence; EXCUSED is counted as absence.
+     * Attendance percent is from attendance module (only lessons with at least one mark count).
      *
      * @param groupId     group ID (must not be null)
      * @param subjectId   subject ID (must not be null)
@@ -80,4 +80,19 @@ public interface CompositionApi {
      *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester is not a teacher of this offering
      */
     GroupSubjectInfoDto getGroupSubjectInfo(UUID groupId, UUID subjectId, UUID requesterId, Optional<UUID> semesterId);
+
+    /**
+     * Get full grade history for a student in an offering (Use Case: Student grade history).
+     * Returns all grade entries (including voided) with full context: lesson (when grade is for a lesson),
+     * homework and submission (when grade is for homework), and who graded. Enables frontend to show
+     * how, when and for what each grade was given. Batch-loaded; no N+1.
+     *
+     * @param studentId   student profile ID (must not be null)
+     * @param offeringId  offering ID (must not be null)
+     * @param requesterId current authenticated user ID (must have permission to view grades)
+     * @return aggregated DTO with totalPoints, breakdownByType, and entries with lesson/homework/submission/gradedBy
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering not found,
+     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view grades
+     */
+    StudentGradeHistoryDto getStudentGradeHistory(UUID studentId, UUID offeringId, UUID requesterId);
 }

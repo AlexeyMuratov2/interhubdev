@@ -56,6 +56,15 @@ class ScheduleLessonService {
                 .toList();
     }
 
+    List<LessonDto> findByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return lessonRepository.findAllById(ids).stream()
+                .map(ScheduleMappers::toLessonDto)
+                .toList();
+    }
+
     Set<UUID> findOfferingSlotIdsWithAtLeastOneLesson(Collection<UUID> offeringSlotIds) {
         if (offeringSlotIds == null || offeringSlotIds.isEmpty()) {
             return Collections.emptySet();

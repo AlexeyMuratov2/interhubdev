@@ -16,7 +16,7 @@ public record GroupSubjectStudentItemDto(
     BigDecimal totalPoints,
     /** Number of homework assignments submitted this semester. */
     int submittedHomeworkCount,
-    /** Attendance percentage: (PRESENT + LATE) / totalSessions * 100. Null if no sessions. */
+    /** Attendance percentage from attendance module: (PRESENT + LATE) / lessonsWithAtLeastOneMark * 100. Null if no such lessons. */
     Double attendancePercent
 ) {
 }

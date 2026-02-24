@@ -63,6 +63,16 @@ public interface HomeworkApi {
     Optional<HomeworkDto> get(UUID homeworkId, UUID requesterId);
 
     /**
+     * Get homeworks by IDs. Used by composition to enrich grade history; missing IDs are skipped.
+     *
+     * @param homeworkIds homework UUIDs (empty returns empty list)
+     * @param requesterId current user (for auth)
+     * @return list of homework DTOs
+     * @throws AppException FORBIDDEN if access denied
+     */
+    List<HomeworkDto> getByIds(Collection<UUID> homeworkIds, UUID requesterId);
+
+    /**
      * Update homework. Any field can be changed. If files are cleared, only the links are removed; files are not deleted.
      *
      * @param homeworkId    homework UUID

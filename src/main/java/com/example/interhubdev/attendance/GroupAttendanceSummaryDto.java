@@ -6,7 +6,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * DTO for group attendance summary (per-student counts).
+ * DTO for group attendance summary (per-student counts and attendance percent).
+ * Attendance percent is the single source of truth: computed only from lessons
+ * where at least one attendance mark was recorded (unmarked lessons are excluded).
  */
 public record GroupAttendanceSummaryDto(
         UUID groupId,
@@ -16,12 +18,15 @@ public record GroupAttendanceSummaryDto(
 ) {
     /**
      * Per-student attendance summary row.
+     * {@code attendancePercent}: (PRESENT + LATE) / sessionsWithAtLeastOneMark * 100;
+     * null if there are no lessons with any attendance mark in the range.
      */
     public record GroupAttendanceRowDto(
             UUID studentId,
             Map<AttendanceStatus, Integer> summary,
             Integer totalMarked,
-            Integer unmarkedCount
+            Integer unmarkedCount,
+            Double attendancePercent
     ) {
     }
 }

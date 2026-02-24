@@ -9,6 +9,7 @@
  *   <li>{@link com.example.interhubdev.subject.TeacherSubjectListItemDto} - teacher subject list item DTO</li>
  *   <li>{@link com.example.interhubdev.subject.TeacherSubjectDetailDto} - teacher subject detail DTO</li>
  *   <li>{@link com.example.interhubdev.subject.OfferingLookupPort} - port for offering lookup</li>
+ *   <li>{@link com.example.interhubdev.subject.SlotLessonsCheckPort} - port to check that offerings have at least one lesson by slot</li>
  *   <li>{@link com.example.interhubdev.subject.TeacherLookupPort} - port for teacher lookup</li>
  *   <li>{@link com.example.interhubdev.subject.CurriculumSubjectLookupPort} - port for curriculum subject lookup</li>
  *   <li>{@link com.example.interhubdev.subject.GroupSubjectOfferingDto} - group subject offering DTO (from offering module)</li>

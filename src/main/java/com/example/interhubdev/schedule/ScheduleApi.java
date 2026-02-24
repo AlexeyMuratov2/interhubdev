@@ -186,6 +186,15 @@ public interface ScheduleApi {
     List<LessonDto> findLessonsByOfferingId(UUID offeringId);
 
     /**
+     * Find lessons by IDs. Single batch query; no N+1.
+     * Used by composition to enrich grade history with lesson context.
+     *
+     * @param ids lesson IDs (empty collection returns empty list)
+     * @return list of lesson DTOs; missing IDs are skipped
+     */
+    List<LessonDto> findLessonsByIds(Collection<UUID> ids);
+
+    /**
      * Among the given offering slot IDs, return those that have at least one lesson.
      * Used to filter teacher slots to only those with actual lessons (empty slots excluded).
      *

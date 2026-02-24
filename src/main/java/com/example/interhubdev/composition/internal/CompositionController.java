@@ -6,6 +6,7 @@ import com.example.interhubdev.composition.GroupSubjectInfoDto;
 import com.example.interhubdev.composition.LessonFullDetailsDto;
 import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
+import com.example.interhubdev.composition.StudentGradeHistoryDto;
 import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
@@ -141,6 +142,30 @@ class CompositionController {
 
         GroupSubjectInfoDto dto = compositionApi.getGroupSubjectInfo(
                 groupId, subjectId, requesterId, Optional.ofNullable(semesterId));
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Get full grade history for a student in an offering.
+     * All grade entries with lesson, homework, submission and grader context for display.
+     *
+     * @param studentId  student profile ID (path)
+     * @param offeringId offering ID (path)
+     * @param request    HTTP request (for authentication)
+     * @return 200 OK with StudentGradeHistoryDto
+     */
+    @GetMapping("/students/{studentId}/offerings/{offeringId}/grade-history")
+    @Operation(summary = "Get student grade history", description = "All grades for a student in an offering with lesson, homework, submission and grader context")
+    public ResponseEntity<StudentGradeHistoryDto> getStudentGradeHistory(
+            @PathVariable UUID studentId,
+            @PathVariable UUID offeringId,
+            HttpServletRequest request
+    ) {
+        UUID requesterId = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+
+        StudentGradeHistoryDto dto = compositionApi.getStudentGradeHistory(studentId, offeringId, requesterId);
         return ResponseEntity.ok(dto);
     }
 }

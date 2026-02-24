@@ -155,6 +155,11 @@ class ScheduleServiceImpl implements ScheduleApi {
     }
 
     @Override
+    public List<LessonDto> findLessonsByIds(Collection<UUID> ids) {
+        return lessonService.findByIds(ids);
+    }
+
+    @Override
     public Set<UUID> findOfferingSlotIdsWithAtLeastOneLesson(Collection<UUID> offeringSlotIds) {
         return lessonService.findOfferingSlotIdsWithAtLeastOneLesson(offeringSlotIds);
     }
