@@ -275,7 +275,8 @@ class GradesServiceImpl implements GradesApi {
     @Transactional(readOnly = true)
     public LessonGradesSummaryDto getLessonGradesSummary(UUID lessonSessionId, UUID requesterId) {
         ensureCanGrade(requesterId);
-        List<GradeEntryEntity> entries = repository.findByLessonIdAndStatusOrderByStudentIdAsc(
+        // Only entries without homework submission (lesson points only; homework points are separate).
+        List<GradeEntryEntity> entries = repository.findByLessonIdAndHomeworkSubmissionIdIsNullAndStatusOrderByStudentIdAsc(
                 lessonSessionId, GradeEntryEntity.STATUS_ACTIVE);
         Map<UUID, BigDecimal> pointsByStudent = entries.stream()
                 .collect(Collectors.groupingBy(GradeEntryEntity::getStudentId,
@@ -305,7 +306,8 @@ class GradesServiceImpl implements GradesApi {
             throw GradeErrors.studentNotInGroup(studentId, offering.groupId());
         }
 
-        List<GradeEntryEntity> existing = repository.findByLessonIdAndStudentIdAndStatusOrderByGradedAtDesc(
+        // Only lesson-only entries (exclude entries linked to homework submission).
+        List<GradeEntryEntity> existing = repository.findByLessonIdAndStudentIdAndHomeworkSubmissionIdIsNullAndStatusOrderByGradedAtDesc(
                 lessonSessionId, studentId, GradeEntryEntity.STATUS_ACTIVE);
 
         if (existing.isEmpty()) {

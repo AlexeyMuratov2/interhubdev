@@ -94,8 +94,8 @@ public record LessonRosterAttendanceDto(
             List<SessionAttendanceDto.StudentNoticeDto> notices,
 
             /**
-             * Total points assigned for this lesson to this student (sum of ACTIVE grade entries with lesson_id = this lesson).
-             * Zero if no grades for this lesson.
+             * Points for this lesson only (ACTIVE entries with lesson_id = this lesson and no homework submission).
+             * Homework points are separate. Zero if no lesson-only grades.
              */
             BigDecimal lessonPoints
     ) {

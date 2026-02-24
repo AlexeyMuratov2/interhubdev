@@ -161,8 +161,8 @@ public interface GradesApi {
     );
 
     /**
-     * Get total points per student for a single lesson (all ACTIVE entries with lesson_id = lessonSessionId).
-     * Used by composition for the lesson screen roster (e.g. "points for this lesson" column).
+     * Get total points per student for a single lesson (ACTIVE entries with lesson_id = lessonSessionId and no homework submission).
+     * Homework points are a separate type; this returns only lesson points. Used by composition for the lesson screen roster.
      *
      * @param lessonSessionId lesson (session) id
      * @param requesterId     current user (must have permission to view grades: TEACHER or ADMIN)
@@ -173,9 +173,9 @@ public interface GradesApi {
 
     /**
      * Set or replace points for one student for one lesson (UX: single cell edit).
-     * If the student already has ACTIVE grade entries linked to this lesson, the first is updated to the new
-     * points value and the rest are voided (so total for this lesson = points). If there are no such entries,
-     * a new entry is created with the given points, linked to this lesson.
+     * Only lesson-only entries (no homework submission) are considered. If the student already has such ACTIVE
+     * entries, the first is updated to the new points value and the rest are voided. If there are none,
+     * a new entry is created with the given points, linked to this lesson (no homework submission).
      *
      * @param lessonSessionId lesson (session) id
      * @param studentId       student profile id

@@ -42,6 +42,24 @@ interface GradeEntryRepository extends JpaRepository<GradeEntryEntity, UUID> {
     );
 
     /**
+     * ACTIVE grade entries linked to this lesson with no homework submission (lesson points only, excludes homework).
+     * Used for lesson roster "points for this lesson" so homework grades are not mixed with lesson grades.
+     */
+    List<GradeEntryEntity> findByLessonIdAndHomeworkSubmissionIdIsNullAndStatusOrderByStudentIdAsc(
+            UUID lessonId,
+            String status
+    );
+
+    /**
+     * ACTIVE grade entries for one student linked to this lesson with no homework submission (for set/replace lesson points).
+     */
+    List<GradeEntryEntity> findByLessonIdAndStudentIdAndHomeworkSubmissionIdIsNullAndStatusOrderByGradedAtDesc(
+            UUID lessonId,
+            UUID studentId,
+            String status
+    );
+
+    /**
      * ACTIVE grade entries for one student linked to this lesson (for set/replace points).
      */
     List<GradeEntryEntity> findByLessonIdAndStudentIdAndStatusOrderByGradedAtDesc(

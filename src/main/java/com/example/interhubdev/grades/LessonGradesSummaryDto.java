@@ -6,14 +6,14 @@ import java.util.UUID;
 
 /**
  * Summary of grade points assigned for a single lesson (lesson session).
- * Only ACTIVE entries with lesson_id = lessonSessionId are included; per-student totals.
+ * Only ACTIVE entries with lesson_id = lessonSessionId and no homework submission (lesson points only).
  */
 public record LessonGradesSummaryDto(
         UUID lessonSessionId,
         List<LessonGradeRowDto> rows
 ) {
     /**
-     * Total points for one student for this lesson (sum of ACTIVE entries linked to this lesson).
+     * Total lesson-only points for one student for this lesson (excludes homework points).
      */
     public record LessonGradeRowDto(
             UUID studentId,
