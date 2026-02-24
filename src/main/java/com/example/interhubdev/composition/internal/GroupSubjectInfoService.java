@@ -13,6 +13,7 @@ import com.example.interhubdev.grades.GradesApi;
 import com.example.interhubdev.grades.GroupOfferingSummaryDto;
 import com.example.interhubdev.grades.GroupOfferingSummaryRow;
 import com.example.interhubdev.group.GroupApi;
+import com.example.interhubdev.group.GroupLeaderDetailDto;
 import com.example.interhubdev.group.GroupMemberDto;
 import com.example.interhubdev.group.StudentGroupDto;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
@@ -151,6 +152,7 @@ class GroupSubjectInfoService {
         List<CurriculumSubjectDto> curriculumSubjects = programApi.findCurriculumSubjectsByCurriculumId(group.curriculumId());
 
         List<GroupMemberDto> members = groupApi.getGroupMembersWithUsers(groupId);
+        List<GroupLeaderDetailDto> leaders = groupApi.findLeadersByGroupId(groupId);
         GroupOfferingSummaryDto grades = gradesApi.getGroupOfferingSummary(
                 groupId, offering.id(), from.atStartOfDay(), to.atTime(23, 59, 59), false, requesterId);
         GroupAttendanceSummaryDto attendance = attendanceApi.getGroupAttendanceSummary(
@@ -197,6 +199,7 @@ class GroupSubjectInfoService {
         return new GroupSubjectInfoDto(
                 subject,
                 group,
+                leaders,
                 program,
                 offering,
                 slots,

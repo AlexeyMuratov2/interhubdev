@@ -1,6 +1,7 @@
 package com.example.interhubdev.composition;
 
 import com.example.interhubdev.academic.SemesterDto;
+import com.example.interhubdev.group.GroupLeaderDetailDto;
 import com.example.interhubdev.group.StudentGroupDto;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingSlotDto;
@@ -19,6 +20,8 @@ import java.util.List;
 public record GroupSubjectInfoDto(
     SubjectDto subject,
     StudentGroupDto group,
+    /** Group leaders (headman, deputy) with student and user data. */
+    List<GroupLeaderDetailDto> leaders,
     ProgramDto program,
     GroupSubjectOfferingDto offering,
     List<OfferingSlotDto> slots,
