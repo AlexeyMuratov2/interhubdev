@@ -1,5 +1,6 @@
 package com.example.interhubdev.program;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -13,6 +14,14 @@ public interface ProgramApi {
     // --- Program ---
     Optional<ProgramDto> findProgramById(UUID id);
 
+    /**
+     * Find programs by ids (batch). Missing ids are skipped; order is not guaranteed.
+     *
+     * @param ids program ids (must not be null)
+     * @return list of program DTOs found (never null)
+     */
+    List<ProgramDto> findProgramsByIds(Collection<UUID> ids);
+
     Optional<ProgramDto> findProgramByCode(String code);
 
     List<ProgramDto> findAllPrograms();
@@ -25,6 +34,14 @@ public interface ProgramApi {
 
     // --- Curriculum ---
     Optional<CurriculumDto> findCurriculumById(UUID id);
+
+    /**
+     * Find curricula by ids (batch). Missing ids are skipped; order is not guaranteed.
+     *
+     * @param ids curriculum ids (must not be null)
+     * @return list of curriculum DTOs found (never null)
+     */
+    List<CurriculumDto> findCurriculaByIds(Collection<UUID> ids);
 
     List<CurriculumDto> findCurriculaByProgramId(UUID programId);
 

@@ -6,7 +6,9 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 interface LessonRepository extends JpaRepository<Lesson, UUID> {
@@ -57,4 +59,12 @@ interface LessonRepository extends JpaRepository<Lesson, UUID> {
     @Modifying
     @Query("UPDATE Lesson l SET l.timeslotId = null WHERE l.timeslotId IS NOT NULL")
     int clearAllTimeslotReferences();
+
+    /**
+     * Distinct offering_slot_id values that have at least one lesson, from the given set of slot IDs.
+     * Used to filter teacher slots to only those with actual lessons (no empty slots).
+     * Do not call with empty collection.
+     */
+    @Query("SELECT DISTINCT l.offeringSlotId FROM Lesson l WHERE l.offeringSlotId IS NOT NULL AND l.offeringSlotId IN :ids")
+    Set<UUID> findDistinctOfferingSlotIdsByOfferingSlotIdIn(Collection<UUID> ids);
 }

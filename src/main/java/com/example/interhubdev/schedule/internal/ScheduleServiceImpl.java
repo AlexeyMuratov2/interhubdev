@@ -14,8 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /** Implements ScheduleApi; orchestrates building, room, timeslot, lesson services. */
@@ -150,6 +152,11 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Override
     public List<LessonDto> findLessonsByOfferingId(UUID offeringId) {
         return lessonService.findByOfferingId(offeringId);
+    }
+
+    @Override
+    public Set<UUID> findOfferingSlotIdsWithAtLeastOneLesson(Collection<UUID> offeringSlotIds) {
+        return lessonService.findOfferingSlotIdsWithAtLeastOneLesson(offeringSlotIds);
     }
 
     @Override

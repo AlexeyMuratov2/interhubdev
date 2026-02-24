@@ -6,6 +6,8 @@ import com.example.interhubdev.composition.CompositionApi;
 import com.example.interhubdev.composition.LessonFullDetailsDto;
 import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
+import com.example.interhubdev.composition.TeacherStudentGroupItemDto;
+import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
@@ -18,15 +20,21 @@ import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.submission.HomeworkSubmissionDto;
 import com.example.interhubdev.submission.SubmissionApi;
 import com.example.interhubdev.group.GroupApi;
+import com.example.interhubdev.group.StudentGroupDto;
+import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingApi;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
 import com.example.interhubdev.offering.OfferingSlotDto;
+import com.example.interhubdev.program.CurriculumDto;
 import com.example.interhubdev.program.ProgramApi;
+import com.example.interhubdev.program.ProgramDto;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.subject.SubjectApi;
 import com.example.interhubdev.teacher.TeacherApi;
+import com.example.interhubdev.user.UserApi;
+import com.example.interhubdev.user.UserDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,10 +42,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -63,6 +73,7 @@ class CompositionServiceImpl implements CompositionApi {
     private final GradesApi gradesApi;
     private final SubmissionApi submissionApi;
     private final DocumentApi documentApi;
+    private final UserApi userApi;
 
     @Override
     public LessonFullDetailsDto getLessonFullDetails(UUID lessonId, UUID requesterId) {
@@ -284,5 +295,75 @@ class CompositionServiceImpl implements CompositionApi {
                 .toList();
 
         return new LessonHomeworkSubmissionsDto(lesson, group, homeworks, studentRows);
+    }
+
+    @Override
+    public TeacherStudentGroupsDto getTeacherStudentGroups(UUID requesterId) {
+        if (requesterId == null) {
+            throw Errors.unauthorized("Authentication required");
+        }
+        var teacher = teacherApi.findByUserId(requesterId)
+                .orElseThrow(() -> Errors.forbidden("Not a teacher"));
+
+        List<OfferingSlotDto> slots = offeringApi.findSlotsByTeacherId(teacher.id());
+        if (slots.isEmpty()) {
+            return new TeacherStudentGroupsDto(List.of());
+        }
+        List<UUID> slotIds = slots.stream().map(OfferingSlotDto::id).toList();
+        Set<UUID> slotIdsWithLessons = scheduleApi.findOfferingSlotIdsWithAtLeastOneLesson(slotIds);
+        Set<UUID> offeringIdsSet = new LinkedHashSet<>();
+        for (OfferingSlotDto slot : slots) {
+            if (slotIdsWithLessons.contains(slot.id())) {
+                offeringIdsSet.add(slot.offeringId());
+            }
+        }
+        if (offeringIdsSet.isEmpty()) {
+            return new TeacherStudentGroupsDto(List.of());
+        }
+        List<GroupSubjectOfferingDto> offerings = offeringApi.findOfferingsByIds(offeringIdsSet);
+        Set<UUID> groupIdsSet = new LinkedHashSet<>();
+        for (GroupSubjectOfferingDto o : offerings) {
+            groupIdsSet.add(o.groupId());
+        }
+        List<UUID> groupIds = new ArrayList<>(groupIdsSet);
+        if (groupIds.isEmpty()) {
+            return new TeacherStudentGroupsDto(List.of());
+        }
+
+        List<StudentGroupDto> groups = groupApi.findGroupsByIds(groupIds);
+        Map<UUID, StudentGroupDto> groupById = groups.stream().collect(Collectors.toMap(StudentGroupDto::id, g -> g));
+
+        Set<UUID> programIds = new LinkedHashSet<>();
+        Set<UUID> curriculumIds = new LinkedHashSet<>();
+        List<UUID> curatorUserIds = new ArrayList<>();
+        for (StudentGroupDto g : groups) {
+            programIds.add(g.programId());
+            curriculumIds.add(g.curriculumId());
+            if (g.curatorUserId() != null) {
+                curatorUserIds.add(g.curatorUserId());
+            }
+        }
+        List<ProgramDto> programs = programApi.findProgramsByIds(programIds);
+        List<CurriculumDto> curricula = programApi.findCurriculaByIds(curriculumIds);
+        List<UserDto> users = curatorUserIds.isEmpty() ? List.of() : userApi.findByIds(curatorUserIds);
+
+        Map<UUID, ProgramDto> programById = programs.stream().collect(Collectors.toMap(ProgramDto::id, p -> p));
+        Map<UUID, CurriculumDto> curriculumById = curricula.stream().collect(Collectors.toMap(CurriculumDto::id, c -> c));
+        Map<UUID, UserDto> userById = users.stream().collect(Collectors.toMap(UserDto::id, u -> u));
+
+        Map<UUID, Long> studentCounts = studentApi.countByGroupIds(groupIds);
+
+        List<TeacherStudentGroupItemDto> items = new ArrayList<>();
+        for (UUID groupId : groupIds) {
+            StudentGroupDto group = groupById.get(groupId);
+            if (group == null) continue;
+            ProgramDto program = programById.get(group.programId());
+            CurriculumDto curriculum = curriculumById.get(group.curriculumId());
+            UserDto curatorUser = group.curatorUserId() != null ? userById.get(group.curatorUserId()) : null;
+            Long count = studentCounts.getOrDefault(groupId, 0L);
+            Integer studentCount = count != null ? count.intValue() : null;
+            items.add(new TeacherStudentGroupItemDto(group, program, curriculum, curatorUser, studentCount));
+        }
+        return new TeacherStudentGroupsDto(items);
     }
 }

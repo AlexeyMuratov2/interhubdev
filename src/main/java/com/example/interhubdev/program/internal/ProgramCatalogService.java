@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +23,15 @@ class ProgramCatalogService {
 
     Optional<ProgramDto> findProgramById(UUID id) {
         return programRepository.findById(id).map(ProgramMappers::toProgramDto);
+    }
+
+    List<ProgramDto> findProgramsByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return programRepository.findAllById(ids).stream()
+                .map(ProgramMappers::toProgramDto)
+                .toList();
     }
 
     Optional<ProgramDto> findProgramByCode(String code) {

@@ -1,5 +1,6 @@
 package com.example.interhubdev.offering;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,6 +36,14 @@ public interface OfferingApi {
      * @return list of offerings for the teacher; empty if teacher has no offerings
      */
     List<GroupSubjectOfferingDto> findOfferingsByTeacherId(UUID teacherId);
+
+    /**
+     * Get offerings by IDs (batch). Missing IDs are skipped; order is not guaranteed.
+     *
+     * @param ids offering IDs (must not be null)
+     * @return list of offering DTOs found (never null)
+     */
+    List<GroupSubjectOfferingDto> findOfferingsByIds(Collection<UUID> ids);
 
     /**
      * Create a new group subject offering.
@@ -106,6 +115,14 @@ public interface OfferingApi {
      * @return list of offering slots ordered by lesson type
      */
     List<OfferingSlotDto> findSlotsByOfferingId(UUID offeringId);
+
+    /**
+     * Get all offering slots where the given teacher is assigned.
+     *
+     * @param teacherId teacher entity ID
+     * @return list of offering slots for the teacher; empty if none
+     */
+    List<OfferingSlotDto> findSlotsByTeacherId(UUID teacherId);
 
     /**
      * Add a weekly slot to an offering. Slot owns day and time.

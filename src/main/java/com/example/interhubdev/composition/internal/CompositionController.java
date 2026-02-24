@@ -5,6 +5,7 @@ import com.example.interhubdev.composition.CompositionApi;
 import com.example.interhubdev.composition.LessonFullDetailsDto;
 import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
+import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -93,6 +94,24 @@ class CompositionController {
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         LessonHomeworkSubmissionsDto dto = compositionApi.getLessonHomeworkSubmissions(lessonId, requesterId);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Get student groups where the current teacher has at least one lesson.
+     * For teacher dashboard "Student groups" page.
+     *
+     * @param request HTTP request (for authentication)
+     * @return 200 OK with TeacherStudentGroupsDto
+     */
+    @GetMapping("/teacher/student-groups")
+    @Operation(summary = "Get teacher student groups", description = "Groups where the teacher has at least one lesson (slots with lessons only)")
+    public ResponseEntity<TeacherStudentGroupsDto> getTeacherStudentGroups(HttpServletRequest request) {
+        UUID requesterId = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+
+        TeacherStudentGroupsDto dto = compositionApi.getTeacherStudentGroups(requesterId);
         return ResponseEntity.ok(dto);
     }
 }

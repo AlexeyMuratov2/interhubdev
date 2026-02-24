@@ -92,6 +92,14 @@ public interface StudentApi {
     List<StudentDto> findByGroupId(UUID groupId);
 
     /**
+     * Count students per group for the given group IDs. Groups with no members have count 0.
+     *
+     * @param groupIds group IDs (empty collection returns empty map)
+     * @return map groupId -> student count (never null)
+     */
+    java.util.Map<UUID, Long> countByGroupIds(java.util.Collection<UUID> groupIds);
+
+    /**
      * Add student to a group. Idempotent if already a member.
      *
      * @param studentId student profile ID (students.id)

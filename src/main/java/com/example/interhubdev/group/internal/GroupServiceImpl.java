@@ -36,6 +36,11 @@ class GroupServiceImpl implements GroupApi {
     }
 
     @Override
+    public List<StudentGroupDto> findGroupsByIds(java.util.Collection<UUID> ids) {
+        return groupCatalogService.findGroupsByIds(ids);
+    }
+
+    @Override
     public Optional<StudentGroupDto> findGroupByCode(String code) {
         return groupCatalogService.findGroupByCode(code);
     }

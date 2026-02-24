@@ -51,4 +51,15 @@ public interface CompositionApi {
      *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view
      */
     LessonHomeworkSubmissionsDto getLessonHomeworkSubmissions(UUID lessonId, UUID requesterId);
+
+    /**
+     * Get student groups where the current teacher has at least one lesson (slots with lessons only).
+     * For teacher dashboard "Student groups" page. Returns group, program, curriculum, curator user, and student count.
+     *
+     * @param requesterId current authenticated user ID (must be a teacher)
+     * @return aggregated DTO with list of groups and enriched data
+     * @throws com.example.interhubdev.error.AppException UNAUTHORIZED if requesterId is null,
+     *         FORBIDDEN if requester is not a teacher
+     */
+    TeacherStudentGroupsDto getTeacherStudentGroups(UUID requesterId);
 }

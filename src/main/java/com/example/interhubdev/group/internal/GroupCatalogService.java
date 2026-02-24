@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +28,15 @@ class GroupCatalogService {
 
     Optional<StudentGroupDto> findGroupById(UUID id) {
         return studentGroupRepository.findById(id).map(GroupMappers::toGroupDto);
+    }
+
+    List<StudentGroupDto> findGroupsByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return studentGroupRepository.findAllById(ids).stream()
+                .map(GroupMappers::toGroupDto)
+                .toList();
     }
 
     Optional<StudentGroupDto> findGroupByCode(String code) {

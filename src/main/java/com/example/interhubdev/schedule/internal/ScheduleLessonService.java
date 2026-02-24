@@ -22,6 +22,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,6 +54,13 @@ class ScheduleLessonService {
         return lessonRepository.findByOfferingIdOrderByDateAscStartTimeAsc(offeringId).stream()
                 .map(ScheduleMappers::toLessonDto)
                 .toList();
+    }
+
+    Set<UUID> findOfferingSlotIdsWithAtLeastOneLesson(Collection<UUID> offeringSlotIds) {
+        if (offeringSlotIds == null || offeringSlotIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return lessonRepository.findDistinctOfferingSlotIdsByOfferingSlotIdIn(offeringSlotIds);
     }
 
     List<LessonDto> findByDate(LocalDate date) {

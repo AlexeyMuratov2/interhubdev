@@ -43,6 +43,11 @@ class ProgramServiceImpl implements ProgramApi {
     }
 
     @Override
+    public List<ProgramDto> findProgramsByIds(java.util.Collection<UUID> ids) {
+        return programCatalogService.findProgramsByIds(ids);
+    }
+
+    @Override
     public Optional<ProgramDto> findProgramByCode(String code) {
         return programCatalogService.findProgramByCode(code);
     }
@@ -73,6 +78,11 @@ class ProgramServiceImpl implements ProgramApi {
     @Override
     public Optional<CurriculumDto> findCurriculumById(UUID id) {
         return curriculumService.findCurriculumById(id);
+    }
+
+    @Override
+    public List<CurriculumDto> findCurriculaByIds(java.util.Collection<UUID> ids) {
+        return curriculumService.findCurriculaByIds(ids);
     }
 
     @Override

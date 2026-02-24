@@ -33,6 +33,12 @@ class OfferingSlotService {
                 .toList();
     }
 
+    List<OfferingSlotDto> findByTeacherId(UUID teacherId) {
+        return slotRepository.findByTeacherId(teacherId).stream()
+                .map(OfferingMappers::toSlotDto)
+                .toList();
+    }
+
     @Transactional
     OfferingSlotDto add(UUID offeringId, UUID timeslotId, Integer dayOfWeek, LocalTime startTime, LocalTime endTime,
                        String lessonType, UUID roomId, UUID teacherId) {

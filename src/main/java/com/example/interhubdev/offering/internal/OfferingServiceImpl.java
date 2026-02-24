@@ -87,6 +87,16 @@ class OfferingServiceImpl implements OfferingApi {
     }
 
     @Override
+    public List<OfferingSlotDto> findSlotsByTeacherId(UUID teacherId) {
+        return slotService.findByTeacherId(teacherId);
+    }
+
+    @Override
+    public List<GroupSubjectOfferingDto> findOfferingsByIds(java.util.Collection<UUID> ids) {
+        return catalogService.findByIds(ids);
+    }
+
+    @Override
     @Transactional
     public OfferingSlotDto addOfferingSlot(UUID offeringId, UUID timeslotId, Integer dayOfWeek,
                                           java.time.LocalTime startTime, java.time.LocalTime endTime,

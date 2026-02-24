@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,6 +38,15 @@ class OfferingCatalogService implements OfferingExistsPort {
 
     Optional<GroupSubjectOfferingDto> findById(UUID id) {
         return offeringRepository.findById(id).map(OfferingMappers::toOfferingDto);
+    }
+
+    List<GroupSubjectOfferingDto> findByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return offeringRepository.findAllById(ids).stream()
+                .map(OfferingMappers::toOfferingDto)
+                .toList();
     }
 
     List<GroupSubjectOfferingDto> findByGroupId(UUID groupId) {

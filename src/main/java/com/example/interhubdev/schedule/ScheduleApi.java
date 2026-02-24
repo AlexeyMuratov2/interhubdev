@@ -1,8 +1,10 @@
 package com.example.interhubdev.schedule;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -182,6 +184,15 @@ public interface ScheduleApi {
      * @return list of lesson DTOs
      */
     List<LessonDto> findLessonsByOfferingId(UUID offeringId);
+
+    /**
+     * Among the given offering slot IDs, return those that have at least one lesson.
+     * Used to filter teacher slots to only those with actual lessons (empty slots excluded).
+     *
+     * @param offeringSlotIds slot IDs to check (empty collection returns empty set)
+     * @return set of slot IDs that have at least one lesson
+     */
+    Set<UUID> findOfferingSlotIdsWithAtLeastOneLesson(Collection<UUID> offeringSlotIds);
 
     /**
      * List lessons by date with full context for schedule UI (offering, slot, teachers). Ordered by startTime.

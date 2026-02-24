@@ -3,6 +3,7 @@ package com.example.interhubdev.group;
 import com.example.interhubdev.error.AppException;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,6 +24,14 @@ public interface GroupApi {
      * @return optional group DTO if found
      */
     Optional<StudentGroupDto> findGroupById(UUID id);
+
+    /**
+     * Find groups by ids (batch). Missing ids are skipped; order is not guaranteed.
+     *
+     * @param ids group ids (must not be null)
+     * @return list of group DTOs found (never null)
+     */
+    List<StudentGroupDto> findGroupsByIds(Collection<UUID> ids);
 
     /**
      * Find group by code.

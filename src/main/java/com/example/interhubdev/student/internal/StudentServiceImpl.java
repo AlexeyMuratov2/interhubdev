@@ -13,7 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -110,6 +113,22 @@ class StudentServiceImpl implements StudentApi {
         return studentRepository.findAllById(studentIds).stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Override
+    public Map<UUID, Long> countByGroupIds(Collection<UUID> groupIds) {
+        if (groupIds == null || groupIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Object[]> rows = memberRepository.countByGroupIdIn(groupIds);
+        Map<UUID, Long> result = new HashMap<>();
+        for (UUID gid : groupIds) {
+            result.put(gid, 0L);
+        }
+        for (Object[] row : rows) {
+            result.put((UUID) row[0], (Long) row[1]);
+        }
+        return result;
     }
 
     @Override

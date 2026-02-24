@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +23,15 @@ class CurriculumService {
 
     Optional<CurriculumDto> findCurriculumById(UUID id) {
         return curriculumRepository.findById(id).map(ProgramMappers::toCurriculumDto);
+    }
+
+    List<CurriculumDto> findCurriculaByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return curriculumRepository.findAllById(ids).stream()
+                .map(ProgramMappers::toCurriculumDto)
+                .toList();
     }
 
     List<CurriculumDto> findCurriculaByProgramId(UUID programId) {
