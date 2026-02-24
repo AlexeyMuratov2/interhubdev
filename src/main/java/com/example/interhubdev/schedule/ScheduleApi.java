@@ -260,6 +260,17 @@ public interface ScheduleApi {
     List<LessonForScheduleDto> findLessonsByWeekAndTeacherId(LocalDate date, UUID teacherId);
 
     /**
+     * List lessons for the week containing the given date for the current authenticated student (all groups the student belongs to), with full context (offering, slot, teachers, group).
+     * Same structure as findLessonsByWeek; ordered by date then startTime. Returns empty list if student has no groups or no lessons in the week.
+     *
+     * @param date any date in the week (used to compute week bounds)
+     * @param userId user ID of the student
+     * @return list of lesson with offering summary, slot summary, teachers and group for the student's week
+     * @throws com.example.interhubdev.error.AppException FORBIDDEN if user does not have a student profile (ScheduleErrors.studentProfileNotFound)
+     */
+    List<LessonForScheduleDto> findLessonsByWeekAndStudentUserId(LocalDate date, UUID userId);
+
+    /**
      * Create a lesson. Date and times are passed as strings and parsed (date: yyyy-MM-dd, time: HH:mm or HH:mm:ss).
      *
      * @param offeringId offering ID (required)

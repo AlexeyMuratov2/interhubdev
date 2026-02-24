@@ -23,6 +23,8 @@ public final class ScheduleErrors {
     public static final String CODE_LESSON_ALREADY_EXISTS = "SCHEDULE_LESSON_ALREADY_EXISTS";
     /** User does not have a teacher profile (e.g. GET /lessons/week/teacher by non-teacher user). */
     public static final String CODE_TEACHER_PROFILE_NOT_FOUND = "SCHEDULE_TEACHER_PROFILE_NOT_FOUND";
+    /** User does not have a student profile (e.g. GET /lessons/week/student by non-student user). */
+    public static final String CODE_STUDENT_PROFILE_NOT_FOUND = "SCHEDULE_STUDENT_PROFILE_NOT_FOUND";
 
     private ScheduleErrors() {
     }
@@ -61,5 +63,9 @@ public final class ScheduleErrors {
 
     public static AppException teacherProfileNotFound() {
         return Errors.of(HttpStatus.FORBIDDEN, CODE_TEACHER_PROFILE_NOT_FOUND, "User does not have a teacher profile");
+    }
+
+    public static AppException studentProfileNotFound() {
+        return Errors.of(HttpStatus.FORBIDDEN, CODE_STUDENT_PROFILE_NOT_FOUND, "User does not have a student profile");
     }
 }

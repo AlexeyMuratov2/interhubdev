@@ -129,10 +129,22 @@ class ScheduleLessonService {
         if (offeringIds.isEmpty()) {
             return List.of();
         }
+        return findByWeekAndOfferingIdsEnriched(date, offeringIds);
+    }
+
+    /**
+     * Lessons in the week containing the given date for the given offering IDs, with full enrichment.
+     * Call only when offeringIds is non-empty. Used for student schedule (union of offerings from all student's groups).
+     */
+    List<LessonForScheduleDto> findByWeekAndOfferingIdsEnriched(LocalDate date, Collection<UUID> offeringIds) {
+        if (offeringIds == null || offeringIds.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> list = new ArrayList<>(offeringIds);
         LocalDate weekStart = date.with(DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
         List<LessonDto> lessons = lessonRepository
-                .findByDateBetweenAndOfferingIdInOrderByDateAscStartTimeAsc(weekStart, weekEnd, offeringIds).stream()
+                .findByDateBetweenAndOfferingIdInOrderByDateAscStartTimeAsc(weekStart, weekEnd, list).stream()
                 .map(ScheduleMappers::toLessonDto)
                 .toList();
         return enrichLessons(lessons);

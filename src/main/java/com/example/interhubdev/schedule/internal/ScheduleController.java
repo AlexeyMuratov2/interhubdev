@@ -230,6 +230,26 @@ class ScheduleController {
         return ResponseEntity.ok(scheduleApi.findLessonsByWeekAndTeacherId(date, teacherId));
     }
 
+    @GetMapping("/lessons/week/student")
+    @Operation(summary = "Get lessons for the week for current authenticated student with full context", description = "Returns lessons in the ISO week that contains the given date, for all groups the student belongs to. Same response structure as GET /lessons/week/teacher. Empty list if student has no groups or no lessons in the week. 403 if user does not have a student profile. Requires authentication.")
+    public ResponseEntity<List<LessonForScheduleDto>> findLessonsByWeekAndStudent(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            jakarta.servlet.http.HttpServletRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw Errors.unauthorized("Authentication required");
+        }
+        Object principal = authentication.getPrincipal();
+        UUID userId;
+        try {
+            java.lang.reflect.Method getUserIdMethod = principal.getClass().getMethod("userId");
+            userId = (UUID) getUserIdMethod.invoke(principal);
+        } catch (Exception e) {
+            throw Errors.unauthorized("Invalid authentication token");
+        }
+        return ResponseEntity.ok(scheduleApi.findLessonsByWeekAndStudentUserId(date, userId));
+    }
+
     @GetMapping("/lessons/offering/{offeringId}")
     @Operation(summary = "Get lessons by offering ID")
     public ResponseEntity<List<LessonDto>> findLessonsByOfferingId(@PathVariable UUID offeringId) {

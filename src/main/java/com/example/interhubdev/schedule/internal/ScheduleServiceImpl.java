@@ -6,7 +6,9 @@ import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.LessonForScheduleDto;
 import com.example.interhubdev.schedule.RoomCreateRequest;
 import com.example.interhubdev.schedule.RoomDto;
+import com.example.interhubdev.schedule.OfferingLookupPort;
 import com.example.interhubdev.schedule.ScheduleApi;
+import com.example.interhubdev.schedule.StudentLookupPort;
 import com.example.interhubdev.schedule.TimeslotCreateRequest;
 import com.example.interhubdev.schedule.TimeslotDto;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -30,6 +33,8 @@ class ScheduleServiceImpl implements ScheduleApi {
     private final ScheduleRoomService roomService;
     private final ScheduleTimeslotService timeslotService;
     private final ScheduleLessonService lessonService;
+    private final StudentLookupPort studentLookupPort;
+    private final OfferingLookupPort offeringLookupPort;
 
     @Override
     public Optional<BuildingDto> findBuildingById(UUID id) {
@@ -192,6 +197,25 @@ class ScheduleServiceImpl implements ScheduleApi {
     @Override
     public List<LessonForScheduleDto> findLessonsByWeekAndTeacherId(LocalDate date, UUID teacherId) {
         return lessonService.findByWeekAndTeacherIdEnriched(date, teacherId);
+    }
+
+    @Override
+    public List<LessonForScheduleDto> findLessonsByWeekAndStudentUserId(LocalDate date, UUID userId) {
+        if (!studentLookupPort.hasStudentProfile(userId)) {
+            throw ScheduleErrors.studentProfileNotFound();
+        }
+        List<UUID> groupIds = studentLookupPort.getGroupIdsByUserId(userId);
+        if (groupIds.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> offeringIds = new HashSet<>();
+        for (UUID groupId : groupIds) {
+            offeringIds.addAll(offeringLookupPort.findOfferingIdsByGroupId(groupId));
+        }
+        if (offeringIds.isEmpty()) {
+            return List.of();
+        }
+        return lessonService.findByWeekAndOfferingIdsEnriched(date, offeringIds);
     }
 
     @Override
