@@ -497,8 +497,7 @@ class AttendanceServiceImpl implements AttendanceApi {
             return new StudentAttendanceByLessonsDto(List.of());
         }
 
-        List<AttendanceRecord> records = repository.findByStudentIdAndLessonSessionIdInAndMarkedAtBetween(
-                studentId, lessonIds, null, null);
+        List<AttendanceRecord> records = repository.findByStudentIdAndLessonSessionIdIn(studentId, lessonIds);
         List<AbsenceNotice> notices = absenceNoticeRepository.findByStudentIdAndLessonSessionIdIn(studentId, lessonIds);
 
         Set<UUID> noticeIds = notices.stream().map(AbsenceNotice::getId).collect(Collectors.toSet());

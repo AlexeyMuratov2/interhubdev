@@ -8,6 +8,7 @@ import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryDto;
 import com.example.interhubdev.composition.StudentGradeHistoryDto;
+import com.example.interhubdev.composition.StudentHomeworkHistoryDto;
 import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
@@ -191,6 +192,30 @@ class CompositionController {
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         StudentAttendanceHistoryDto dto = compositionApi.getStudentAttendanceHistory(studentId, offeringId, requesterId);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Get full homework history for a student in an offering.
+     * All homework assignments for the offering and the student's submission and grade per assignment.
+     *
+     * @param studentId  student profile ID (path)
+     * @param offeringId offering ID (path)
+     * @param request    HTTP request (for authentication)
+     * @return 200 OK with StudentHomeworkHistoryDto
+     */
+    @GetMapping("/students/{studentId}/offerings/{offeringId}/homework-history")
+    @Operation(summary = "Get student homework history", description = "All homeworks for the offering with student's submission and grade per assignment; full data for frontend student view")
+    public ResponseEntity<StudentHomeworkHistoryDto> getStudentHomeworkHistory(
+            @PathVariable UUID studentId,
+            @PathVariable UUID offeringId,
+            HttpServletRequest request
+    ) {
+        UUID requesterId = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+
+        StudentHomeworkHistoryDto dto = compositionApi.getStudentHomeworkHistory(studentId, offeringId, requesterId);
         return ResponseEntity.ok(dto);
     }
 }

@@ -111,4 +111,18 @@ public interface CompositionApi {
      *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view (e.g. student viewing another)
      */
     StudentAttendanceHistoryDto getStudentAttendanceHistory(UUID studentId, UUID offeringId, UUID requesterId);
+
+    /**
+     * Get full homework history for a student in an offering (Use Case: Student homework history).
+     * Returns all homework assignments for the offering and the student's submission (solution) and grade per assignment.
+     * For frontend to display complete student homework info (e.g. student card). Batch-loaded; no N+1.
+     *
+     * @param studentId   student profile ID (must not be null)
+     * @param offeringId  offering ID (must not be null)
+     * @param requesterId current authenticated user ID (must have permission to view submissions and grades, e.g. teacher/admin)
+     * @return aggregated DTO with student, subjectName, and items (homework + lesson + submission + grade + files per row)
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering or student not found,
+     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view
+     */
+    StudentHomeworkHistoryDto getStudentHomeworkHistory(UUID studentId, UUID offeringId, UUID requesterId);
 }

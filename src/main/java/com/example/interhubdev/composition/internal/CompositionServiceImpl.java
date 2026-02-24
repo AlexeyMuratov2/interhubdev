@@ -7,6 +7,7 @@ import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryDto;
 import com.example.interhubdev.composition.StudentGradeHistoryDto;
+import com.example.interhubdev.composition.StudentHomeworkHistoryDto;
 import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ class CompositionServiceImpl implements CompositionApi {
     private final GroupSubjectInfoService groupSubjectInfoService;
     private final StudentGradeHistoryService studentGradeHistoryService;
     private final StudentAttendanceHistoryService studentAttendanceHistoryService;
+    private final StudentHomeworkHistoryService studentHomeworkHistoryService;
 
     @Override
     public LessonFullDetailsDto getLessonFullDetails(UUID lessonId, UUID requesterId) {
@@ -63,5 +65,10 @@ class CompositionServiceImpl implements CompositionApi {
     @Override
     public StudentAttendanceHistoryDto getStudentAttendanceHistory(UUID studentId, UUID offeringId, UUID requesterId) {
         return studentAttendanceHistoryService.execute(studentId, offeringId, requesterId);
+    }
+
+    @Override
+    public StudentHomeworkHistoryDto getStudentHomeworkHistory(UUID studentId, UUID offeringId, UUID requesterId) {
+        return studentHomeworkHistoryService.execute(studentId, offeringId, requesterId);
     }
 }

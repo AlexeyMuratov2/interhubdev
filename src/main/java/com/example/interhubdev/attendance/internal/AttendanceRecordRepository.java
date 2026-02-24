@@ -45,7 +45,19 @@ interface AttendanceRecordRepository extends JpaRepository<AttendanceRecord, UUI
     List<AttendanceRecord> findByLessonSessionIdIn(List<UUID> lessonSessionIds);
 
     /**
-     * Find attendance records for a student filtered by lesson session IDs.
+     * Find attendance records for a student filtered by lesson session IDs (no date filter).
+     * Call only when sessionIds is non-empty. Used by getStudentAttendanceByLessonIds to avoid
+     * PostgreSQL parameter type inference issues with null from/to.
+     */
+    @Query("SELECT ar FROM AttendanceRecord ar WHERE ar.studentId = :studentId " +
+            "AND ar.lessonSessionId IN :sessionIds ORDER BY ar.markedAt DESC")
+    List<AttendanceRecord> findByStudentIdAndLessonSessionIdIn(
+            @Param("studentId") UUID studentId,
+            @Param("sessionIds") List<UUID> sessionIds
+    );
+
+    /**
+     * Find attendance records for a student filtered by lesson session IDs and date range.
      */
     @Query("SELECT ar FROM AttendanceRecord ar WHERE ar.studentId = :studentId " +
             "AND ar.lessonSessionId IN :sessionIds " +

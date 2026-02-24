@@ -21,6 +21,8 @@
  *   <li>{@link com.example.interhubdev.composition.StudentGradeHistoryItemDto} - one grade entry with lesson/homework/submission/gradedBy context</li>
  *   <li>{@link com.example.interhubdev.composition.StudentAttendanceHistoryDto} - attendance history for a student in an offering (all lessons + attendance + notices)</li>
  *   <li>{@link com.example.interhubdev.composition.StudentAttendanceHistoryLessonItemDto} - one lesson row with attendance and absence notices</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentHomeworkHistoryDto} - full homework history for a student in an offering (all homeworks + submission + grade per row)</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentHomeworkHistoryItemDto} - one homework row with lesson, submission, grade and files</li>
  * </ul>
  *
  * <h2>Architecture</h2>
@@ -36,6 +38,7 @@
  *   <li>Use Case #4: Group Subject Info - full info for group and subject (offering, slots, curriculum, students with points, submissions, attendance) for teacher screen</li>
  *   <li>Use Case #5: Student Grade History - all grade entries for a student in an offering with lesson, homework, submission and grader context</li>
  *   <li>Use Case #6: Student Attendance History - all lessons for an offering with student's attendance and absence notices per lesson; missed and notices counts</li>
+ *   <li>Use Case #7: Student Homework History - all homeworks for an offering with student's submission and grade per assignment; for full student info screen</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
