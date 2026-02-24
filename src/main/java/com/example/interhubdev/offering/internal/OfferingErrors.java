@@ -28,6 +28,8 @@ final class OfferingErrors {
     public static final String CODE_OFFERING_NOT_FOUND = "OFFERING_NOT_FOUND";
     /** Timeslot info could not be resolved for a slot. */
     public static final String CODE_TIMESLOT_NOT_RESOLVED = "OFFERING_TIMESLOT_NOT_RESOLVED";
+    /** Curriculum subject does not belong to the target academic semester. */
+    public static final String CODE_SEMESTER_MISMATCH = "OFFERING_SEMESTER_MISMATCH";
 
     public static AppException noSlots(UUID offeringId) {
         return Errors.of(HttpStatus.BAD_REQUEST, CODE_NO_SLOTS,
@@ -57,5 +59,11 @@ final class OfferingErrors {
     public static AppException timeslotNotResolved(UUID timeslotId) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_TIMESLOT_NOT_RESOLVED,
                 "Timeslot could not be resolved");
+    }
+
+    public static AppException semesterMismatch(int curriculumSemesterNo, int academicSemesterNumber) {
+        return Errors.of(HttpStatus.BAD_REQUEST, CODE_SEMESTER_MISMATCH,
+                "Curriculum subject (semester " + curriculumSemesterNo
+                        + ") does not belong to academic semester " + academicSemesterNumber);
     }
 }

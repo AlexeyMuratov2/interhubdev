@@ -8,6 +8,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.core.env.Environment;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -29,17 +30,26 @@ import java.util.regex.Pattern;
 @Slf4j
 class EmailServiceImpl implements EmailApi {
 
+    private static final String MAIL_ENABLED = "MAIL_ENABLED";
+    private static final String MAIL_LOG_ONLY = "MAIL_LOG_ONLY";
+
     private final JavaMailSender mailSender;
     private final EmailProperties properties;
+    private final Environment environment;
 
     @Override
     public EmailResult send(EmailMessage message) {
-        if (!properties.isEnabled()) {
+        boolean enabled = properties.isEnabled()
+                && !"false".equalsIgnoreCase(environment.getProperty(MAIL_ENABLED, "true"));
+        boolean logOnly = properties.isLogOnly()
+                || "true".equalsIgnoreCase(environment.getProperty(MAIL_LOG_ONLY, "false"));
+
+        if (!enabled) {
             log.warn("Email sending is disabled. Would have sent to: {}", message.to());
             return EmailResult.success(generateMessageId(), message.to());
         }
 
-        if (properties.isLogOnly()) {
+        if (logOnly) {
             logEmail(message);
             return EmailResult.success(generateMessageId(), message.to());
         }

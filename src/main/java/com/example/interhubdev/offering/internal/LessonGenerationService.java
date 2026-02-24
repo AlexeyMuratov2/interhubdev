@@ -45,6 +45,8 @@ class LessonGenerationService {
         CurriculumSubjectDto currSubject = curriculumSubjectLookupPort.findById(offering.getCurriculumSubjectId())
                 .orElseThrow(() -> OfferingErrors.curriculumSubjectNotFound(offering.getCurriculumSubjectId()));
 
+        validateSemesterMatch(currSubject, semester);
+
         List<OfferingSlot> slots = slotRepository.findByOfferingIdOrderByDayOfWeekAscStartTimeAsc(offeringId);
         if (slots.isEmpty()) {
             throw OfferingErrors.noSlots(offeringId);
@@ -71,19 +73,25 @@ class LessonGenerationService {
 
         int totalCreated = 0;
         for (GroupSubjectOffering offering : offerings) {
-            List<OfferingSlot> slots = slotRepository
-                    .findByOfferingIdOrderByDayOfWeekAscStartTimeAsc(offering.getId());
-            if (slots.isEmpty()) {
-                log.debug("Skipping offering {} (no slots)", offering.getId());
-                continue;
-            }
-
             CurriculumSubjectDto currSubject = curriculumSubjectLookupPort
                     .findById(offering.getCurriculumSubjectId())
                     .orElse(null);
             if (currSubject == null) {
                 log.warn("Curriculum subject {} not found for offering {}, skipping",
                         offering.getCurriculumSubjectId(), offering.getId());
+                continue;
+            }
+
+            if (!matchesSemester(currSubject.semesterNo(), semester.number())) {
+                log.debug("Skipping offering {} (curriculum semester {} does not match academic semester {})",
+                        offering.getId(), currSubject.semesterNo(), semester.number());
+                continue;
+            }
+
+            List<OfferingSlot> slots = slotRepository
+                    .findByOfferingIdOrderByDayOfWeekAscStartTimeAsc(offering.getId());
+            if (slots.isEmpty()) {
+                log.debug("Skipping offering {} (no slots)", offering.getId());
                 continue;
             }
 
@@ -102,16 +110,37 @@ class LessonGenerationService {
 
     @Transactional
     int regenerateForOffering(UUID offeringId, UUID semesterId) {
-        if (!offeringRepository.existsById(offeringId)) {
-            throw OfferingErrors.offeringNotFound(offeringId);
-        }
+        GroupSubjectOffering offering = offeringRepository.findById(offeringId)
+                .orElseThrow(() -> OfferingErrors.offeringNotFound(offeringId));
+
         SemesterDto semester = academicApi.findSemesterById(semesterId)
                 .orElseThrow(() -> OfferingErrors.semesterNotFound(semesterId));
+
+        CurriculumSubjectDto currSubject = curriculumSubjectLookupPort.findById(offering.getCurriculumSubjectId())
+                .orElseThrow(() -> OfferingErrors.curriculumSubjectNotFound(offering.getCurriculumSubjectId()));
+
+        validateSemesterMatch(currSubject, semester);
+
         lessonCreationPort.deleteLessonsByOfferingIdAndDateRange(
                 offeringId, semester.startDate(), semester.endDate());
         log.info("Deleted lessons for offering {} in semester date range [{}..{}] before regeneration",
                 offeringId, semester.startDate(), semester.endDate());
         return generateForOffering(offeringId, semesterId);
+    }
+
+    /**
+     * Checks that curriculum semester number (1..N) maps to the target academic
+     * semester number (1 or 2). Odd → 1, even → 2.
+     */
+    private static boolean matchesSemester(int curriculumSemesterNo, int academicSemesterNumber) {
+        int expected = (curriculumSemesterNo % 2 == 0) ? 2 : 1;
+        return expected == academicSemesterNumber;
+    }
+
+    private void validateSemesterMatch(CurriculumSubjectDto currSubject, SemesterDto semester) {
+        if (!matchesSemester(currSubject.semesterNo(), semester.number())) {
+            throw OfferingErrors.semesterMismatch(currSubject.semesterNo(), semester.number());
+        }
     }
 
     private List<LessonCreateCommand> buildLessonCommands(
