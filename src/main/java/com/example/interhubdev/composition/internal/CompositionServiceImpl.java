@@ -5,6 +5,7 @@ import com.example.interhubdev.composition.GroupSubjectInfoDto;
 import com.example.interhubdev.composition.LessonFullDetailsDto;
 import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
+import com.example.interhubdev.composition.StudentAttendanceHistoryDto;
 import com.example.interhubdev.composition.StudentGradeHistoryDto;
 import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ class CompositionServiceImpl implements CompositionApi {
     private final TeacherStudentGroupsService teacherStudentGroupsService;
     private final GroupSubjectInfoService groupSubjectInfoService;
     private final StudentGradeHistoryService studentGradeHistoryService;
+    private final StudentAttendanceHistoryService studentAttendanceHistoryService;
 
     @Override
     public LessonFullDetailsDto getLessonFullDetails(UUID lessonId, UUID requesterId) {
@@ -56,5 +58,10 @@ class CompositionServiceImpl implements CompositionApi {
     @Override
     public StudentGradeHistoryDto getStudentGradeHistory(UUID studentId, UUID offeringId, UUID requesterId) {
         return studentGradeHistoryService.execute(studentId, offeringId, requesterId);
+    }
+
+    @Override
+    public StudentAttendanceHistoryDto getStudentAttendanceHistory(UUID studentId, UUID offeringId, UUID requesterId) {
+        return studentAttendanceHistoryService.execute(studentId, offeringId, requesterId);
     }
 }

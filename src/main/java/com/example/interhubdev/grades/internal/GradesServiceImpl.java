@@ -178,6 +178,10 @@ class GradesServiceImpl implements GradesApi {
         return repository.findById(id).map(GradeEntryMappers::toDto);
     }
 
+    /** Safe bounds for DB timestamp range (PostgreSQL rejects LocalDateTime.MIN/MAX). */
+    private static final LocalDateTime SAFE_MIN = LocalDateTime.of(1970, 1, 1, 0, 0);
+    private static final LocalDateTime SAFE_MAX = LocalDateTime.of(9999, 12, 31, 23, 59, 59);
+
     @Override
     @Transactional(readOnly = true)
     public StudentOfferingGradesDto getStudentOfferingGrades(
@@ -190,10 +194,15 @@ class GradesServiceImpl implements GradesApi {
     ) {
         ensureCanGrade(requesterId);
         validateOfferingExists(offeringId);
-        LocalDateTime fromBound = from != null ? from : LocalDateTime.MIN;
-        LocalDateTime toBound = to != null ? to : LocalDateTime.MAX;
-        List<GradeEntryEntity> list = repository.findByStudentIdAndOfferingIdAndGradedAtBetween(
-                studentId, offeringId, fromBound, toBound);
+        List<GradeEntryEntity> list;
+        if (from == null && to == null) {
+            list = repository.findByStudentIdAndOfferingIdOrderByGradedAtDesc(studentId, offeringId);
+        } else {
+            LocalDateTime fromBound = from != null ? from : SAFE_MIN;
+            LocalDateTime toBound = to != null ? to : SAFE_MAX;
+            list = repository.findByStudentIdAndOfferingIdAndGradedAtBetween(
+                    studentId, offeringId, fromBound, toBound);
+        }
         List<GradeEntryDto> entries = list.stream()
                 .filter(e -> includeVoided || GradeEntryEntity.STATUS_ACTIVE.equals(e.getStatus()))
                 .map(GradeEntryMappers::toDto)

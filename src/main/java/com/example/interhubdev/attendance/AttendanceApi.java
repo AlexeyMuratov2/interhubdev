@@ -84,6 +84,23 @@ public interface AttendanceApi {
     );
 
     /**
+     * Get attendance records and absence notices for a student by lesson IDs (batch).
+     * Used by composition module to build student attendance history per offering without N+1.
+     * Returns one item per lesson ID in the same order; lessons with no record have empty optional and empty notices.
+     *
+     * @param studentId   student profile ID
+     * @param lessonIds   list of lesson (session) IDs (order preserved in response)
+     * @param requesterId current user ID (must be student themselves or teacher/admin)
+     * @return DTO with one item per lesson: optional attendance record and list of absence notices
+     * @throws AppException NOT_FOUND (student), FORBIDDEN (student can only view own data)
+     */
+    StudentAttendanceByLessonsDto getStudentAttendanceByLessonIds(
+            UUID studentId,
+            java.util.List<UUID> lessonIds,
+            UUID requesterId
+    );
+
+    /**
      * Get attendance summary for a group (per-student counts and attendance percent).
      * Attendance percent is computed only from lessons that had at least one attendance mark;
      * lessons with no marks are excluded from the denominator (single source of truth).

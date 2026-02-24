@@ -73,10 +73,15 @@ class StudentGradeHistoryService {
                 .map(HomeworkSubmissionDto::homeworkId)
                 .collect(Collectors.toSet());
         Map<UUID, HomeworkDto> homeworkById = batchHomeworks(homeworkIds, requesterId);
+        Set<UUID> homeworkLessonIds = homeworkById.values().stream()
+                .map(HomeworkDto::lessonId)
+                .collect(Collectors.toSet());
+        homeworkLessonIds.removeAll(lessonById.keySet());
+        Map<UUID, LessonDto> lessonForHomeworkById = batchLessons(homeworkLessonIds);
         Map<UUID, UserDto> userById = batchUsers(gradedByIds);
 
         List<StudentGradeHistoryItemDto> items = entries.stream()
-                .map(entry -> toItem(entry, lessonById, submissionById, homeworkById, userById))
+                .map(entry -> toItem(entry, lessonById, submissionById, homeworkById, userById, lessonForHomeworkById))
                 .toList();
 
         return new StudentGradeHistoryDto(
@@ -114,12 +119,16 @@ class StudentGradeHistoryService {
             Map<UUID, LessonDto> lessonById,
             Map<UUID, HomeworkSubmissionDto> submissionById,
             Map<UUID, HomeworkDto> homeworkById,
-            Map<UUID, UserDto> userById) {
+            Map<UUID, UserDto> userById,
+            Map<UUID, LessonDto> lessonForHomeworkById) {
         Optional<LessonDto> lesson = entry.lessonSessionId().flatMap(id -> Optional.ofNullable(lessonById.get(id)));
         Optional<HomeworkSubmissionDto> submission = entry.homeworkSubmissionId()
                 .flatMap(id -> Optional.ofNullable(submissionById.get(id)));
         Optional<HomeworkDto> homework = submission.flatMap(s -> Optional.ofNullable(homeworkById.get(s.homeworkId())));
         Optional<UserDto> gradedByUser = Optional.ofNullable(userById.get(entry.gradedBy()));
-        return new StudentGradeHistoryItemDto(entry, lesson, homework, submission, gradedByUser);
+        Optional<LessonDto> lessonForHomework = homework.flatMap(h ->
+                Optional.ofNullable(lessonById.get(h.lessonId()))
+                        .or(() -> Optional.ofNullable(lessonForHomeworkById.get(h.lessonId()))));
+        return new StudentGradeHistoryItemDto(entry, lesson, homework, submission, gradedByUser, lessonForHomework);
     }
 }

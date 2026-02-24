@@ -103,6 +103,20 @@ interface AbsenceNoticeRepository extends JpaRepository<AbsenceNotice, UUID> {
     List<AbsenceNotice> findByLessonSessionId(UUID sessionId);
 
     /**
+     * Find all notices for a student and given lesson sessions (batch for composition).
+     * Call only when sessionIds is non-empty.
+     *
+     * @param studentId  student profile ID
+     * @param sessionIds lesson session IDs
+     * @return list of notices (ordered by submittedAt DESC)
+     */
+    @Query("SELECT an FROM AbsenceNotice an WHERE an.studentId = :studentId " +
+            "AND an.lessonSessionId IN :sessionIds ORDER BY an.lessonSessionId, an.submittedAt DESC")
+    List<AbsenceNotice> findByStudentIdAndLessonSessionIdIn(
+            @Param("studentId") UUID studentId,
+            @Param("sessionIds") List<UUID> sessionIds);
+
+    /**
      * First page: find absence notices for lessons (no cursor).
      * Used when cursor is null to avoid binding null parameters (PostgreSQL type inference issue).
      * Note: limit is applied in application layer.

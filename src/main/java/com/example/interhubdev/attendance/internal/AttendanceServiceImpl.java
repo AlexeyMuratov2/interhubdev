@@ -469,6 +469,78 @@ class AttendanceServiceImpl implements AttendanceApi {
 
     @Override
     @Transactional(readOnly = true)
+    public StudentAttendanceByLessonsDto getStudentAttendanceByLessonIds(
+            UUID studentId,
+            List<UUID> lessonIds,
+            UUID requesterId
+    ) {
+        studentApi.findById(studentId)
+                .orElseThrow(() -> AttendanceErrors.studentNotFound(studentId));
+
+        UserDto requester = userApi.findById(requesterId)
+                .orElseThrow(() -> AttendanceErrors.forbidden("User not found"));
+        boolean isStudent = requester.hasRole(Role.STUDENT);
+        boolean isTeacherOrAdmin = requester.hasRole(Role.TEACHER) || requester.hasRole(Role.ADMIN)
+                || requester.hasRole(Role.MODERATOR) || requester.hasRole(Role.SUPER_ADMIN);
+
+        if (isStudent) {
+            StudentDto student = studentApi.findByUserId(requesterId)
+                    .orElseThrow(() -> AttendanceErrors.forbidden("Student profile not found"));
+            if (!student.id().equals(studentId)) {
+                throw AttendanceErrors.forbidden("Students can only view their own attendance records");
+            }
+        } else if (!isTeacherOrAdmin) {
+            throw AttendanceErrors.forbidden("Only students (own records), teachers, or administrators can view attendance");
+        }
+
+        if (lessonIds == null || lessonIds.isEmpty()) {
+            return new StudentAttendanceByLessonsDto(List.of());
+        }
+
+        List<AttendanceRecord> records = repository.findByStudentIdAndLessonSessionIdInAndMarkedAtBetween(
+                studentId, lessonIds, null, null);
+        List<AbsenceNotice> notices = absenceNoticeRepository.findByStudentIdAndLessonSessionIdIn(studentId, lessonIds);
+
+        Set<UUID> noticeIds = notices.stream().map(AbsenceNotice::getId).collect(Collectors.toSet());
+        Map<UUID, List<String>> fileIdsByNoticeId = new HashMap<>();
+        if (!noticeIds.isEmpty()) {
+            List<AbsenceNoticeAttachment> attachments = absenceNoticeAttachmentRepository.findByNoticeIdIn(new ArrayList<>(noticeIds));
+            for (AbsenceNoticeAttachment a : attachments) {
+                fileIdsByNoticeId.computeIfAbsent(a.getNoticeId(), k -> new ArrayList<>()).add(a.getFileId());
+            }
+        }
+
+        Map<UUID, AttendanceRecord> recordByLesson = records.stream()
+                .collect(Collectors.toMap(AttendanceRecord::getLessonSessionId, r -> r, (a, b) -> a));
+        Map<UUID, List<StudentNoticeSummaryDto>> noticesByLesson = new HashMap<>();
+        for (AbsenceNotice n : notices) {
+            List<String> fileIds = fileIdsByNoticeId.getOrDefault(n.getId(), List.of());
+            StudentNoticeSummaryDto dto = new StudentNoticeSummaryDto(
+                    n.getId(),
+                    n.getType(),
+                    n.getStatus(),
+                    Optional.ofNullable(n.getReasonText()).filter(s -> !s.isBlank()),
+                    n.getSubmittedAt(),
+                    fileIds
+            );
+            noticesByLesson.computeIfAbsent(n.getLessonSessionId(), k -> new ArrayList<>()).add(dto);
+        }
+
+        List<StudentLessonAttendanceItemDto> items = new ArrayList<>();
+        for (UUID lessonId : lessonIds) {
+            AttendanceRecord rec = recordByLesson.get(lessonId);
+            List<StudentNoticeSummaryDto> lessonNotices = noticesByLesson.getOrDefault(lessonId, List.of());
+            items.add(new StudentLessonAttendanceItemDto(
+                    lessonId,
+                    rec != null ? Optional.of(AttendanceMappers.toDto(rec)) : Optional.empty(),
+                    lessonNotices
+            ));
+        }
+        return new StudentAttendanceByLessonsDto(items);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public GroupAttendanceSummaryDto getGroupAttendanceSummary(
             UUID groupId,
             LocalDate from,

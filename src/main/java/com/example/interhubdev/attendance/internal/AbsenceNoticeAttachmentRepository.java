@@ -32,4 +32,13 @@ interface AbsenceNoticeAttachmentRepository extends JpaRepository<AbsenceNoticeA
      * @param fileIds  list of file IDs to delete
      */
     void deleteByNoticeIdAndFileIdIn(UUID noticeId, List<String> fileIds);
+
+    /**
+     * Find all attachments for the given notices (batch load).
+     * Call only when noticeIds is non-empty.
+     *
+     * @param noticeIds notice IDs
+     * @return list of attachments (order not specified; group by noticeId in application layer)
+     */
+    List<AbsenceNoticeAttachment> findByNoticeIdIn(List<UUID> noticeIds);
 }

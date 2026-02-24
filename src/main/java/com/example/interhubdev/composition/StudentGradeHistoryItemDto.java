@@ -21,6 +21,8 @@ public record StudentGradeHistoryItemDto(
     /** Present when this grade is linked to a homework submission. */
     Optional<HomeworkSubmissionDto> submission,
     /** User who created or last updated this grade (for display "Graded by X"). */
-    Optional<UserDto> gradedByUser
+    Optional<UserDto> gradedByUser,
+    /** When grade is for homework: the lesson this homework belongs to (for date and link). */
+    Optional<LessonDto> lessonForHomework
 ) {
 }

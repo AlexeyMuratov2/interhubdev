@@ -95,4 +95,20 @@ public interface CompositionApi {
      *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view grades
      */
     StudentGradeHistoryDto getStudentGradeHistory(UUID studentId, UUID offeringId, UUID requesterId);
+
+    /**
+     * Get attendance history for a student in an offering (Use Case: Student attendance history).
+     * Returns all lessons for the offering (regardless of lesson status), with for each lesson:
+     * lesson info, student's attendance record (if marked), and all absence notices for that lesson.
+     * Includes summary: missed count (ABSENT/EXCUSED) and total absence notices submitted.
+     * Batch-loaded; no N+1.
+     *
+     * @param studentId   student profile ID (must not be null)
+     * @param offeringId  offering ID (must not be null)
+     * @param requesterId current authenticated user ID (student can only view own; teacher/admin can view any)
+     * @return aggregated DTO with student, subjectName, missedCount, absenceNoticesSubmittedCount, and lessons list
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering or student not found,
+     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view (e.g. student viewing another)
+     */
+    StudentAttendanceHistoryDto getStudentAttendanceHistory(UUID studentId, UUID offeringId, UUID requesterId);
 }

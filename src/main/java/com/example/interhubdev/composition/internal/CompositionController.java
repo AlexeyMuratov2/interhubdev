@@ -6,6 +6,7 @@ import com.example.interhubdev.composition.GroupSubjectInfoDto;
 import com.example.interhubdev.composition.LessonFullDetailsDto;
 import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
+import com.example.interhubdev.composition.StudentAttendanceHistoryDto;
 import com.example.interhubdev.composition.StudentGradeHistoryDto;
 import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import com.example.interhubdev.error.Errors;
@@ -166,6 +167,30 @@ class CompositionController {
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         StudentGradeHistoryDto dto = compositionApi.getStudentGradeHistory(studentId, offeringId, requesterId);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Get attendance history for a student in an offering.
+     * All lessons for the offering with attendance and absence notices per lesson; summary counts for UI.
+     *
+     * @param studentId  student profile ID (path)
+     * @param offeringId offering ID (path)
+     * @param request    HTTP request (for authentication)
+     * @return 200 OK with StudentAttendanceHistoryDto
+     */
+    @GetMapping("/students/{studentId}/offerings/{offeringId}/attendance-history")
+    @Operation(summary = "Get student attendance history", description = "All lessons for the offering with student attendance and absence notices per lesson; missed count and notices count")
+    public ResponseEntity<StudentAttendanceHistoryDto> getStudentAttendanceHistory(
+            @PathVariable UUID studentId,
+            @PathVariable UUID offeringId,
+            HttpServletRequest request
+    ) {
+        UUID requesterId = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+
+        StudentAttendanceHistoryDto dto = compositionApi.getStudentAttendanceHistory(studentId, offeringId, requesterId);
         return ResponseEntity.ok(dto);
     }
 }
