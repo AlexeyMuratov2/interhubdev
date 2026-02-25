@@ -101,10 +101,10 @@ public interface CompositionApi {
      *
      * @param studentId   student profile ID (must not be null)
      * @param offeringId  offering ID (must not be null)
-     * @param requesterId current authenticated user ID (must have permission to view grades)
+     * @param requesterId current authenticated user ID (student may view own; teacher/admin may view any)
      * @return aggregated DTO with totalPoints, breakdownByType, and entries with lesson/homework/submission/gradedBy
      * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering not found,
-     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view grades
+     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view grades (e.g. student viewing another)
      */
     StudentGradeHistoryDto getStudentGradeHistory(UUID studentId, UUID offeringId, UUID requesterId);
 
@@ -147,10 +147,10 @@ public interface CompositionApi {
      *
      * @param studentId   student profile ID (must not be null)
      * @param offeringId  offering ID (must not be null)
-     * @param requesterId current authenticated user ID (must have permission to view submissions and grades, e.g. teacher/admin)
+     * @param requesterId current authenticated user ID (student may view own; teacher/admin may view any)
      * @return aggregated DTO with student, subjectName, and items (homework + lesson + submission + grade + files per row)
      * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering or student not found,
-     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view
+     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if requester cannot view (e.g. student viewing another)
      */
     StudentHomeworkHistoryDto getStudentHomeworkHistory(UUID studentId, UUID offeringId, UUID requesterId);
 }

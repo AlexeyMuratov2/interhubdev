@@ -127,11 +127,13 @@ class SubmissionServiceImpl implements SubmissionApi {
     @Transactional(readOnly = true)
     public List<HomeworkSubmissionDto> listByHomeworkIds(Collection<UUID> homeworkIds, UUID requesterId) {
         validateRequester(requesterId);
-        checkTeacherOrAdmin(requesterId);
         if (homeworkIds == null || homeworkIds.isEmpty()) {
             return List.of();
         }
         List<HomeworkSubmission> list = submissionRepository.findByHomeworkIdIn(homeworkIds);
+        if (!isTeacherOrAdmin(requesterId)) {
+            list = list.stream().filter(s -> s.getAuthorId().equals(requesterId)).toList();
+        }
         return list.stream().map(this::toDto).toList();
     }
 
@@ -149,11 +151,13 @@ class SubmissionServiceImpl implements SubmissionApi {
     @Transactional(readOnly = true)
     public List<HomeworkSubmissionDto> getByIds(Collection<UUID> submissionIds, UUID requesterId) {
         validateRequester(requesterId);
-        checkTeacherOrAdmin(requesterId);
         if (submissionIds == null || submissionIds.isEmpty()) {
             return List.of();
         }
         List<HomeworkSubmission> list = submissionRepository.findByIdInWithFiles(submissionIds);
+        if (!isTeacherOrAdmin(requesterId)) {
+            list = list.stream().filter(s -> s.getAuthorId().equals(requesterId)).toList();
+        }
         return list.stream().map(this::toDto).toList();
     }
 
@@ -374,5 +378,10 @@ class SubmissionServiceImpl implements SubmissionApi {
             return;
         }
         throw SubmissionErrors.permissionDenied();
+    }
+
+    private boolean isTeacherOrAdmin(UUID userId) {
+        UserDto user = userApi.findById(userId).orElse(null);
+        return user != null && (user.hasRole(Role.TEACHER) || user.hasRole(Role.ADMIN) || user.hasRole(Role.MODERATOR) || user.hasRole(Role.SUPER_ADMIN));
     }
 }

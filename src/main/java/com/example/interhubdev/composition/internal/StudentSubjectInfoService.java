@@ -104,7 +104,10 @@ class StudentSubjectInfoService {
 
         List<CourseMaterialDto> materials = courseMaterialApi.listByOffering(offering.id(), requesterId);
 
+        UUID studentIdForDto = student != null ? student.id() : null;
+
         return new StudentSubjectInfoDto(
+                studentIdForDto,
                 subject,
                 departmentName,
                 curriculumSubject,

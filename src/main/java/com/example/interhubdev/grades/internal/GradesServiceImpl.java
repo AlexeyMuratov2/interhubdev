@@ -192,7 +192,7 @@ class GradesServiceImpl implements GradesApi {
             boolean includeVoided,
             UUID requesterId
     ) {
-        ensureCanGrade(requesterId);
+        ensureCanViewStudentGrades(requesterId, studentId);
         validateOfferingExists(offeringId);
         List<GradeEntryEntity> list;
         if (from == null && to == null) {
@@ -348,6 +348,20 @@ class GradesServiceImpl implements GradesApi {
         throw GradeErrors.forbidden();
     }
 
+    /** Allow teacher/admin or the student viewing their own grades. */
+    private void ensureCanViewStudentGrades(UUID requesterId, UUID studentId) {
+        UserDto requester = userApi.findById(requesterId)
+                .orElseThrow(GradeErrors::forbidden);
+        if (requester.hasRole(Role.TEACHER) || requester.hasRole(Role.ADMIN) || requester.hasRole(Role.MODERATOR) || requester.hasRole(Role.SUPER_ADMIN)) {
+            return;
+        }
+        StudentDto student = studentApi.findById(studentId)
+                .orElseThrow(() -> GradeErrors.studentNotFound(studentId));
+        if (!student.userId().equals(requesterId)) {
+            throw GradeErrors.forbidden();
+        }
+    }
+
     private void validateOfferingExists(UUID offeringId) {
         if (offeringApi.findOfferingById(offeringId).isEmpty()) {
             throw GradeErrors.offeringNotFound(offeringId);
@@ -376,8 +390,12 @@ class GradesServiceImpl implements GradesApi {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<UUID, GradeEntryDto> getGradeEntriesByHomeworkSubmissionIds(List<UUID> submissionIds, UUID requesterId) {
-        ensureCanGrade(requesterId);
+    public Map<UUID, GradeEntryDto> getGradeEntriesByHomeworkSubmissionIds(List<UUID> submissionIds, UUID requesterId, UUID studentIdForOwnCheck) {
+        if (studentIdForOwnCheck != null) {
+            ensureCanViewStudentGrades(requesterId, studentIdForOwnCheck);
+        } else {
+            ensureCanGrade(requesterId);
+        }
         if (submissionIds == null || submissionIds.isEmpty()) {
             return Map.of();
         }

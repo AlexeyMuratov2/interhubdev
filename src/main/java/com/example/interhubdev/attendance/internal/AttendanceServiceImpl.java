@@ -407,8 +407,8 @@ class AttendanceServiceImpl implements AttendanceApi {
             throw AttendanceErrors.forbidden("Only students (own records), teachers, or administrators can view attendance");
         }
 
-        // Get records
-        List<AttendanceRecord> records = repository.findByStudentIdAndMarkedAtBetween(studentId, from, to);
+        // Get records (branch by null from/to to avoid PostgreSQL "could not determine data type of parameter" with :param IS NULL in JPQL)
+        List<AttendanceRecord> records = getAttendanceRecordsByDateRange(studentId, from, to);
 
         // Filter by offeringId if provided (need to get lesson's offeringId)
         if (offeringId != null) {
@@ -467,6 +467,23 @@ class AttendanceServiceImpl implements AttendanceApi {
                 records.size(),
                 recordDtos
         );
+    }
+
+    /**
+     * Load attendance records by student and optional date range.
+     * Branches by null from/to to avoid PostgreSQL "could not determine data type of parameter" when using :param IS NULL in JPQL.
+     */
+    private List<AttendanceRecord> getAttendanceRecordsByDateRange(UUID studentId, LocalDateTime from, LocalDateTime to) {
+        if (from == null && to == null) {
+            return repository.findByStudentIdOrderByMarkedAtDesc(studentId);
+        }
+        if (from == null) {
+            return repository.findByStudentIdAndMarkedAtLessThanEqualOrderByMarkedAtDesc(studentId, to);
+        }
+        if (to == null) {
+            return repository.findByStudentIdAndMarkedAtGreaterThanEqualOrderByMarkedAtDesc(studentId, from);
+        }
+        return repository.findByStudentIdAndMarkedAtBetweenOrderByMarkedAtDesc(studentId, from, to);
     }
 
     @Override

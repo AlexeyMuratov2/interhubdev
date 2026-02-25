@@ -7,6 +7,7 @@ import com.example.interhubdev.program.CurriculumSubjectDto;
 import com.example.interhubdev.subject.SubjectDto;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Aggregated data for the student's "Subject detail" screen.
@@ -14,6 +15,8 @@ import java.util.List;
  * and all course materials with files for display and download.
  */
 public record StudentSubjectInfoDto(
+    /** Current student's profile ID when requester is a student in the offering's group; null for admin. */
+    UUID studentId,
     SubjectDto subject,
     /** Department name resolved from subject.departmentId; null if not available. */
     String departmentName,

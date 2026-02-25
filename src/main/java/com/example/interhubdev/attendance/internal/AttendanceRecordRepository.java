@@ -25,18 +25,26 @@ interface AttendanceRecordRepository extends JpaRepository<AttendanceRecord, UUI
     Optional<AttendanceRecord> findByLessonSessionIdAndStudentId(UUID lessonSessionId, UUID studentId);
 
     /**
-     * Find all attendance records for a student within a date range.
-     * Filtered by markedAt timestamp.
+     * Find all attendance records for a student (no date filter).
+     * Used when both from and to are null to avoid PostgreSQL "could not determine data type of parameter" with optional params.
      */
-    @Query("SELECT ar FROM AttendanceRecord ar WHERE ar.studentId = :studentId " +
-            "AND (:from IS NULL OR ar.markedAt >= :from) " +
-            "AND (:to IS NULL OR ar.markedAt <= :to) " +
-            "ORDER BY ar.markedAt DESC")
-    List<AttendanceRecord> findByStudentIdAndMarkedAtBetween(
-            @Param("studentId") UUID studentId,
-            @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
-    );
+    List<AttendanceRecord> findByStudentIdOrderByMarkedAtDesc(UUID studentId);
+
+    /**
+     * Find all attendance records for a student with markedAt &gt;= from.
+     */
+    List<AttendanceRecord> findByStudentIdAndMarkedAtGreaterThanEqualOrderByMarkedAtDesc(UUID studentId, LocalDateTime from);
+
+    /**
+     * Find all attendance records for a student with markedAt &lt;= to.
+     */
+    List<AttendanceRecord> findByStudentIdAndMarkedAtLessThanEqualOrderByMarkedAtDesc(UUID studentId, LocalDateTime to);
+
+    /**
+     * Find all attendance records for a student within a date range (inclusive).
+     * Use this only when both from and to are non-null; otherwise use the other overloads to avoid PostgreSQL parameter type inference issues.
+     */
+    List<AttendanceRecord> findByStudentIdAndMarkedAtBetweenOrderByMarkedAtDesc(UUID studentId, LocalDateTime from, LocalDateTime to);
 
     /**
      * Find all attendance records for multiple lesson sessions.

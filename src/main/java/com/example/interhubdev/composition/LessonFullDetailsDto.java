@@ -69,6 +69,13 @@ public record LessonFullDetailsDto(
     List<OfferingTeacherItemDto> offeringTeachers,
 
     /**
+     * All teachers with full profile and user data (TeacherDto + UserDto + role).
+     * Use this for displaying complete teacher information (name, email, position, faculty, etc.).
+     * Empty list if no teachers are assigned.
+     */
+    List<StudentSubjectTeacherItemDto> teachers,
+
+    /**
      * All lesson materials linked to the lesson.
      * Empty list if no materials are attached.
      */

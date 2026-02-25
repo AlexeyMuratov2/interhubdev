@@ -200,13 +200,15 @@ public interface GradesApi {
     /**
      * Get one ACTIVE grade entry per homework submission ID (latest by gradedAt when multiple exist).
      * Used by composition to return full GradeEntryDto per submission for the homework-submissions endpoint.
+     * When {@code studentIdForOwnCheck} is non-null, allows the student to view their own grades for those submissions.
      *
-     * @param submissionIds list of homework submission UUIDs (may be empty)
-     * @param requesterId   current user (must have permission to view grades)
+     * @param submissionIds       list of homework submission UUIDs (may be empty)
+     * @param requesterId        current user (must have permission to view grades)
+     * @param studentIdForOwnCheck when non-null, requester may be that student (viewing own); when null, teacher/admin only
      * @return map submissionId -> grade entry; only submissions that have at least one ACTIVE entry are present
      * @throws AppException FORBIDDEN if requester cannot view grades
      */
-    Map<UUID, GradeEntryDto> getGradeEntriesByHomeworkSubmissionIds(List<UUID> submissionIds, UUID requesterId);
+    Map<UUID, GradeEntryDto> getGradeEntriesByHomeworkSubmissionIds(List<UUID> submissionIds, UUID requesterId, UUID studentIdForOwnCheck);
 
     /**
      * Get total points (sum of ACTIVE entries) for one student in one offering.

@@ -76,7 +76,7 @@ class LessonHomeworkSubmissionsService {
             }
         }
 
-        Map<UUID, GradeEntryDto> gradeEntryBySubmissionId = gradesApi.getGradeEntriesByHomeworkSubmissionIds(allSubmissionIds, requesterId);
+        Map<UUID, GradeEntryDto> gradeEntryBySubmissionId = gradesApi.getGradeEntriesByHomeworkSubmissionIds(allSubmissionIds, requesterId, null);
 
         // Resolve file metadata for all submission file ids
         Map<UUID, StoredFileDto> filesById = new LinkedHashMap<>();

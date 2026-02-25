@@ -82,7 +82,7 @@ class StudentHomeworkHistoryService {
 
         List<UUID> submissionIds = new ArrayList<>(submissionByHomeworkId.values().stream().map(HomeworkSubmissionDto::id).toList());
         Map<UUID, com.example.interhubdev.grades.GradeEntryDto> gradeBySubmissionId =
-                gradesApi.getGradeEntriesByHomeworkSubmissionIds(submissionIds, requesterId);
+                gradesApi.getGradeEntriesByHomeworkSubmissionIds(submissionIds, requesterId, studentId);
 
         Map<UUID, StoredFileDto> filesById = resolveSubmissionFiles(submissionByHomeworkId.values());
 
