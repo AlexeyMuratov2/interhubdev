@@ -45,7 +45,7 @@ class AttendanceMarkedHandler implements OutboxEventHandler {
         UUID sessionId = UUID.fromString(payload.get("sessionId").toString());
         UUID studentId = UUID.fromString(payload.get("studentId").toString());
         AttendanceStatus status = AttendanceStatus.valueOf(payload.get("status").toString());
-        Instant occurredAt = Instant.parse(payload.get("markedAt").toString());
+        Instant occurredAt = parseInstantFromPayload(payload.get("markedAt"));
 
         log.debug("Processing attendance marked event: recordId={}, sessionId={}, studentId={}, status={}",
                 recordId, sessionId, studentId, status);
@@ -88,5 +88,11 @@ class AttendanceMarkedHandler implements OutboxEventHandler {
         log.info("Created notification for student: recordId={}, studentUserId={}", recordId, studentUserId);
 
         // TODO: In future, after creating in-app notification, enqueue push delivery (mobile) based on user preferences.
+    }
+
+    private static Instant parseInstantFromPayload(Object value) {
+        if (value == null) return Instant.now();
+        if (value instanceof Number n) return Instant.ofEpochMilli(n.longValue());
+        return Instant.parse(value.toString());
     }
 }

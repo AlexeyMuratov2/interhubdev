@@ -51,7 +51,7 @@ class AbsenceNoticeSubmittedHandler implements OutboxEventHandler {
         UUID sessionId = UUID.fromString(payload.get("sessionId").toString());
         UUID studentId = UUID.fromString(payload.get("studentId").toString());
         AbsenceNoticeType noticeType = AbsenceNoticeType.valueOf(payload.get("type").toString());
-        Instant occurredAt = Instant.parse(payload.get("submittedAt").toString());
+        Instant occurredAt = parseInstantFromPayload(payload.get("submittedAt"));
 
         log.debug("Processing absence notice submitted event: noticeId={}, sessionId={}, studentId={}",
                 noticeId, sessionId, studentId);
@@ -121,5 +121,19 @@ class AbsenceNoticeSubmittedHandler implements OutboxEventHandler {
         log.info("Created notifications for {} teachers: noticeId={}, sessionId={}", teachers.size(), noticeId, sessionId);
 
         // TODO: In future, after creating in-app notification, enqueue push delivery (mobile) based on user preferences.
+    }
+
+    /**
+     * Parse Instant from outbox payload. Accepts both ISO-8601 string and epoch millis number
+     * (Jackson may serialize Instant as number when deserialized to Map).
+     */
+    private static Instant parseInstantFromPayload(Object value) {
+        if (value == null) {
+            return Instant.now();
+        }
+        if (value instanceof Number n) {
+            return Instant.ofEpochMilli(n.longValue());
+        }
+        return Instant.parse(value.toString());
     }
 }

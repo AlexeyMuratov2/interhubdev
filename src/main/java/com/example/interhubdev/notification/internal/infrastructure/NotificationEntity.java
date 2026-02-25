@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -35,10 +37,12 @@ class NotificationEntity {
     @Column(name = "template_key", nullable = false, length = 255)
     private String templateKey;
 
-    @Column(name = "params_json", nullable = false, columnDefinition = "JSONB")
+    @Column(name = "params_json", nullable = false, columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String paramsJson;
 
-    @Column(name = "data_json", nullable = false, columnDefinition = "JSONB")
+    @Column(name = "data_json", nullable = false, columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String dataJson;
 
     @Column(name = "created_at", nullable = false)

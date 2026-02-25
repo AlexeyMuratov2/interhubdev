@@ -10,7 +10,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -135,7 +134,7 @@ class OutboxProcessor {
             OutboxEvent event = mapper.toDto(entity);
             handler.handle(event);
             repository.markDone(entity.getId(), now);
-            log.debug("Successfully processed outbox event: id={}, type={}", 
+            log.debug("Successfully processed outbox event: id={}, type={}",
                     entity.getId(), eventType);
         } catch (Exception e) {
             handleProcessingFailure(entity, e, now);
