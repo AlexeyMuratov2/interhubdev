@@ -180,7 +180,7 @@ class StudentSubjectInfoService {
                 .collect(Collectors.toMap(UserDto::id, u -> u));
 
         Map<UUID, String> roleByTeacherId = offeringTeachers.stream()
-                .filter(ot -> ot.teacherId() != null)
+                .filter(ot -> ot.teacherId() != null && ot.role() != null)
                 .collect(Collectors.toMap(
                         OfferingTeacherItemDto::teacherId,
                         OfferingTeacherItemDto::role,
