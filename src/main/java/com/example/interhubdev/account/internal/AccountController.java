@@ -13,6 +13,7 @@ import com.example.interhubdev.student.CreateStudentRequest;
 import com.example.interhubdev.student.StudentDto;
 import com.example.interhubdev.teacher.CreateTeacherRequest;
 import com.example.interhubdev.teacher.TeacherDto;
+import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserDto;
 import com.example.interhubdev.user.UserPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -136,11 +137,15 @@ class AccountController {
     }
 
     @GetMapping("/teachers/{userId}")
-    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Get teacher by user ID")
-    public ResponseEntity<TeacherProfileItem> getTeacher(@PathVariable UUID userId) {
-        TeacherProfileItem item = accountApi.getTeacher(userId)
-                .orElseThrow(() -> AccountErrors.teacherProfileNotFound(userId));
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get teacher by user ID", description = "Use 'me' for current user, or a UUID. Mod/admin can use any UUID; others only 'me'.")
+    public ResponseEntity<TeacherProfileItem> getTeacher(
+            @PathVariable String userId,
+            HttpServletRequest request
+    ) {
+        UUID resolved = resolveUserId(userId, request);
+        TeacherProfileItem item = accountApi.getTeacher(resolved)
+                .orElseThrow(() -> AccountErrors.teacherProfileNotFound(resolved));
         return ResponseEntity.ok(item);
     }
 
@@ -158,6 +163,17 @@ class AccountController {
 
     // --------------- Students: list and get (mod/admin); edit only owner ---------------
 
+    @GetMapping("/students/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get my student profile", description = "Returns current user's student profile. 404 if user is not a student.")
+    public ResponseEntity<StudentProfileItem> getMyStudent(HttpServletRequest request) {
+        UserDto current = accountApi.getCurrentUser(request)
+                .orElseThrow(() -> Errors.unauthorized("Требуется вход в систему."));
+        StudentProfileItem item = accountApi.getStudent(current.id())
+                .orElseThrow(() -> AccountErrors.studentProfileNotFound(current.id()));
+        return ResponseEntity.ok(item);
+    }
+
     @GetMapping("/students")
     @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @Operation(summary = "List students (cursor pagination)", description = "Max 30 per page. Items include display name.")
@@ -170,11 +186,15 @@ class AccountController {
     }
 
     @GetMapping("/students/{userId}")
-    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
-    @Operation(summary = "Get student by user ID")
-    public ResponseEntity<StudentProfileItem> getStudent(@PathVariable UUID userId) {
-        StudentProfileItem item = accountApi.getStudent(userId)
-                .orElseThrow(() -> AccountErrors.studentProfileNotFound(userId));
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get student by user ID", description = "Use 'me' for current user, or a UUID. Mod/admin can use any UUID; others only 'me'.")
+    public ResponseEntity<StudentProfileItem> getStudent(
+            @PathVariable String userId,
+            HttpServletRequest request
+    ) {
+        UUID resolved = resolveUserId(userId, request);
+        StudentProfileItem item = accountApi.getStudent(resolved)
+                .orElseThrow(() -> AccountErrors.studentProfileNotFound(resolved));
         return ResponseEntity.ok(item);
     }
 
@@ -188,5 +208,29 @@ class AccountController {
         UserDto current = accountApi.getCurrentUser(request)
                 .orElseThrow(() -> Errors.unauthorized("Требуется вход в систему."));
         return ResponseEntity.ok(accountApi.updateMyStudentProfile(current.id(), body));
+    }
+
+    /**
+     * Resolves path segment to user UUID: "me" (case-insensitive) → current user;
+     * otherwise parses as UUID. Only MODERATOR/ADMIN/SUPER_ADMIN may use a UUID other than self.
+     */
+    private UUID resolveUserId(String userId, HttpServletRequest request) {
+        if ("me".equalsIgnoreCase(userId)) {
+            UserDto current = accountApi.getCurrentUser(request)
+                    .orElseThrow(() -> Errors.unauthorized("Требуется вход в систему."));
+            return current.id();
+        }
+        try {
+            UUID id = UUID.fromString(userId);
+            UserDto current = accountApi.getCurrentUser(request)
+                    .orElseThrow(() -> Errors.unauthorized("Требуется вход в систему."));
+            if (current.id().equals(id)
+                    || current.hasRole(Role.MODERATOR) || current.hasRole(Role.ADMIN) || current.hasRole(Role.SUPER_ADMIN)) {
+                return id;
+            }
+            throw Errors.forbidden("Доступ к профилю другого пользователя разрешён только модераторам и администраторам.");
+        } catch (IllegalArgumentException e) {
+            throw Errors.badRequest("Неверный идентификатор пользователя. Используйте 'me' или UUID.");
+        }
     }
 }

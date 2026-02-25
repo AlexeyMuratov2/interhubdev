@@ -4,7 +4,6 @@ import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.error.AppException;
 import com.example.interhubdev.error.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -16,6 +15,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -52,6 +52,21 @@ class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of("CONFLICT", ex.getMessage()));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String param = ex.getName() != null ? ex.getName() : "parameter";
+        String value = ex.getValue() != null ? String.valueOf(ex.getValue()) : "?";
+        String message = "Неверное значение параметра '" + param + "': " + value + ". Ожидается корректный формат.";
+        if (ex.getRequiredType() != null && ex.getRequiredType().getSimpleName().equals("UUID")
+                && "me".equalsIgnoreCase(value)) {
+            message = "Используйте 'me' для текущего пользователя или UUID. Параметр: " + param + ".";
+        }
+        log.debug("Type mismatch for {}: {} -> {}", param, value, ex.getRequiredType());
+        return ResponseEntity
+                .badRequest()
+                .body(ErrorResponse.of("BAD_REQUEST", message));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
