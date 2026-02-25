@@ -20,19 +20,30 @@ interface NotificationJpaRepository extends JpaRepository<NotificationEntity, UU
     boolean existsByRecipientUserIdAndSourceEventId(UUID recipientUserId, UUID sourceEventId);
 
     /**
-     * Find notifications for recipient with pagination.
-     * <p>
+     * Find first page of notifications for recipient (no cursor).
      * Ordered by createdAt DESC, id DESC.
-     * For first page: cursorCreatedAt and cursorId are null.
-     * For next page: returns notifications where
-     * (createdAt < cursorCreatedAt) OR (createdAt = cursorCreatedAt AND id < cursorId).
      */
     @Query("SELECT n FROM NotificationEntity n " +
             "WHERE n.recipientUserId = :recipientUserId " +
             "AND (:unreadOnly = false OR n.readAt IS NULL) " +
-            "AND (:cursorCreatedAt IS NULL OR (n.createdAt < :cursorCreatedAt) OR (n.createdAt = :cursorCreatedAt AND n.id < :cursorId)) " +
             "ORDER BY n.createdAt DESC, n.id DESC")
-    List<NotificationEntity> findByRecipientUserIdWithPagination(
+    List<NotificationEntity> findFirstPage(
+            @Param("recipientUserId") UUID recipientUserId,
+            @Param("unreadOnly") boolean unreadOnly,
+            org.springframework.data.domain.Pageable pageable);
+
+    /**
+     * Find next page of notifications for recipient using cursor.
+     * Returns notifications where (createdAt &lt; cursorCreatedAt)
+     * OR (createdAt = cursorCreatedAt AND id &lt; cursorId).
+     * Ordered by createdAt DESC, id DESC.
+     */
+    @Query("SELECT n FROM NotificationEntity n " +
+            "WHERE n.recipientUserId = :recipientUserId " +
+            "AND (:unreadOnly = false OR n.readAt IS NULL) " +
+            "AND ((n.createdAt < :cursorCreatedAt) OR (n.createdAt = :cursorCreatedAt AND n.id < :cursorId)) " +
+            "ORDER BY n.createdAt DESC, n.id DESC")
+    List<NotificationEntity> findNextPage(
             @Param("recipientUserId") UUID recipientUserId,
             @Param("unreadOnly") boolean unreadOnly,
             @Param("cursorCreatedAt") java.time.Instant cursorCreatedAt,

@@ -34,8 +34,8 @@ interface OutboxEventRepository extends JpaRepository<OutboxEventEntity, UUID> {
      */
     @Query(value = """
         SELECT * FROM outbox_event
-        WHERE status IN ('NEW', 'FAILED')
-        AND (next_retry_at IS NULL OR next_retry_at <= :now)
+        WHERE status = 'NEW'
+           OR (status = 'FAILED' AND next_retry_at IS NOT NULL AND next_retry_at <= :now)
         ORDER BY occurred_at ASC
         LIMIT :limit
         FOR UPDATE SKIP LOCKED

@@ -40,25 +40,19 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
     @Override
     public List<Notification> findByRecipient(UUID recipientUserId, boolean unreadOnly, UUID cursor, int limit) {
-        java.time.Instant cursorCreatedAt = null;
-        UUID cursorId = null;
+        PageRequest pageable = PageRequest.of(0, limit);
+        List<NotificationEntity> entities;
 
         if (cursor != null) {
-            // Load cursor notification to get createdAt
             NotificationEntity cursorEntity = jpaRepository.findById(cursor)
                     .orElseThrow(() -> new IllegalArgumentException("Cursor notification not found: " + cursor));
-            cursorCreatedAt = cursorEntity.getCreatedAt();
-            cursorId = cursorEntity.getId();
+            entities = jpaRepository.findNextPage(
+                    recipientUserId, unreadOnly,
+                    cursorEntity.getCreatedAt(), cursorEntity.getId(),
+                    pageable);
+        } else {
+            entities = jpaRepository.findFirstPage(recipientUserId, unreadOnly, pageable);
         }
-
-        PageRequest pageable = PageRequest.of(0, limit);
-        List<NotificationEntity> entities = jpaRepository.findByRecipientUserIdWithPagination(
-                recipientUserId,
-                unreadOnly,
-                cursorCreatedAt,
-                cursorId,
-                pageable
-        );
 
         return entities.stream()
                 .map(NotificationMappers::toDomain)
