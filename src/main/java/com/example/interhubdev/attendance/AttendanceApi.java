@@ -141,6 +141,27 @@ public interface AttendanceApi {
     );
 
     /**
+     * Get own absence notices for a student with cursor-based pagination.
+     * Returns notices enriched with lesson, offering, and slot context for the UI.
+     * Only the student themselves may call this (enforced by controller).
+     *
+     * @param studentId student profile ID
+     * @param from      optional filter: submittedAt >= from (null to ignore)
+     * @param to        optional filter: submittedAt <= to (null to ignore)
+     * @param cursor    optional cursor (notice ID) for next page
+     * @param limit     maximum number of results per page (capped at 30)
+     * @return page of enriched notice items (notice + lesson, offering, slot)
+     * @throws AppException BAD_REQUEST if cursor is invalid, FORBIDDEN if cursor notice does not belong to student
+     */
+    StudentAbsenceNoticePage getMyAbsenceNotices(
+            UUID studentId,
+            LocalDateTime from,
+            LocalDateTime to,
+            UUID cursor,
+            Integer limit
+    );
+
+    /**
      * Create a new absence notice for a student.
      *
      * @param request   submission request

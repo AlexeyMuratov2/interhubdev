@@ -57,6 +57,7 @@ class AttendanceServiceImpl implements AttendanceApi {
     private final UserApi userApi;
     private final OutboxIntegrationEventPublisher publisher;
     private final GetTeacherAbsenceNoticesUseCase getTeacherAbsenceNoticesUseCase;
+    private final GetMyAbsenceNoticesUseCase getMyAbsenceNoticesUseCase;
     private final CreateAbsenceNoticeUseCase createAbsenceNoticeUseCase;
     private final UpdateAbsenceNoticeUseCase updateAbsenceNoticeUseCase;
     private final RespondToAbsenceNoticeUseCase respondToAbsenceNoticeUseCase;
@@ -851,6 +852,18 @@ class AttendanceServiceImpl implements AttendanceApi {
             Integer limit
     ) {
         return getTeacherAbsenceNoticesUseCase.execute(teacherId, statuses, cursor, limit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StudentAbsenceNoticePage getMyAbsenceNotices(
+            UUID studentId,
+            LocalDateTime from,
+            LocalDateTime to,
+            UUID cursor,
+            Integer limit
+    ) {
+        return getMyAbsenceNoticesUseCase.execute(studentId, from, to, cursor, limit);
     }
 
     @Override

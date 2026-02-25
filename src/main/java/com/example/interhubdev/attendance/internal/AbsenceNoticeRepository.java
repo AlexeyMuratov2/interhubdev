@@ -1,6 +1,7 @@
 package com.example.interhubdev.attendance.internal;
 
 import com.example.interhubdev.attendance.AbsenceNoticeStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -163,5 +164,51 @@ interface AbsenceNoticeRepository extends JpaRepository<AbsenceNotice, UUID> {
             @Param("statuses") List<AbsenceNoticeStatus> statuses,
             @Param("cursorSubmittedAt") java.time.LocalDateTime cursorSubmittedAt,
             @Param("cursorId") UUID cursorId
+    );
+
+    /**
+     * First page: find absence notices for a student within date range (no cursor).
+     * Caller must pass non-null from/to (use LocalDateTime.MIN/MAX for no lower/upper bound)
+     * to avoid PostgreSQL parameter type inference issues with "? IS NULL".
+     *
+     * @param studentId student profile ID
+     * @param from       submittedAt >= from (use LocalDateTime.MIN for no filter)
+     * @param to         submittedAt <= to (use LocalDateTime.MAX for no filter)
+     * @param pageable   limit (use size = limit + 1 to detect hasNext)
+     * @return list of notices (ordered by submittedAt DESC, id DESC)
+     */
+    @Query("SELECT an FROM AbsenceNotice an WHERE an.studentId = :studentId " +
+            "AND an.submittedAt >= :from AND an.submittedAt <= :to " +
+            "ORDER BY an.submittedAt DESC, an.id DESC")
+    List<AbsenceNotice> findFirstPageByStudentId(
+            @Param("studentId") UUID studentId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable
+    );
+
+    /**
+     * Next page: find absence notices for a student with cursor.
+     * Caller must pass non-null from/to (use LocalDateTime.MIN/MAX for no lower/upper bound).
+     *
+     * @param studentId          student profile ID
+     * @param from                submittedAt >= from (use LocalDateTime.MIN for no filter)
+     * @param to                  submittedAt <= to (use LocalDateTime.MAX for no filter)
+     * @param cursorSubmittedAt   submittedAt of cursor notice
+     * @param cursorId            id of cursor notice
+     * @param pageable            limit (use size = limit + 1 to detect hasNext)
+     * @return list of notices (ordered by submittedAt DESC, id DESC)
+     */
+    @Query("SELECT an FROM AbsenceNotice an WHERE an.studentId = :studentId " +
+            "AND an.submittedAt >= :from AND an.submittedAt <= :to " +
+            "AND ((an.submittedAt < :cursorSubmittedAt) OR (an.submittedAt = :cursorSubmittedAt AND an.id < :cursorId)) " +
+            "ORDER BY an.submittedAt DESC, an.id DESC")
+    List<AbsenceNotice> findNextPageByStudentId(
+            @Param("studentId") UUID studentId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            @Param("cursorSubmittedAt") LocalDateTime cursorSubmittedAt,
+            @Param("cursorId") UUID cursorId,
+            Pageable pageable
     );
 }
