@@ -11,6 +11,7 @@ import com.example.interhubdev.program.CurriculumSubjectDto;
 import com.example.interhubdev.schedule.RoomDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.subject.*;
+import com.example.interhubdev.subject.port.SlotLessonsCheckPort;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
 import org.springframework.context.annotation.Lazy;

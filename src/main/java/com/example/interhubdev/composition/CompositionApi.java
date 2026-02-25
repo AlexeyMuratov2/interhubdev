@@ -125,6 +125,22 @@ public interface CompositionApi {
     StudentAttendanceHistoryDto getStudentAttendanceHistory(UUID studentId, UUID offeringId, UUID requesterId);
 
     /**
+     * Get full subject detail for a student by offering ID (Use Case: Student subject detail).
+     * For the student's "Subject detail" screen. Aggregates subject info, curriculum subject,
+     * offering schedule, teacher profiles, student-specific statistics (attendance, homework, points),
+     * and all course materials with files (for display and download).
+     * Only the student who belongs to the offering's group (or admin) can view.
+     *
+     * @param offeringId  offering ID (must not be null)
+     * @param requesterId current authenticated user ID (must be a student in the group or admin)
+     * @param semesterId  optional semester; if empty, current semester is used for statistics
+     * @return aggregated DTO with subject, teachers, student stats, and materials (each with file metadata)
+     * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering or related data not found,
+     *         UNAUTHORIZED if requesterId is null, FORBIDDEN if student is not in the offering's group
+     */
+    StudentSubjectInfoDto getStudentSubjectInfo(UUID offeringId, UUID requesterId, Optional<UUID> semesterId);
+
+    /**
      * Get full homework history for a student in an offering (Use Case: Student homework history).
      * Returns all homework assignments for the offering and the student's submission (solution) and grade per assignment.
      * For frontend to display complete student homework info (e.g. student card). Batch-loaded; no N+1.

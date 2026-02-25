@@ -38,4 +38,11 @@ interface HomeworkSubmissionRepository extends JpaRepository<HomeworkSubmission,
      */
     @Query("SELECT s FROM HomeworkSubmission s LEFT JOIN FETCH s.files WHERE s.homeworkId IN :homeworkIds")
     List<HomeworkSubmission> findByHomeworkIdIn(@Param("homeworkIds") Collection<UUID> homeworkIds);
+
+    /**
+     * Count distinct homework IDs for which the given author has at least one submission.
+     * Used for student "submitted homework count" stat.
+     */
+    @Query("SELECT COUNT(DISTINCT s.homeworkId) FROM HomeworkSubmission s WHERE s.authorId = :authorId AND s.homeworkId IN :homeworkIds")
+    long countDistinctHomeworkIdsByAuthorIdAndHomeworkIdIn(@Param("authorId") UUID authorId, @Param("homeworkIds") Collection<UUID> homeworkIds);
 }

@@ -81,6 +81,29 @@ All this data is returned in a single request and is sufficient to display full 
 
 **Authorization**: Requester must be authenticated. Only teachers who are assigned to the offering (main teacher or slot teacher) for this group and subject, or users with ADMIN/MODERATOR/SUPER_ADMIN role, can view.
 
+### Use Case #8: Student Subject Info
+
+**Endpoint**: `GET /api/composition/student/subjects/{offeringId}/info`
+
+**Purpose**: Aggregates all data needed for the student's "Subject detail" screen in a single request. Data is returned only if the requester is a student in the offering's group (or an administrator).
+
+**Query parameters**: Optional `semesterId`; if omitted, the current semester is used for statistics.
+
+**What the endpoint returns**:
+
+1. **Subject** – SubjectDto, resolved department name
+2. **Curriculum subject** – CurriculumSubjectDto (duration weeks, hours, credits, semester number)
+3. **Offering** – GroupSubjectOfferingDto
+4. **Schedule slots** – list of OfferingSlotDto (weekly timetable)
+5. **Teachers** – For each teacher assigned to the offering: TeacherDto, UserDto, and role (MAIN, LECTURE, PRACTICE, LAB). Batch-loaded; no N+1.
+6. **Student statistics** – StudentSubjectStatsDto:
+   - Attendance percentage: (PRESENT + LATE) / totalMarked × 100 (null if no sessions with marks)
+   - Submitted homework count: number of distinct homework assignments the student has submitted
+   - Total homework count: number of homework assignments for this offering in the semester
+   - Total points: sum of all ACTIVE grade entries for this offering
+
+**Authorization**: Requester must be authenticated. Only students who belong to the offering's group, or users with ADMIN/MODERATOR/SUPER_ADMIN role, can view.
+
 ## Internal Logic
 
 The endpoint works as follows:
@@ -115,6 +138,7 @@ The module depends on:
 - `grades` - points per student per offering
 - `submission` - homework submissions (including batch by homework IDs)
 - `user` - UserDto for student display in group subject info
+- `department` - department name resolution for subject detail
 
 ## Error Handling
 

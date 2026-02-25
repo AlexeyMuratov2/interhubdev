@@ -23,6 +23,9 @@
  *   <li>{@link com.example.interhubdev.composition.StudentAttendanceHistoryLessonItemDto} - one lesson row with attendance and absence notices</li>
  *   <li>{@link com.example.interhubdev.composition.StudentHomeworkHistoryDto} - full homework history for a student in an offering (all homeworks + submission + grade per row)</li>
  *   <li>{@link com.example.interhubdev.composition.StudentHomeworkHistoryItemDto} - one homework row with lesson, submission, grade and files</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentSubjectInfoDto} - student subject detail: subject, curriculum, teachers, schedule, and student stats</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentSubjectTeacherItemDto} - one teacher with profile and user display data</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentSubjectStatsDto} - student statistics for attendance, homework, and points</li>
  * </ul>
  *
  * <h2>Architecture</h2>
@@ -39,6 +42,7 @@
  *   <li>Use Case #5: Student Grade History - all grade entries for a student in an offering with lesson, homework, submission and grader context</li>
  *   <li>Use Case #6: Student Attendance History - all lessons for an offering with student's attendance and absence notices per lesson; missed and notices counts</li>
  *   <li>Use Case #7: Student Homework History - all homeworks for an offering with student's submission and grade per assignment; for full student info screen</li>
+ *   <li>Use Case #8: Student Subject Info - full subject detail for a student: subject, curriculum, offering, schedule, teachers with profiles, and student statistics (attendance, homework, points)</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
@@ -68,6 +72,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Composition",
-    allowedDependencies = {"academic", "schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "grades", "submission", "user"}
+    allowedDependencies = {"academic", "schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "grades", "submission", "user", "department"}
 )
 package com.example.interhubdev.composition;

@@ -9,6 +9,7 @@ import com.example.interhubdev.composition.LessonRosterAttendanceDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryDto;
 import com.example.interhubdev.composition.StudentGradeHistoryDto;
 import com.example.interhubdev.composition.StudentHomeworkHistoryDto;
+import com.example.interhubdev.composition.StudentSubjectInfoDto;
 import com.example.interhubdev.composition.StudentSubjectsDto;
 import com.example.interhubdev.composition.TeacherStudentGroupsDto;
 import com.example.interhubdev.error.Errors;
@@ -140,6 +141,32 @@ class CompositionController {
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         StudentSubjectsDto dto = compositionApi.getStudentSubjects(requesterId, Optional.ofNullable(semesterNo));
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Get full subject detail for a student by offering ID.
+     * For the student's "Subject detail" screen: subject, curriculum, teachers, schedule, student stats, and all course materials with files.
+     *
+     * @param offeringId offering ID (path)
+     * @param semesterId optional semester; if absent, current semester is used for statistics
+     * @param request    HTTP request (for authentication)
+     * @return 200 OK with StudentSubjectInfoDto
+     */
+    @GetMapping("/student/subjects/{offeringId}/info")
+    @Operation(summary = "Get student subject info",
+            description = "Full subject detail for a student: subject, curriculum, offering, schedule, teachers with profiles, student statistics (attendance, homework, points), and all course materials with file metadata for display/download. Only for student in the offering's group or admin.")
+    public ResponseEntity<StudentSubjectInfoDto> getStudentSubjectInfo(
+            @PathVariable UUID offeringId,
+            @RequestParam(required = false) UUID semesterId,
+            HttpServletRequest request
+    ) {
+        UUID requesterId = authApi.getCurrentUser(request)
+                .map(u -> u.id())
+                .orElseThrow(() -> Errors.unauthorized("Authentication required"));
+
+        StudentSubjectInfoDto dto = compositionApi.getStudentSubjectInfo(
+                offeringId, requesterId, Optional.ofNullable(semesterId));
         return ResponseEntity.ok(dto);
     }
 

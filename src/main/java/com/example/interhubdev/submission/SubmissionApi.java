@@ -103,6 +103,19 @@ public interface SubmissionApi {
     boolean canTeacherDownloadSubmissionFile(UUID storedFileId, UUID userId);
 
     /**
+     * Count distinct homework IDs for which the given author has at least one submission.
+     * Author can count their own submissions. Teachers and admins can count for any author.
+     * Used by composition to compute "submitted homework count" for a student without N+1.
+     *
+     * @param authorId    author's user ID (the student who submitted)
+     * @param homeworkIds homework IDs to check (empty returns 0)
+     * @param requesterId current user ID (must be author themselves, teacher, or admin)
+     * @return number of distinct homework IDs with at least one submission by this author
+     * @throws AppException FORBIDDEN if requester is not the author, teacher, or admin
+     */
+    int countSubmittedByAuthorForHomeworkIds(UUID authorId, Collection<UUID> homeworkIds, UUID requesterId);
+
+    /**
      * Prepare a ZIP archive of all submissions (and their files) for a homework.
      * Only the teacher of the lesson for this homework (or admin/moderator) can call this.
      * Use the returned handle to set Content-Disposition with {@link SubmissionsArchiveHandle#getFilename()}

@@ -62,7 +62,7 @@
  *   <li>{@link com.example.interhubdev.adapter.GroupIdsByTeacherAdapter} - implements Group's
  *       {@link com.example.interhubdev.group.port.GroupIdsByTeacherPort} using Offering and Schedule (group IDs where teacher has at least one lesson).</li>
  *   <li>{@link com.example.interhubdev.adapter.SubjectSlotLessonsCheckAdapter} - implements Subject's
- *       {@link com.example.interhubdev.subject.SlotLessonsCheckPort} using Offering and Schedule (checks that offerings have at least one lesson by slot).</li>
+ *       {@link com.example.interhubdev.subject.port.SlotLessonsCheckPort} using Offering and Schedule (checks that offerings have at least one lesson by slot).</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
@@ -74,6 +74,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Adapter",
-    allowedDependencies = {"schedule", "offering", "group", "group :: port", "document", "document :: api", "subject", "program", "academic", "submission", "error"}
+    allowedDependencies = {"schedule", "offering", "group", "group :: port", "document", "document :: api", "subject :: port", "program", "academic", "submission", "error"}
 )
 package com.example.interhubdev.adapter;

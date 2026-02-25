@@ -216,6 +216,19 @@ class SubmissionServiceImpl implements SubmissionApi {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public int countSubmittedByAuthorForHomeworkIds(UUID authorId, Collection<UUID> homeworkIds, UUID requesterId) {
+        validateRequester(requesterId);
+        if (!authorId.equals(requesterId)) {
+            checkTeacherOrAdmin(requesterId);
+        }
+        if (homeworkIds == null || homeworkIds.isEmpty()) {
+            return 0;
+        }
+        return (int) submissionRepository.countDistinctHomeworkIdsByAuthorIdAndHomeworkIdIn(authorId, homeworkIds);
+    }
+
+    @Override
     public SubmissionsArchiveHandle buildSubmissionsArchive(UUID homeworkId, UUID requesterId) {
         validateRequester(requesterId);
         ensureCanDownloadArchiveByHomework(homeworkId, requesterId);

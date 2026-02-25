@@ -1,4 +1,4 @@
-package com.example.interhubdev.subject;
+package com.example.interhubdev.subject.port;
 
 import java.util.Collection;
 import java.util.UUID;

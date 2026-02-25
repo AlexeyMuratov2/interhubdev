@@ -207,4 +207,16 @@ public interface GradesApi {
      * @throws AppException FORBIDDEN if requester cannot view grades
      */
     Map<UUID, GradeEntryDto> getGradeEntriesByHomeworkSubmissionIds(List<UUID> submissionIds, UUID requesterId);
+
+    /**
+     * Get total points (sum of ACTIVE entries) for one student in one offering.
+     * Students can view their own total; teachers and admins can view any student's total.
+     *
+     * @param studentId   student profile id
+     * @param offeringId  offering id
+     * @param requesterId current user (must be the student's own user, or teacher/admin)
+     * @return total points (BigDecimal.ZERO if no entries)
+     * @throws AppException NOT_FOUND if offering missing, FORBIDDEN if unauthorized
+     */
+    BigDecimal getStudentTotalPoints(UUID studentId, UUID offeringId, UUID requesterId);
 }

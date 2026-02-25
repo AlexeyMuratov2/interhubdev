@@ -1,6 +1,8 @@
 package com.example.interhubdev.attendance.internal;
 
 import com.example.interhubdev.attendance.*;
+import com.example.interhubdev.attendance.StudentAttendanceByLessonsDto;
+import com.example.interhubdev.attendance.StudentLessonAttendanceItemDto;
 import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeAttachedEventPayload;
 import com.example.interhubdev.attendance.internal.integration.AttendanceMarkedEventPayload;
 import com.example.interhubdev.auth.AuthApi;

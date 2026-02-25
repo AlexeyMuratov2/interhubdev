@@ -2,7 +2,7 @@ package com.example.interhubdev.adapter;
 
 import com.example.interhubdev.offering.OfferingApi;
 import com.example.interhubdev.schedule.ScheduleApi;
-import com.example.interhubdev.subject.SlotLessonsCheckPort;
+import com.example.interhubdev.subject.port.SlotLessonsCheckPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

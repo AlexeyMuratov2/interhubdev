@@ -395,4 +395,26 @@ class GradesServiceImpl implements GradesApi {
                         )
                 ));
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getStudentTotalPoints(UUID studentId, UUID offeringId, UUID requesterId) {
+        UserDto requester = userApi.findById(requesterId)
+                .orElseThrow(GradeErrors::forbidden);
+        boolean privileged = requester.hasRole(Role.TEACHER) || requester.hasRole(Role.ADMIN)
+                || requester.hasRole(Role.MODERATOR) || requester.hasRole(Role.SUPER_ADMIN);
+        if (!privileged) {
+            StudentDto student = studentApi.findById(studentId)
+                    .orElseThrow(() -> GradeErrors.studentNotFound(studentId));
+            if (!student.userId().equals(requesterId)) {
+                throw GradeErrors.forbidden();
+            }
+        }
+        validateOfferingExists(offeringId);
+        List<GradeEntryEntity> entries = repository.findByStudentIdAndOfferingIdOrderByGradedAtDesc(studentId, offeringId);
+        return entries.stream()
+                .filter(e -> GradeEntryEntity.STATUS_ACTIVE.equals(e.getStatus()))
+                .map(GradeEntryEntity::getPoints)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 }
