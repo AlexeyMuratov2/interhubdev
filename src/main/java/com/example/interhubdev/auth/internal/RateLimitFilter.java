@@ -43,7 +43,7 @@ class RateLimitFilter extends OncePerRequestFilter implements Ordered {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        String clientKey = resolveClientKey(request);
+        String clientKey = resolveClientKey(request, authProperties.isTrustProxy());
         long now = System.currentTimeMillis();
 
         maybeCleanup(now);
@@ -97,10 +97,12 @@ class RateLimitFilter extends OncePerRequestFilter implements Ordered {
         toRemove.forEach(clientTimestamps::remove);
     }
 
-    private static String resolveClientKey(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+    private static String resolveClientKey(HttpServletRequest request, boolean trustProxy) {
+        if (trustProxy) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
         }
         return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
     }

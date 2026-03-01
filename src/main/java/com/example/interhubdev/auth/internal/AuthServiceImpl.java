@@ -37,7 +37,7 @@ class AuthServiceImpl implements AuthApi {
     @Override
     @Transactional
     public AuthResult login(String email, String password, HttpServletRequest request, HttpServletResponse response) {
-        log.debug("Login attempt for email: {}", email);
+        log.debug("Login attempt");
 
         String clientIp = cookieHelper.getClientIp(request);
         if (!loginRateLimitService.tryAcquire(clientIp)) {
@@ -47,27 +47,27 @@ class AuthServiceImpl implements AuthApi {
         // Find user
         UserDto user = userApi.findByEmail(email)
                 .orElseThrow(() -> {
-                    log.debug("User not found: {}", email);
+                    log.debug("Login failed: user not found");
                     loginRateLimitService.recordFailedAttempt(clientIp);
                     return new AuthenticationException(AuthErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
                 });
 
         // Check user status
         if (user.status() == UserStatus.PENDING) {
-            log.debug("User {} has PENDING status - account not activated", email);
+            log.debug("Login failed: account not activated");
             loginRateLimitService.recordFailedAttempt(clientIp);
             throw new AuthenticationException(AuthErrorCode.USER_NOT_ACTIVE, "Account not activated. Please check your email for activation link.");
         }
 
         if (user.status() == UserStatus.DISABLED) {
-            log.debug("User {} is DISABLED", email);
+            log.debug("Login failed: account disabled");
             loginRateLimitService.recordFailedAttempt(clientIp);
             throw new AuthenticationException(AuthErrorCode.USER_DISABLED, "Account is disabled. Please contact administrator.");
         }
 
         // Verify password
         if (!userApi.verifyPassword(email, password)) {
-            log.debug("Invalid password for user: {}", email);
+            log.debug("Login failed: invalid password");
             loginRateLimitService.recordFailedAttempt(clientIp);
             throw new AuthenticationException(AuthErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
         }
@@ -93,7 +93,7 @@ class AuthServiceImpl implements AuthApi {
         cookieHelper.setAccessTokenCookie(response, accessToken, jwtService.getAccessTokenMaxAge());
         cookieHelper.setRefreshTokenCookie(response, refreshToken, jwtService.getRefreshTokenMaxAge());
 
-        log.info("User {} logged in successfully", email);
+        log.info("User logged in successfully");
         return AuthResult.success(user.id(), user.email(),
                 user.roles() != null ? List.copyOf(user.roles()) : List.of(),
                 user.getFullName());
@@ -128,7 +128,7 @@ class AuthServiceImpl implements AuthApi {
 
         // Check user is still active
         if (!user.canLogin()) {
-            log.debug("User {} cannot login - status: {}", user.email(), user.status());
+            log.debug("Login failed: user cannot login, status={}", user.status());
             tokenEntity.revoke();
             refreshTokenRepository.save(tokenEntity);
             cookieHelper.clearAuthCookies(response);
@@ -157,7 +157,7 @@ class AuthServiceImpl implements AuthApi {
         cookieHelper.setAccessTokenCookie(response, newAccessToken, jwtService.getAccessTokenMaxAge());
         cookieHelper.setRefreshTokenCookie(response, newRefreshToken, jwtService.getRefreshTokenMaxAge());
 
-        log.debug("Tokens refreshed for user {}", user.email());
+        log.debug("Tokens refreshed successfully");
         return AuthResult.success(user.id(), user.email(),
                 user.roles() != null ? List.copyOf(user.roles()) : List.of(),
                 user.getFullName());

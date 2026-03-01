@@ -5,6 +5,9 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Configuration properties for JWT authentication.
  */
@@ -49,6 +52,17 @@ class AuthProperties {
      * Security response headers.
      */
     private SecurityHeadersConfig securityHeaders = new SecurityHeadersConfig();
+
+    /**
+     * Whether to trust X-Forwarded-For for client IP (only when behind a trusted reverse proxy).
+     * When false, client IP is taken from request.getRemoteAddr() only.
+     */
+    private boolean trustProxy = false;
+
+    /**
+     * CORS configuration. When allowedOrigins is non-empty, cross-origin requests from those origins are permitted.
+     */
+    private CorsConfig cors = new CorsConfig();
 
     @Getter
     @Setter
@@ -121,5 +135,12 @@ class AuthProperties {
          * Cookie path.
          */
         private String path = "/api";
+    }
+
+    @Getter
+    @Setter
+    public static class CorsConfig {
+        /** Allowed origins for CORS (e.g. https://app.example.com). Empty = no CORS; do not use * with credentials. */
+        private List<String> allowedOrigins = new ArrayList<>();
     }
 }

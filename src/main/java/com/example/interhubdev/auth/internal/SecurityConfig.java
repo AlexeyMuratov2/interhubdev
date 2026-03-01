@@ -12,6 +12,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Security configuration for the application.
@@ -44,15 +49,37 @@ class SecurityConfig {
      * Uses JWT authentication with tokens stored in HttpOnly cookies.
      */
     @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        List<String> origins = authProperties.getCors().getAllowedOrigins();
+        if (!origins.isEmpty()) {
+            config.setAllowedOrigins(origins);
+            config.setAllowCredentials(true);
+            config.addAllowedMethod("GET");
+            config.addAllowedMethod("POST");
+            config.addAllowedMethod("PUT");
+            config.addAllowedMethod("PATCH");
+            config.addAllowedMethod("DELETE");
+            config.addAllowedMethod("OPTIONS");
+            config.addAllowedHeader("*");
+        }
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+    @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // CORS: uses corsConfigurationSource bean; when allowedOrigins is empty, no cross-origin is permitted
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             // Disable CSRF - we use SameSite=Strict cookies for protection
             .csrf(csrf -> csrf.disable())
             
             // Security response headers
             .headers(headers -> {
                 headers.frameOptions(this::applyFrameOptions);
-                headers.contentTypeOptions(cto -> {});
+                headers.contentTypeOptions(cto -> applyContentTypeOptions(cto));
                 var hsts = authProperties.getSecurityHeaders();
                 if (hsts.getHstsMaxAgeSeconds() > 0) {
                     headers.httpStrictTransportSecurity(h -> h
@@ -98,6 +125,13 @@ class SecurityConfig {
             config.sameOrigin();
         } else {
             config.deny();
+        }
+    }
+
+    private void applyContentTypeOptions(HeadersConfigurer<?>.ContentTypeOptionsConfig config) {
+        String value = authProperties.getSecurityHeaders().getContentTypeOptions();
+        if (value == null || !"nosniff".equalsIgnoreCase(value.trim())) {
+            config.disable();
         }
     }
 }

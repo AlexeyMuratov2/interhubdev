@@ -85,14 +85,18 @@ class CookieHelper {
     }
 
     /**
-     * Get client IP address, considering proxies.
+     * Get client IP address. When trust-proxy is enabled, uses first value of X-Forwarded-For;
+     * otherwise uses request.getRemoteAddr() only (safe when not behind a trusted reverse proxy).
      */
     public String getClientIp(HttpServletRequest request) {
+        if (!authProperties.isTrustProxy()) {
+            return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
+        }
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isBlank()) {
             return xForwardedFor.split(",")[0].trim();
         }
-        return request.getRemoteAddr();
+        return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
     }
 
     /**

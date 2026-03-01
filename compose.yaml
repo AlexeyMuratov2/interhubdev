@@ -34,6 +34,19 @@ services:
       timeout: 20s
       retries: 3
 
+  redis:
+    image: redis:7-alpine
+    container_name: interhubdev-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ClamAV: antivirus daemon (clamd) on port 3310. Uses ~1.5 GiB RAM; prefer 4 GiB for production.
   # Configured to scan files up to 500MB via INSTREAM protocol.
   clamav:
@@ -54,4 +67,5 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  redis_data:
   clamav_data:

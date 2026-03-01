@@ -2,8 +2,6 @@ package com.example.interhubdev.auth.internal;
 
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserDto;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -39,7 +37,6 @@ class JwtService {
 
     private final AuthProperties authProperties;
     private final org.springframework.core.env.Environment environment;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private SecretKey secretKey;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -157,25 +154,6 @@ class JwtService {
             return Optional.empty();
         } catch (JwtException e) {
             log.debug("Invalid access token: {}", e.getMessage());
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Extract user ID from token without full validation.
-     * Useful for logging/debugging. Returns empty if parsing fails.
-     */
-    public Optional<UUID> extractUserIdUnsafe(String token) {
-        try {
-            String[] parts = token.split("\\.");
-            if (parts.length != 3) return Optional.empty();
-
-            String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-            JsonNode root = objectMapper.readTree(payloadJson);
-            JsonNode sub = root.get("sub");
-            if (sub == null || !sub.isTextual()) return Optional.empty();
-            return Optional.of(UUID.fromString(sub.asText()));
-        } catch (Exception e) {
             return Optional.empty();
         }
     }
