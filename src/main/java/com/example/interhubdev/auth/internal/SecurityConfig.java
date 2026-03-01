@@ -99,7 +99,7 @@ class SecurityConfig {
             // Authorization rules
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints - authentication
-                .requestMatchers("/api/auth/login", "/api/auth/refresh").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 
                 // Public endpoints - invitation acceptance (user activation)
                 .requestMatchers("/api/invitations/validate", "/api/invitations/accept").permitAll()

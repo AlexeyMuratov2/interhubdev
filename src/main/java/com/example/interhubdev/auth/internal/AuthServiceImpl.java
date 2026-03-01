@@ -4,6 +4,12 @@ import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.auth.AuthApi.AuthenticationException;
 import com.example.interhubdev.auth.AuthApi.AuthErrorCode;
 import com.example.interhubdev.auth.AuthResult;
+import com.example.interhubdev.email.EmailApi;
+import com.example.interhubdev.email.EmailMessage;
+import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.otp.OtpApi;
+import com.example.interhubdev.otp.OtpCreatedResult;
+import com.example.interhubdev.otp.OtpOptions;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
 import com.example.interhubdev.user.UserStatus;
@@ -14,7 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,11 +37,16 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 class AuthServiceImpl implements AuthApi {
 
+    private static final String OTP_PURPOSE_PASSWORD_RESET = "password-reset";
+
     private final UserApi userApi;
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final CookieHelper cookieHelper;
     private final LoginRateLimitService loginRateLimitService;
+    private final OtpApi otpApi;
+    private final EmailApi emailApi;
+    private final AuthProperties authProperties;
 
     @Override
     @Transactional
@@ -201,5 +215,64 @@ class AuthServiceImpl implements AuthApi {
         return cookieHelper.getAccessToken(request)
                 .flatMap(jwtService::validateAccessToken)
                 .flatMap(claims -> userApi.findById(claims.userId()));
+    }
+
+    @Override
+    public void requestPasswordReset(String email) {
+        String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
+        if (normalizedEmail.isEmpty()) {
+            return;
+        }
+        Optional<UserDto> userOpt = userApi.findByEmail(normalizedEmail);
+        if (userOpt.isEmpty() || userOpt.get().status() != UserStatus.ACTIVE) {
+            return;
+        }
+        OtpCreatedResult result = otpApi.create(OTP_PURPOSE_PASSWORD_RESET, normalizedEmail, OtpOptions.defaults());
+        EmailMessage message = buildPasswordResetEmail(normalizedEmail, result.plainCode(), result.expiresAt());
+        emailApi.send(message);
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String email, String code, String newPassword) {
+        String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
+        if (code == null || code.isBlank()) {
+            throw AuthErrors.invalidOrExpiredResetCode();
+        }
+        boolean verified = otpApi.verifyAndConsume(OTP_PURPOSE_PASSWORD_RESET, normalizedEmail, code.trim());
+        if (!verified) {
+            throw AuthErrors.invalidOrExpiredResetCode();
+        }
+        UserDto user = userApi.findByEmail(normalizedEmail)
+                .orElseThrow(() -> Errors.notFound("Пользователь не найден"));
+        userApi.setPassword(user.id(), newPassword);
+        revokeAllTokensForUser(user.id());
+    }
+
+    private EmailMessage buildPasswordResetEmail(String email, String plainCode, Instant expiresAt) {
+        String resetPageUrl = authProperties.getPasswordResetBaseUrl() + "/reset-password";
+        String expiresFormatted = DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy")
+                .withZone(ZoneId.systemDefault())
+                .format(expiresAt);
+        String htmlBody = String.format("""
+            <html>
+            <body>
+                <h1>Восстановление пароля — InterHubDev</h1>
+                <p>Вы запросили сброс пароля. Используйте код ниже на странице восстановления:</p>
+                <p><strong>%s</strong></p>
+                <p>Перейдите по ссылке и введите код: <a href="%s">%s</a></p>
+                <p>Код действителен до %s.</p>
+                <p>Если вы не запрашивали сброс пароля, проигнорируйте это письмо.</p>
+                <br>
+                <p>С уважением,<br>Команда InterHubDev</p>
+            </body>
+            </html>
+            """,
+                plainCode,
+                resetPageUrl,
+                resetPageUrl,
+                expiresFormatted
+        );
+        return EmailMessage.html(email, "Восстановление пароля — InterHubDev", htmlBody);
     }
 }

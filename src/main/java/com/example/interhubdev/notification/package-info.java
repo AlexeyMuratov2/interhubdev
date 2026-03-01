@@ -51,6 +51,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Notification",
-    allowedDependencies = {"error", "outbox", "auth", "schedule", "offering", "teacher", "student"}
+    allowedDependencies = {"error", "outbox", "auth", "schedule", "offering", "teacher", "student", "attendancerecord", "absencenotice"}
 )
 package com.example.interhubdev.notification;

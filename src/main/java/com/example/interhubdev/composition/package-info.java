@@ -72,6 +72,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Composition",
-    allowedDependencies = {"academic", "schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "grades", "submission", "user", "department"}
+    allowedDependencies = {"academic", "schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "attendancerecord", "absencenotice", "grades", "submission", "user", "department"}
 )
 package com.example.interhubdev.composition;

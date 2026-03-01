@@ -1,7 +1,7 @@
 package com.example.interhubdev.composition;
 
-import com.example.interhubdev.attendance.AttendanceRecordDto;
-import com.example.interhubdev.attendance.StudentNoticeSummaryDto;
+import com.example.interhubdev.absencenotice.StudentNoticeSummaryDto;
+import com.example.interhubdev.attendancerecord.AttendanceRecordDto;
 import com.example.interhubdev.schedule.LessonDto;
 
 import java.util.List;

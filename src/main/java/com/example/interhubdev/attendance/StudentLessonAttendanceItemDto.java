@@ -1,11 +1,14 @@
 package com.example.interhubdev.attendance;
 
+import com.example.interhubdev.absencenotice.StudentNoticeSummaryDto;
+import com.example.interhubdev.attendancerecord.AttendanceRecordDto;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Attendance and absence notices for one student in one lesson (batch response item).
+ * One lesson's attendance record and notices (merged type for facade).
  */
 public record StudentLessonAttendanceItemDto(
         UUID lessonSessionId,

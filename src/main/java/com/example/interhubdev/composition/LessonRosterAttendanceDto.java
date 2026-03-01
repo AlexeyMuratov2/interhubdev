@@ -1,6 +1,7 @@
 package com.example.interhubdev.composition;
 
-import com.example.interhubdev.attendance.AttendanceStatus;
+import com.example.interhubdev.absencenotice.StudentNoticeSummaryDto;
+import com.example.interhubdev.attendancerecord.AttendanceStatus;
 import com.example.interhubdev.attendance.SessionAttendanceDto;
 import com.example.interhubdev.group.StudentGroupDto;
 import com.example.interhubdev.schedule.LessonDto;
@@ -91,7 +92,7 @@ public record LessonRosterAttendanceDto(
             /**
              * All absence notices for this student and lesson (for UI: type, status, reason, submittedAt, fileIds).
              */
-            List<SessionAttendanceDto.StudentNoticeDto> notices,
+            List<StudentNoticeSummaryDto> notices,
 
             /**
              * Points for this lesson only (ACTIVE entries with lesson_id = this lesson and no homework submission).

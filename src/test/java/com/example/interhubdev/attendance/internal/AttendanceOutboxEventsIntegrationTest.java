@@ -1,11 +1,12 @@
 package com.example.interhubdev.attendance.internal;
 
-import com.example.interhubdev.attendance.*;
-import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeAttachedEventPayload;
-import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeCanceledEventPayload;
-import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeSubmittedEventPayload;
-import com.example.interhubdev.attendance.internal.integration.AbsenceNoticeUpdatedEventPayload;
-import com.example.interhubdev.attendance.internal.integration.AttendanceMarkedEventPayload;
+import com.example.interhubdev.absencenotice.AbsenceNoticeDto;
+import com.example.interhubdev.absencenotice.AbsenceNoticeType;
+import com.example.interhubdev.absencenotice.SubmitAbsenceNoticeRequest;
+import com.example.interhubdev.attendancerecord.AttendanceRecordDto;
+import com.example.interhubdev.attendancerecord.AttendanceStatus;
+import com.example.interhubdev.attendance.AttendanceApi;
+import com.example.interhubdev.absencenotice.internal.AbsenceNoticeEventTypes;
 import com.example.interhubdev.group.GroupApi;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
 import com.example.interhubdev.offering.OfferingApi;
@@ -64,19 +65,7 @@ class AttendanceOutboxEventsIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private CreateAbsenceNoticeUseCase createAbsenceNoticeUseCase;
-
-    @Autowired
-    private UpdateAbsenceNoticeUseCase updateAbsenceNoticeUseCase;
-
-    @Autowired
-    private CancelAbsenceNoticeUseCase cancelAbsenceNoticeUseCase;
-
-    @Autowired
-    private AttachAbsenceNoticeToAttendanceUseCase attachAbsenceNoticeToAttendanceUseCase;
-
-    @Autowired
-    private AttendanceServiceImpl attendanceService;
+    private AttendanceApi attendanceApi;
 
     @MockitoBean
     private ScheduleApi scheduleApi;
@@ -159,14 +148,14 @@ class AttendanceOutboxEventsIntegrationTest {
             );
 
             // When
-            createAbsenceNoticeUseCase.execute(request, STUDENT_ID);
+            attendanceApi.createAbsenceNotice(request, STUDENT_ID);
 
             // Then
-            List<OutboxEvent> events = findEventsByType(AttendanceEventTypes.ABSENCE_NOTICE_SUBMITTED);
+            List<OutboxEvent> events = findEventsByType(AbsenceNoticeEventTypes.ABSENCE_NOTICE_SUBMITTED);
             assertThat(events).hasSize(1);
 
             OutboxEvent event = events.get(0);
-            assertThat(event.eventType()).isEqualTo(AttendanceEventTypes.ABSENCE_NOTICE_SUBMITTED);
+            assertThat(event.eventType()).isEqualTo(AbsenceNoticeEventTypes.ABSENCE_NOTICE_SUBMITTED);
             assertThat(event.status()).isEqualTo("NEW");
             assertThat(event.occurredAt()).isNotNull();
 
@@ -186,7 +175,7 @@ class AttendanceOutboxEventsIntegrationTest {
             SubmitAbsenceNoticeRequest firstRequest = new SubmitAbsenceNoticeRequest(
                     SESSION_ID, AbsenceNoticeType.ABSENT, "First reason", List.of()
             );
-            AbsenceNoticeDto firstNotice = createAbsenceNoticeUseCase.execute(firstRequest, STUDENT_ID);
+            AbsenceNoticeDto firstNotice = attendanceApi.createAbsenceNotice(firstRequest, STUDENT_ID);
 
             // Clear events from first submission
             jdbcTemplate.update("DELETE FROM outbox_event");
@@ -195,14 +184,14 @@ class AttendanceOutboxEventsIntegrationTest {
             SubmitAbsenceNoticeRequest updateRequest = new SubmitAbsenceNoticeRequest(
                     SESSION_ID, AbsenceNoticeType.LATE, "Updated reason", List.of()
             );
-            updateAbsenceNoticeUseCase.execute(firstNotice.id(), updateRequest, STUDENT_ID);
+            attendanceApi.updateAbsenceNotice(firstNotice.id(), updateRequest, STUDENT_ID);
 
             // Then
-            List<OutboxEvent> events = findEventsByType(AttendanceEventTypes.ABSENCE_NOTICE_UPDATED);
+            List<OutboxEvent> events = findEventsByType(AbsenceNoticeEventTypes.ABSENCE_NOTICE_UPDATED);
             assertThat(events).hasSize(1);
 
             OutboxEvent event = events.get(0);
-            assertThat(event.eventType()).isEqualTo(AttendanceEventTypes.ABSENCE_NOTICE_UPDATED);
+            assertThat(event.eventType()).isEqualTo(AbsenceNoticeEventTypes.ABSENCE_NOTICE_UPDATED);
             assertThat(event.status()).isEqualTo("NEW");
 
             // Verify payload
@@ -221,20 +210,20 @@ class AttendanceOutboxEventsIntegrationTest {
             SubmitAbsenceNoticeRequest request = new SubmitAbsenceNoticeRequest(
                     SESSION_ID, AbsenceNoticeType.ABSENT, "Test reason", List.of()
             );
-            AbsenceNoticeDto notice = createAbsenceNoticeUseCase.execute(request, STUDENT_ID);
+            AbsenceNoticeDto notice = attendanceApi.createAbsenceNotice(request, STUDENT_ID);
 
             // Clear events from submission
             jdbcTemplate.update("DELETE FROM outbox_event");
 
             // When
-            cancelAbsenceNoticeUseCase.execute(notice.id(), STUDENT_ID);
+            attendanceApi.cancelAbsenceNotice(notice.id(), STUDENT_ID);
 
             // Then
-            List<OutboxEvent> events = findEventsByType(AttendanceEventTypes.ABSENCE_NOTICE_CANCELED);
+            List<OutboxEvent> events = findEventsByType(AbsenceNoticeEventTypes.ABSENCE_NOTICE_CANCELED);
             assertThat(events).hasSize(1);
 
             OutboxEvent event = events.get(0);
-            assertThat(event.eventType()).isEqualTo(AttendanceEventTypes.ABSENCE_NOTICE_CANCELED);
+            assertThat(event.eventType()).isEqualTo(AbsenceNoticeEventTypes.ABSENCE_NOTICE_CANCELED);
             assertThat(event.status()).isEqualTo("NEW");
 
             // Verify payload
@@ -254,17 +243,17 @@ class AttendanceOutboxEventsIntegrationTest {
         @DisplayName("publishes ATTENDANCE_MARKED when marking attendance single")
         void publishesMarkedEventForSingle() {
             // When
-            attendanceService.markAttendanceSingle(
+            attendanceApi.markAttendanceSingle(
                     SESSION_ID, STUDENT_ID, AttendanceStatus.PRESENT,
                     null, null, null, null, USER_ID
             );
 
             // Then
-            List<OutboxEvent> events = findEventsByType(AttendanceEventTypes.ATTENDANCE_MARKED);
+            List<OutboxEvent> events = findEventsByType("attendance.record.marked");
             assertThat(events).hasSize(1);
 
             OutboxEvent event = events.get(0);
-            assertThat(event.eventType()).isEqualTo(AttendanceEventTypes.ATTENDANCE_MARKED);
+            assertThat(event.eventType()).isEqualTo("attendance.record.marked");
             assertThat(event.status()).isEqualTo("NEW");
 
             // Verify payload
@@ -289,9 +278,9 @@ class AttendanceOutboxEventsIntegrationTest {
             SubmitAbsenceNoticeRequest noticeRequest = new SubmitAbsenceNoticeRequest(
                     SESSION_ID, AbsenceNoticeType.ABSENT, "Test reason", List.of()
             );
-            AbsenceNoticeDto notice = createAbsenceNoticeUseCase.execute(noticeRequest, STUDENT_ID);
+            AbsenceNoticeDto notice = attendanceApi.createAbsenceNotice(noticeRequest, STUDENT_ID);
 
-            AttendanceRecordDto record = attendanceService.markAttendanceSingle(
+            AttendanceRecordDto record = attendanceApi.markAttendanceSingle(
                     SESSION_ID, STUDENT_ID, AttendanceStatus.EXCUSED,
                     null, null, null, null, USER_ID
             );
@@ -300,14 +289,14 @@ class AttendanceOutboxEventsIntegrationTest {
             jdbcTemplate.update("DELETE FROM outbox_event");
 
             // When - attach notice to record
-            attachAbsenceNoticeToAttendanceUseCase.execute(record.id(), notice.id(), USER_ID);
+            attendanceApi.attachNoticeToRecord(record.id(), notice.id(), USER_ID);
 
             // Then
-            List<OutboxEvent> events = findEventsByType(AttendanceEventTypes.ABSENCE_NOTICE_ATTACHED);
+            List<OutboxEvent> events = findEventsByType(AbsenceNoticeEventTypes.ABSENCE_NOTICE_ATTACHED);
             assertThat(events).hasSize(1);
 
             OutboxEvent event = events.get(0);
-            assertThat(event.eventType()).isEqualTo(AttendanceEventTypes.ABSENCE_NOTICE_ATTACHED);
+            assertThat(event.eventType()).isEqualTo(AbsenceNoticeEventTypes.ABSENCE_NOTICE_ATTACHED);
             assertThat(event.status()).isEqualTo("NEW");
 
             // Verify payload

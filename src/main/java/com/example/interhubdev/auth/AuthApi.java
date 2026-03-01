@@ -69,6 +69,25 @@ public interface AuthApi {
     Optional<UserDto> getCurrentUser(HttpServletRequest request);
 
     /**
+     * Request password reset: if a user with the given email exists and is ACTIVE,
+     * creates an OTP and sends it by email. Response is always the same (no user enumeration).
+     *
+     * @param email user email (normalized)
+     * @throws com.example.interhubdev.error.AppException from OtpApi e.g. rate limit exceeded
+     */
+    void requestPasswordReset(String email);
+
+    /**
+     * Reset password using OTP: verifies the code, sets new password, revokes all sessions.
+     *
+     * @param email       user email (same as used in requestPasswordReset)
+     * @param code        OTP code from email
+     * @param newPassword new password (min 8 chars)
+     * @throws com.example.interhubdev.error.AppException if code invalid/expired or user not found
+     */
+    void resetPassword(String email, String code, String newPassword);
+
+    /**
      * Authentication exception for login failures.
      */
     class AuthenticationException extends RuntimeException {

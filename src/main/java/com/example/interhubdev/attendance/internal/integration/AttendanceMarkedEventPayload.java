@@ -1,12 +1,12 @@
 package com.example.interhubdev.attendance.internal.integration;
 
-import com.example.interhubdev.attendance.AttendanceStatus;
+import com.example.interhubdev.attendancerecord.AttendanceStatus;
 
 import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Payload for attendance marked event.
+ * Payload for attendance marked event (published by facade).
  */
 public record AttendanceMarkedEventPayload(
         UUID recordId,

@@ -1,6 +1,12 @@
 package com.example.interhubdev.attendance.internal;
 
-import com.example.interhubdev.attendance.*;
+import com.example.interhubdev.attendancerecord.AttendanceRecordDto;
+import com.example.interhubdev.attendancerecord.AttendanceStatus;
+import com.example.interhubdev.attendancerecord.GroupAttendanceSummaryDto;
+import com.example.interhubdev.attendancerecord.MarkAttendanceItem;
+import com.example.interhubdev.attendancerecord.StudentAttendanceDto;
+import com.example.interhubdev.attendance.AttendanceApi;
+import com.example.interhubdev.attendance.SessionAttendanceDto;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,9 +24,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * REST controller for Attendance API: mark and query attendance records.
- */
 @RestController
 @RequestMapping("/api/attendance")
 @RequiredArgsConstructor
@@ -28,8 +31,6 @@ import java.util.UUID;
 class AttendanceController {
 
     private final AttendanceApi attendanceApi;
-    private final AttachAbsenceNoticeToAttendanceUseCase attachNoticeUseCase;
-    private final DetachAbsenceNoticeFromAttendanceUseCase detachNoticeUseCase;
     private final AuthApi authApi;
 
     private UUID requireCurrentUser(HttpServletRequest request) {
@@ -125,7 +126,7 @@ class AttendanceController {
             HttpServletRequest request
     ) {
         UUID requesterId = requireCurrentUser(request);
-        AttendanceRecordDto record = attachNoticeUseCase.execute(recordId, body.noticeId(), requesterId);
+        AttendanceRecordDto record = attendanceApi.attachNoticeToRecord(recordId, body.noticeId(), requesterId);
         return ResponseEntity.ok(record);
     }
 
@@ -136,43 +137,26 @@ class AttendanceController {
             HttpServletRequest request
     ) {
         UUID requesterId = requireCurrentUser(request);
-        AttendanceRecordDto record = detachNoticeUseCase.execute(recordId, requesterId);
+        AttendanceRecordDto record = attendanceApi.detachNoticeFromRecord(recordId, requesterId);
         return ResponseEntity.ok(record);
     }
 
-    /**
-     * Request for bulk attendance marking.
-     */
     public record BulkMarkAttendanceRequest(
             @Valid List<@Valid MarkAttendanceItem> items
     ) {
     }
 
-    /**
-     * Request for single attendance marking.
-     */
     public record MarkAttendanceRequest(
             @jakarta.validation.constraints.NotNull(message = "status is required")
             AttendanceStatus status,
             Integer minutesLate,
             @jakarta.validation.constraints.Size(max = 2000, message = "teacherComment must not exceed 2000 characters")
             String teacherComment,
-            /**
-             * Optional explicit absence notice ID to attach to this record.
-             * Mutually exclusive with autoAttachLastNotice.
-             */
             UUID absenceNoticeId,
-            /**
-             * If true, automatically attach the last submitted notice for this student and session.
-             * Mutually exclusive with absenceNoticeId.
-             */
             Boolean autoAttachLastNotice
     ) {
     }
 
-    /**
-     * Request for attaching notice to record.
-     */
     public record AttachNoticeRequest(
             @jakarta.validation.constraints.NotNull(message = "noticeId is required")
             UUID noticeId

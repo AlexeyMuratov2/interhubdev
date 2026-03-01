@@ -76,6 +76,17 @@ public interface UserApi {
     void activateUser(UUID userId, String rawPassword);
 
     /**
+     * Set a new password for an active user (e.g. password recovery).
+     * Only allowed when user is in ACTIVE status. Password encoding is handled internally.
+     *
+     * @param userId      user ID
+     * @param rawPassword plain text password (will be BCrypt encoded)
+     * @throws IllegalArgumentException if user not found
+     * @throws IllegalStateException    if user is not in ACTIVE status
+     */
+    void setPassword(UUID userId, String rawPassword);
+
+    /**
      * Disable user account.
      *
      * @param userId user ID

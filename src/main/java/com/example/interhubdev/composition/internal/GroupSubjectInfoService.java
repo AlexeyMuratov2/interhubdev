@@ -3,7 +3,7 @@ package com.example.interhubdev.composition.internal;
 import com.example.interhubdev.academic.AcademicApi;
 import com.example.interhubdev.academic.SemesterDto;
 import com.example.interhubdev.attendance.AttendanceApi;
-import com.example.interhubdev.attendance.GroupAttendanceSummaryDto;
+import com.example.interhubdev.attendancerecord.GroupAttendanceSummaryDto;
 import com.example.interhubdev.composition.GroupSubjectInfoDto;
 import com.example.interhubdev.composition.GroupSubjectStudentItemDto;
 import com.example.interhubdev.document.HomeworkApi;

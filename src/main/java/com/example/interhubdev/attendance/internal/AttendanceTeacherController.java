@@ -1,9 +1,9 @@
 package com.example.interhubdev.attendance.internal;
 
-import com.example.interhubdev.attendance.AbsenceNoticeDto;
-import com.example.interhubdev.attendance.AbsenceNoticeStatus;
-import com.example.interhubdev.attendance.RespondToAbsenceNoticeRequest;
-import com.example.interhubdev.attendance.TeacherAbsenceNoticePage;
+import com.example.interhubdev.absencenotice.AbsenceNoticeDto;
+import com.example.interhubdev.absencenotice.AbsenceNoticeStatus;
+import com.example.interhubdev.absencenotice.RespondToAbsenceNoticeRequest;
+import com.example.interhubdev.absencenotice.TeacherAbsenceNoticePage;
 import com.example.interhubdev.attendance.AttendanceApi;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.error.Errors;
@@ -20,10 +20,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * REST controller for teacher absence notice operations.
- * Teachers can view absence notices for sessions they teach.
- */
 @RestController
 @RequestMapping("/api/attendance")
 @RequiredArgsConstructor
@@ -33,7 +29,6 @@ class AttendanceTeacherController {
     private static final int DEFAULT_LIMIT = 30;
     private static final int MAX_LIMIT = 30;
 
-    private final GetSessionAbsenceNoticesUseCase getSessionNoticesUseCase;
     private final AttendanceApi attendanceApi;
     private final AuthApi authApi;
 
@@ -51,7 +46,7 @@ class AttendanceTeacherController {
             HttpServletRequest httpRequest
     ) {
         UUID requesterId = requireCurrentUser(httpRequest);
-        List<AbsenceNoticeDto> notices = getSessionNoticesUseCase.execute(sessionId, requesterId, includeCanceled);
+        List<AbsenceNoticeDto> notices = attendanceApi.getSessionNotices(sessionId, requesterId, includeCanceled);
         return ResponseEntity.ok(notices);
     }
 
@@ -65,7 +60,6 @@ class AttendanceTeacherController {
     ) {
         UUID requesterId = requireCurrentUser(httpRequest);
 
-        // Parse statuses filter
         List<AbsenceNoticeStatus> statusList = null;
         if (statuses != null && !statuses.isBlank()) {
             try {
@@ -79,7 +73,6 @@ class AttendanceTeacherController {
             }
         }
 
-        // Cap limit
         int cappedLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
 
         TeacherAbsenceNoticePage page = attendanceApi.getTeacherAbsenceNotices(

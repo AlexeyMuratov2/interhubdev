@@ -1,9 +1,9 @@
 package com.example.interhubdev.attendance.internal;
 
-import com.example.interhubdev.attendance.AbsenceNoticeDto;
+import com.example.interhubdev.absencenotice.AbsenceNoticeDto;
+import com.example.interhubdev.absencenotice.StudentAbsenceNoticePage;
+import com.example.interhubdev.absencenotice.SubmitAbsenceNoticeRequest;
 import com.example.interhubdev.attendance.AttendanceApi;
-import com.example.interhubdev.attendance.StudentAbsenceNoticePage;
-import com.example.interhubdev.attendance.SubmitAbsenceNoticeRequest;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.student.StudentApi;
@@ -21,10 +21,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * REST controller for student absence notice operations.
- * Students can submit, update, cancel, and view their own absence notices.
- */
 @RestController
 @RequestMapping("/api/attendance/notices")
 @RequiredArgsConstructor
@@ -32,7 +28,6 @@ import java.util.UUID;
 class AttendanceStudentController {
 
     private final AttendanceApi attendanceApi;
-    private final CancelAbsenceNoticeUseCase cancelUseCase;
     private final AuthApi authApi;
     private final StudentApi studentApi;
 
@@ -45,7 +40,7 @@ class AttendanceStudentController {
     private UUID requireCurrentStudentId(HttpServletRequest request) {
         UUID userId = requireCurrentUser(request);
         StudentDto student = studentApi.findByUserId(userId)
-                .orElseThrow(() -> AttendanceErrors.studentNotFound(userId));
+                .orElseThrow(() -> Errors.notFound("Student profile not found for current user"));
         return student.id();
     }
 
@@ -79,7 +74,7 @@ class AttendanceStudentController {
             HttpServletRequest httpRequest
     ) {
         UUID studentId = requireCurrentStudentId(httpRequest);
-        AbsenceNoticeDto notice = cancelUseCase.execute(id, studentId);
+        AbsenceNoticeDto notice = attendanceApi.cancelAbsenceNotice(id, studentId);
         return ResponseEntity.ok(notice);
     }
 

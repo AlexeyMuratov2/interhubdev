@@ -113,6 +113,20 @@ class UserServiceImpl implements UserApi {
 
     @Override
     @Transactional
+    public void setPassword(UUID userId, String rawPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new IllegalStateException("User is not in ACTIVE status");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
     public void disableUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));

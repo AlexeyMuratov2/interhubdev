@@ -64,6 +64,12 @@ class AuthProperties {
      */
     private CorsConfig cors = new CorsConfig();
 
+    /**
+     * Base URL for the password reset page (used in reset email body).
+     * User is directed to this URL to enter the OTP code.
+     */
+    private String passwordResetBaseUrl = "http://localhost:5173";
+
     @Getter
     @Setter
     public static class RateLimitConfig {

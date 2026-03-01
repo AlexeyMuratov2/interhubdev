@@ -2,7 +2,11 @@ package com.example.interhubdev.auth.internal;
 
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.auth.AuthResult;
+import com.example.interhubdev.auth.ForgotPasswordRequest;
+import com.example.interhubdev.auth.ForgotPasswordResponse;
 import com.example.interhubdev.auth.LoginRequest;
+import com.example.interhubdev.auth.ResetPasswordRequest;
+import com.example.interhubdev.auth.ResetPasswordResponse;
 import com.example.interhubdev.user.UserDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -86,5 +90,28 @@ class AuthController {
         return authApi.getCurrentUser(request)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Request password reset", description = "Send OTP to email if account exists and is active. Always returns 202.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "Request accepted (email sent if account exists)"),
+            @ApiResponse(responseCode = "429", description = "Too many requests (OTP rate limit)")
+    })
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authApi.requestPasswordReset(request.email());
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(new ForgotPasswordResponse("Если аккаунт с таким email существует, на него будет отправлено письмо с инструкциями."));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password with OTP", description = "Verify OTP code and set new password. All sessions are revoked.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Password reset successful"),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired code")
+    })
+    public ResponseEntity<ResetPasswordResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authApi.resetPassword(request.email(), request.code(), request.newPassword());
+        return ResponseEntity.ok(new ResetPasswordResponse("Пароль успешно изменён. Войдите с новым паролем."));
     }
 }

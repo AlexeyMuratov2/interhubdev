@@ -1,10 +1,11 @@
 package com.example.interhubdev.composition.internal;
 
-import com.example.interhubdev.attendance.AttendanceRecordDto;
-import com.example.interhubdev.attendance.AttendanceStatus;
+import com.example.interhubdev.absencenotice.StudentNoticeSummaryDto;
+import com.example.interhubdev.attendancerecord.AttendanceRecordDto;
+import com.example.interhubdev.attendancerecord.AttendanceStatus;
+import com.example.interhubdev.attendance.AttendanceApi;
 import com.example.interhubdev.attendance.StudentAttendanceByLessonsDto;
 import com.example.interhubdev.attendance.StudentLessonAttendanceItemDto;
-import com.example.interhubdev.attendance.StudentNoticeSummaryDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryLessonItemDto;
 import com.example.interhubdev.error.Errors;
@@ -15,7 +16,6 @@ import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
 import com.example.interhubdev.subject.SubjectApi;
-import com.example.interhubdev.attendance.AttendanceApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

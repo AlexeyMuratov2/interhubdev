@@ -1,6 +1,6 @@
 package com.example.interhubdev.notification.internal.infrastructure.handlers;
 
-import com.example.interhubdev.attendance.AbsenceNoticeType;
+import com.example.interhubdev.absencenotice.AbsenceNoticeType;
 import com.example.interhubdev.notification.NotificationTemplateKeys;
 import com.example.interhubdev.notification.internal.application.CreateNotificationUseCase;
 import com.example.interhubdev.notification.internal.domain.Notification;
