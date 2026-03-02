@@ -6,6 +6,7 @@ import com.example.interhubdev.absencenotice.internal.integration.AbsenceNoticeC
 import com.example.interhubdev.absencenotice.internal.integration.AbsenceNoticeUpdatedEventPayload;
 import com.example.interhubdev.outbox.OutboxEventDraft;
 import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
+import com.example.interhubdev.schedule.LessonDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +27,7 @@ class RemoveAbsenceNoticeLessonUseCase {
     private final AbsenceNoticeRepository noticeRepository;
     private final AbsenceNoticeLessonRepository lessonRepository;
     private final AbsenceNoticeAttachmentRepository attachmentRepository;
+    private final SessionGateway sessionGateway;
     private final OutboxIntegrationEventPublisher publisher;
 
     AbsenceNoticeDto execute(UUID noticeId, UUID lessonSessionId, UUID studentId) {
@@ -71,13 +74,18 @@ class RemoveAbsenceNoticeLessonUseCase {
         }
 
         AbsenceNotice saved = noticeRepository.save(notice);
+        List<LessonDto> lessons = sessionGateway.getSessionsByIds(remainingSessionIds);
+        Instant periodStart = computePeriodStart(lessons);
+        Instant periodEnd = computePeriodEnd(lessons);
         Instant occurredAt = Instant.now();
         AbsenceNoticeUpdatedEventPayload updatedPayload = new AbsenceNoticeUpdatedEventPayload(
                 saved.getId(),
                 remainingSessionIds,
                 saved.getStudentId(),
                 saved.getType(),
-                toInstant(saved.getUpdatedAt())
+                toInstant(saved.getUpdatedAt()),
+                periodStart,
+                periodEnd
         );
         publisher.publish(OutboxEventDraft.builder()
                 .eventType(AbsenceNoticeEventTypes.ABSENCE_NOTICE_UPDATED)
@@ -91,5 +99,21 @@ class RemoveAbsenceNoticeLessonUseCase {
 
     private static Instant toInstant(LocalDateTime localDateTime) {
         return localDateTime != null ? localDateTime.toInstant(ZoneOffset.UTC) : Instant.now();
+    }
+
+    private static Instant computePeriodStart(List<LessonDto> lessons) {
+        return lessons.stream()
+                .flatMap(l -> Stream.of(LocalDateTime.of(l.date(), l.startTime())))
+                .min(LocalDateTime::compareTo)
+                .map(ldt -> ldt.toInstant(ZoneOffset.UTC))
+                .orElse(Instant.now());
+    }
+
+    private static Instant computePeriodEnd(List<LessonDto> lessons) {
+        return lessons.stream()
+                .flatMap(l -> Stream.of(LocalDateTime.of(l.date(), l.endTime())))
+                .max(LocalDateTime::compareTo)
+                .map(ldt -> ldt.toInstant(ZoneOffset.UTC))
+                .orElse(Instant.now());
     }
 }

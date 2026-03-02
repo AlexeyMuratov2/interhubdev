@@ -1,4 +1,4 @@
-package com.example.interhubdev.composition.internal;
+package com.example.interhubdev.composition.internal.lessons;
 
 import com.example.interhubdev.attendance.AttendanceApi;
 import com.example.interhubdev.attendance.SessionAttendanceDto;
@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 
 /**
  * Use-case service: aggregates roster attendance for a lesson (students + attendance status + notices).
- * For the lesson screen attendance table UI.
  */
 @Service
 @RequiredArgsConstructor

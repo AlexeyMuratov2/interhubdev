@@ -1,4 +1,4 @@
-package com.example.interhubdev.composition.internal;
+package com.example.interhubdev.composition.internal.lessons;
 
 import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
 import com.example.interhubdev.document.DocumentApi;
@@ -29,7 +29,6 @@ import java.util.UUID;
 
 /**
  * Use-case service: aggregates homework submissions for a lesson (students × homeworks with submission/points/files).
- * For the lesson screen homework submissions table.
  */
 @Service
 @RequiredArgsConstructor
@@ -62,7 +61,6 @@ class LessonHomeworkSubmissionsService {
         List<StudentDto> roster = studentApi.findByGroupId(offering.groupId());
         List<HomeworkDto> homeworks = homeworkApi.listByLesson(lessonId, requesterId);
 
-        // (authorUserId, homeworkId) -> submission; authorId in submission is user ID, roster has StudentDto with id (student entity) and userId (user/account)
         Map<UUID, Map<UUID, HomeworkSubmissionDto>> submissionByUserAndHomework = new LinkedHashMap<>();
         List<UUID> allSubmissionIds = new ArrayList<>();
 
@@ -78,7 +76,6 @@ class LessonHomeworkSubmissionsService {
 
         Map<UUID, GradeEntryDto> gradeEntryBySubmissionId = gradesApi.getGradeEntriesByHomeworkSubmissionIds(allSubmissionIds, requesterId, null);
 
-        // Resolve file metadata for all submission file ids
         Map<UUID, StoredFileDto> filesById = new LinkedHashMap<>();
         for (var e : submissionByUserAndHomework.values()) {
             for (HomeworkSubmissionDto s : e.values()) {
@@ -94,7 +91,6 @@ class LessonHomeworkSubmissionsService {
                 .map(student -> {
                     List<LessonHomeworkSubmissionsDto.StudentHomeworkItemDto> items = homeworks.stream()
                             .map(hw -> {
-                                // Look up by userId: submission.authorId is user (account) ID, not student entity id
                                 HomeworkSubmissionDto sub = submissionByUserAndHomework
                                         .getOrDefault(student.userId(), Map.of())
                                         .get(hw.id());

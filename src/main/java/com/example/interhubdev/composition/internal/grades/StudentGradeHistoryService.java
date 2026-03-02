@@ -1,7 +1,8 @@
-package com.example.interhubdev.composition.internal;
+package com.example.interhubdev.composition.internal.grades;
 
 import com.example.interhubdev.composition.StudentGradeHistoryDto;
 import com.example.interhubdev.composition.StudentGradeHistoryItemDto;
+import com.example.interhubdev.composition.StudentGradeHistoryQueryApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
 import com.example.interhubdev.error.Errors;
@@ -23,13 +24,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Use-case service: aggregates full grade history for a student in an offering
- * with lesson, homework, submission and grader context. Batch-loads related data to avoid N+1.
+ * Use-case service: aggregates full grade history for a student in an offering.
+ * Implements StudentGradeHistoryQueryApi.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class StudentGradeHistoryService {
+class StudentGradeHistoryService implements StudentGradeHistoryQueryApi {
 
     private final GradesApi gradesApi;
     private final ScheduleApi scheduleApi;
@@ -37,6 +38,11 @@ class StudentGradeHistoryService {
     private final HomeworkApi homeworkApi;
     private final UserApi userApi;
     private final OfferingApi offeringApi;
+
+    @Override
+    public StudentGradeHistoryDto getStudentGradeHistory(UUID studentId, UUID offeringId, UUID requesterId) {
+        return execute(studentId, offeringId, requesterId);
+    }
 
     StudentGradeHistoryDto execute(UUID studentId, UUID offeringId, UUID requesterId) {
         if (requesterId == null) {

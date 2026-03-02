@@ -1,11 +1,11 @@
-package com.example.interhubdev.composition.internal;
+package com.example.interhubdev.composition.internal.group;
 
-import com.example.interhubdev.academic.AcademicApi;
-import com.example.interhubdev.academic.SemesterDto;
 import com.example.interhubdev.attendance.AttendanceApi;
 import com.example.interhubdev.attendancerecord.GroupAttendanceSummaryDto;
 import com.example.interhubdev.composition.GroupSubjectInfoDto;
+import com.example.interhubdev.composition.GroupSubjectQueryApi;
 import com.example.interhubdev.composition.GroupSubjectStudentItemDto;
+import com.example.interhubdev.composition.internal.shared.SemesterResolver;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.grades.GradesApi;
@@ -40,7 +40,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -52,15 +51,13 @@ import java.util.stream.Collectors;
 
 /**
  * Use-case service: aggregates group subject info for the teacher's "Group subject info" screen.
- * Only teachers assigned to an offering slot for this group and subject (or admin) can view.
- * Attendance percent is obtained from attendance module (only lessons with at least one mark count).
+ * Implements GroupSubjectQueryApi.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class GroupSubjectInfoService {
+class GroupSubjectInfoService implements GroupSubjectQueryApi {
 
-    private final AcademicApi academicApi;
     private final AttendanceApi attendanceApi;
     private final GroupApi groupApi;
     private final GradesApi gradesApi;
@@ -68,10 +65,16 @@ class GroupSubjectInfoService {
     private final OfferingApi offeringApi;
     private final ProgramApi programApi;
     private final ScheduleApi scheduleApi;
+    private final SemesterResolver semesterResolver;
     private final SubmissionApi submissionApi;
     private final SubjectApi subjectApi;
     private final TeacherApi teacherApi;
     private final UserApi userApi;
+
+    @Override
+    public GroupSubjectInfoDto getGroupSubjectInfo(UUID groupId, UUID subjectId, UUID requesterId, Optional<UUID> semesterId) {
+        return execute(groupId, subjectId, requesterId, semesterId);
+    }
 
     GroupSubjectInfoDto execute(UUID groupId, UUID subjectId, UUID requesterId, Optional<UUID> semesterId) {
         if (requesterId == null) {
@@ -125,16 +128,9 @@ class GroupSubjectInfoService {
             throw Errors.forbidden("Only teacher of this subject and group can view");
         }
 
-        SemesterDto semester;
-        if (semesterId != null && semesterId.isPresent()) {
-            semester = academicApi.findSemesterById(semesterId.get())
-                    .orElseThrow(() -> Errors.notFound("Semester not found"));
-        } else {
-            semester = academicApi.findSemesterByDate(LocalDate.now())
-                    .orElseThrow(() -> Errors.notFound("Current semester not found"));
-        }
-        LocalDate from = semester.startDate();
-        LocalDate to = semester.endDate();
+        var semester = semesterResolver.resolve(semesterId);
+        var from = semester.startDate();
+        var to = semester.endDate();
 
         SubjectDto subject = subjectApi.findSubjectById(subjectId)
                 .orElseThrow(() -> Errors.notFound("Subject not found"));

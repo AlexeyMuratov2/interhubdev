@@ -1,0 +1,146 @@
+---
+description: Гайд по внутренней архитектуре модуля composition. Как добавлять use-case сервисы, контроллеры, DTO, resolvers и не превращать модуль в god service.
+globs: **/composition/**/*.java
+alwaysApply: false
+---
+
+# Модуль Composition — внутренний гайд
+
+Composition — read-only агрегатор данных из нескольких модулей для UI-экранов. Он по определению зависит от многих модулей. Чтобы он не стал god service, соблюдай правила ниже.
+
+---
+
+## Архитектурные принципы
+
+1. **Только чтение**. Composition НЕ меняет данные. Никаких write-операций, создания/обновления сущностей, публикации событий.
+2. **Без бизнес-логики**. Composition только собирает и объединяет данные. Валидация доступа (авторизация) допускается; бизнес-правила — нет.
+3. **Один use-case = один сервис**. Каждый экран/запрос реализуется отдельным `*Service` классом в `internal/`. Не добавлять методы в существующий сервис, если это другой use-case.
+4. **Никто не зависит от composition**. Ни один другой модуль не должен импортировать типы из composition. Composition — лист в графе зависимостей.
+
+---
+
+## Структура модуля (текущая)
+
+Публичные Query API по доменам; контроллеры и сервисы разбиты по подпакетам. При добавлении новых фич сохраняй эту структуру.
+
+```
+composition/
+├── package-info.java
+├── LessonQueryApi.java
+├── TeacherStudentGroupsQueryApi.java
+├── StudentSubjectsQueryApi.java
+├── GroupSubjectQueryApi.java
+├── StudentGradeHistoryQueryApi.java
+├── StudentAttendanceHistoryQueryApi.java
+├── StudentHomeworkHistoryQueryApi.java
+├── *Dto.java                        # Публичные DTO ответов
+└── internal/
+    ├── shared/                      # Переиспользуемые resolvers
+    │   ├── SubjectNameResolver.java
+    │   └── SemesterResolver.java
+    ├── lessons/
+    │   ├── LessonQueryController.java
+    │   ├── LessonQueryFacade.java   # implements LessonQueryApi
+    │   ├── LessonFullDetailsService.java
+    │   ├── LessonRosterAttendanceService.java
+    │   └── LessonHomeworkSubmissionsService.java
+    ├── teacher/
+    │   ├── TeacherStudentGroupsQueryController.java
+    │   └── TeacherStudentGroupsService.java   # implements TeacherStudentGroupsQueryApi
+    ├── student/
+    │   ├── StudentSubjectsQueryController.java
+    │   ├── StudentSubjectsQueryFacade.java    # implements StudentSubjectsQueryApi
+    │   ├── StudentSubjectsService.java
+    │   └── StudentSubjectInfoService.java
+    ├── group/
+    │   ├── GroupSubjectQueryController.java
+    │   └── GroupSubjectInfoService.java      # implements GroupSubjectQueryApi
+    ├── grades/
+    │   ├── StudentGradeHistoryQueryController.java
+    │   └── StudentGradeHistoryService.java   # implements StudentGradeHistoryQueryApi
+    ├── attendance/
+    │   ├── StudentAttendanceHistoryQueryController.java
+    │   └── StudentAttendanceHistoryService.java  # implements StudentAttendanceHistoryQueryApi
+    └── homework/
+        ├── StudentHomeworkHistoryQueryController.java
+        └── StudentHomeworkHistoryService.java   # implements StudentHomeworkHistoryQueryApi
+```
+
+---
+
+## Правила при добавлении нового use-case
+
+### 1. Создай отдельный сервис
+
+Каждый use-case — отдельный класс `*Service` в подпакете по домену (`internal/attendance/`, `internal/grades/`, и т.д.).
+
+```java
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+class MyNewQueryService {
+    // Только нужные API + shared resolvers. НЕ 10+ зависимостей.
+    private final ScheduleApi scheduleApi;
+    private final OfferingApi offeringApi;
+    private final SubjectNameResolver subjectNameResolver;
+    private final OfferingAccessChecker accessChecker;
+
+    MyNewDto execute(...) { ... }
+}
+```
+
+### 2. Используй shared resolvers вместо дублирования
+
+Повторяющиеся паттерны выносятся в `internal/shared/`:
+
+- **Разрешение имени предмета** по `curriculumSubjectId` → `SubjectNameResolver`
+- **Определение текущего семестра** или поиск по ID → `SemesterResolver`
+- **Проверка доступа** (teacher of offering, student of group, admin) → `OfferingAccessChecker`, `GroupAccessChecker`
+
+Перед добавлением нового сервиса проверь, есть ли уже нужные resolvers. Если паттерн повторяется в 2+ сервисах — вынеси в shared.
+
+### 3. Контроллеры — по доменам, не один на всё
+
+При добавлении нового эндпоинта: если контроллер для этого домена уже есть — добавь туда. Если нет — создай новый контроллер в подпакете.
+
+Эндпоинты добавляй в контроллер **соответствующего домена** (например `LessonQueryController`, `StudentSubjectsQueryController`). Если домена ещё нет — создай новый подпакет и контроллер:
+- `internal/lessons/LessonQueryController.java`
+- `internal/teacher/TeacherStudentGroupsQueryController.java`
+- `internal/student/StudentSubjectsQueryController.java`
+- `internal/group/GroupSubjectQueryController.java`
+- `internal/grades/StudentGradeHistoryQueryController.java`
+- `internal/attendance/StudentAttendanceHistoryQueryController.java`
+- `internal/homework/StudentHomeworkHistoryQueryController.java`
+
+### 4. DTO — в публичном пакете composition
+
+DTO ответов composition определяются в корне пакета `composition/` (публичные). Они могут содержать DTO из других модулей (composition — потребитель всех API). Не дублируй DTO другого модуля — переиспользуй его.
+
+### 5. Query API — по одному на домен
+
+Уже есть доменные Query API (`LessonQueryApi`, `StudentSubjectsQueryApi`, и т.д.). **Новый use-case** добавляй в существующий Query API этого домена (один метод) или создай новый интерфейс `*QueryApi` и реализацию (фасад или один сервис). Контроллер инжектит только нужный Query API.
+
+---
+
+## Ограничения на зависимости сервиса
+
+Use-case сервис должен инжектить **не более 6-7 прямых зависимостей**. Если больше:
+
+1. Вынеси повторяющиеся lookup-паттерны в shared resolver.
+2. Проверь, не делает ли сервис слишком много — возможно, это два use-case, а не один.
+3. Если сервису реально нужны данные из многих модулей, допустимо 7-8, но **задокументируй** в Javadoc, почему.
+
+---
+
+## Чек-лист: добавление нового composition use-case
+
+1. [ ] Use-case — **read-only** агрегация из 2+ модулей (если из 1 — это не composition).
+2. [ ] Создан **отдельный** `*Service` класс в `internal/<domain>/`.
+3. [ ] Повторяющиеся паттерны (resolve subject, resolve semester, check access) используют shared resolvers.
+4. [ ] Сервис инжектит **≤ 6-7** зависимостей.
+5. [ ] DTO ответа определён в публичном пакете `composition/`.
+6. [ ] Эндпоинт добавлен в контроллер для этого домена (или создан новый контроллер).
+7. [ ] Метод добавлен в domain-specific Query API (в существующий `*QueryApi` домена или создан новый).
+8. [ ] `allowedDependencies` в `package-info.java` обновлён, если добавлена зависимость на новый модуль.
+9. [ ] `@Transactional(readOnly = true)` на сервисе или методе.
+10. [ ] Javadoc на публичном Query API методе: назначение, параметры, что возвращает, ошибки.

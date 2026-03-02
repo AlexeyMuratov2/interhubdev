@@ -1,4 +1,4 @@
-package com.example.interhubdev.composition.internal;
+package com.example.interhubdev.composition.internal.attendance;
 
 import com.example.interhubdev.absencenotice.StudentNoticeSummaryDto;
 import com.example.interhubdev.attendancerecord.AttendanceRecordDto;
@@ -8,14 +8,14 @@ import com.example.interhubdev.attendance.StudentAttendanceByLessonsDto;
 import com.example.interhubdev.attendance.StudentLessonAttendanceItemDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryLessonItemDto;
+import com.example.interhubdev.composition.StudentAttendanceHistoryQueryApi;
+import com.example.interhubdev.composition.internal.shared.SubjectNameResolver;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.offering.OfferingApi;
-import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
-import com.example.interhubdev.subject.SubjectApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,20 +26,24 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Use-case service: aggregates student attendance history for an offering (all lessons + attendance + notices).
- * Batch-loads data to avoid N+1.
+ * Use-case service: aggregates student attendance history for an offering.
+ * Implements StudentAttendanceHistoryQueryApi. Uses SubjectNameResolver for subject display name.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class StudentAttendanceHistoryService {
+class StudentAttendanceHistoryService implements StudentAttendanceHistoryQueryApi {
 
     private final ScheduleApi scheduleApi;
     private final OfferingApi offeringApi;
-    private final ProgramApi programApi;
-    private final SubjectApi subjectApi;
     private final StudentApi studentApi;
     private final AttendanceApi attendanceApi;
+    private final SubjectNameResolver subjectNameResolver;
+
+    @Override
+    public StudentAttendanceHistoryDto getStudentAttendanceHistory(UUID studentId, UUID offeringId, UUID requesterId) {
+        return execute(studentId, offeringId, requesterId);
+    }
 
     StudentAttendanceHistoryDto execute(UUID studentId, UUID offeringId, UUID requesterId) {
         if (requesterId == null) {
@@ -54,7 +58,7 @@ class StudentAttendanceHistoryService {
 
         List<LessonDto> lessons = scheduleApi.findLessonsByOfferingId(offeringId);
 
-        String subjectName = resolveSubjectName(offering.curriculumSubjectId());
+        String subjectName = subjectNameResolver.resolve(offering.curriculumSubjectId());
 
         if (lessons.isEmpty()) {
             return new StudentAttendanceHistoryDto(
@@ -100,12 +104,5 @@ class StudentAttendanceHistoryService {
                 absenceNoticesSubmittedCount,
                 historyLessons
         );
-    }
-
-    private String resolveSubjectName(UUID curriculumSubjectId) {
-        return programApi.findCurriculumSubjectById(curriculumSubjectId)
-                .flatMap(cs -> subjectApi.findSubjectById(cs.subjectId()))
-                .map(s -> s.englishName() != null && !s.englishName().isBlank() ? s.englishName() : s.chineseName())
-                .orElse("");
     }
 }

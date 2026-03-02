@@ -40,6 +40,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -100,10 +101,11 @@ class AttendanceOutboxEventsIntegrationTest {
         // Setup common mocks
         LessonDto lesson = new LessonDto(
                 SESSION_ID, OFFERING_ID, UUID.randomUUID(), LocalDate.now(),
-                null, null, null, null, null, null,
+                LocalTime.of(10, 0), LocalTime.of(11, 0), null, null, null, null,
                 LocalDateTime.now(), LocalDateTime.now()
         );
         when(scheduleApi.findLessonById(SESSION_ID)).thenReturn(Optional.of(lesson));
+        when(scheduleApi.findLessonsByIds(any())).thenReturn(List.of(lesson));
 
         GroupSubjectOfferingDto offering = new GroupSubjectOfferingDto(
                 OFFERING_ID, GROUP_ID, UUID.randomUUID(), TEACHER_ID, null,
@@ -167,6 +169,8 @@ class AttendanceOutboxEventsIntegrationTest {
             assertThat(payload.get("studentId").asText()).isEqualTo(STUDENT_ID.toString());
             assertThat(payload.get("type").asText()).isEqualTo("ABSENT");
             assertThat(payload.get("submittedAt")).isNotNull();
+            assertThat(payload.get("periodStart")).isNotNull();
+            assertThat(payload.get("periodEnd")).isNotNull();
         }
 
         @Test
@@ -202,6 +206,8 @@ class AttendanceOutboxEventsIntegrationTest {
             assertThat(payload.get("studentId").asText()).isEqualTo(STUDENT_ID.toString());
             assertThat(payload.get("type").asText()).isEqualTo("LATE");
             assertThat(payload.get("updatedAt")).isNotNull();
+            assertThat(payload.get("periodStart")).isNotNull();
+            assertThat(payload.get("periodEnd")).isNotNull();
         }
 
         @Test

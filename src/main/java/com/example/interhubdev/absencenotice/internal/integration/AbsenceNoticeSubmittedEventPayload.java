@@ -14,6 +14,8 @@ public record AbsenceNoticeSubmittedEventPayload(
         List<UUID> sessionIds,
         UUID studentId,
         AbsenceNoticeType type,
-        Instant submittedAt
+        Instant submittedAt,
+        Instant periodStart,
+        Instant periodEnd
 ) {
 }

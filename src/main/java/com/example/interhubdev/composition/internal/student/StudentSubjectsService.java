@@ -1,4 +1,4 @@
-package com.example.interhubdev.composition.internal;
+package com.example.interhubdev.composition.internal.student;
 
 import com.example.interhubdev.composition.StudentSubjectListItemDto;
 import com.example.interhubdev.composition.StudentSubjectsDto;
@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 
 /**
  * Use-case service: aggregates all subjects for which the current student has at least one lesson.
- * For student dashboard / subject list. Returns subject info and teacher display name per offering.
  */
 @Service
 @RequiredArgsConstructor

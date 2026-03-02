@@ -63,10 +63,13 @@
  *       {@link com.example.interhubdev.group.port.GroupIdsByTeacherPort} using Offering and Schedule (group IDs where teacher has at least one lesson).</li>
  *   <li>{@link com.example.interhubdev.adapter.SubjectSlotLessonsCheckAdapter} - implements Subject's
  *       {@link com.example.interhubdev.subject.port.SlotLessonsCheckPort} using Offering and Schedule (checks that offerings have at least one lesson by slot).</li>
+ *   <li>{@link com.example.interhubdev.adapter.NotificationContentResolverAdapter} - implements Notification's
+ *       {@link com.example.interhubdev.notification.NotificationContentResolver} for absence notice events (submitted/updated);
+ *       uses Student, Schedule, Offering and Teacher to build rich notification content (student name, period, recipients).</li>
  * </ul>
  *
  * <h2>Dependencies</h2>
- * This package depends on {@code schedule}, {@code offering}, {@code group}, {@code document}, {@code subject}, {@code program}, {@code academic}, and {@code submission}
+ * This package depends on {@code schedule}, {@code offering}, {@code group}, {@code document}, {@code subject}, {@code program}, {@code academic}, {@code submission}, {@code notification}, {@code student}, and {@code teacher}
  * (only their port interfaces and types used in method signatures). The modules themselves do not depend on each other.
  * 
  * <p>This package is not a Spring Modulith module - it's an adapter layer that connects modules
@@ -74,6 +77,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Adapter",
-    allowedDependencies = {"schedule", "offering", "group", "group :: port", "document", "document :: api", "subject :: port", "program", "academic", "submission", "error"}
+    allowedDependencies = {"schedule", "offering", "group", "group :: port", "document", "document :: api", "subject :: port", "program", "academic", "submission", "notification", "student", "teacher", "error"}
 )
 package com.example.interhubdev.adapter;

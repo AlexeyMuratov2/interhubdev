@@ -1,7 +1,9 @@
-package com.example.interhubdev.composition.internal;
+package com.example.interhubdev.composition.internal.homework;
 
 import com.example.interhubdev.composition.StudentHomeworkHistoryDto;
 import com.example.interhubdev.composition.StudentHomeworkHistoryItemDto;
+import com.example.interhubdev.composition.StudentHomeworkHistoryQueryApi;
+import com.example.interhubdev.composition.internal.shared.SubjectNameResolver;
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
@@ -9,12 +11,10 @@ import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.grades.GradesApi;
 import com.example.interhubdev.offering.OfferingApi;
-import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
-import com.example.interhubdev.subject.SubjectApi;
 import com.example.interhubdev.submission.HomeworkSubmissionDto;
 import com.example.interhubdev.submission.SubmissionApi;
 import lombok.RequiredArgsConstructor;
@@ -27,13 +27,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Use-case service: aggregates full homework history for a student in an offering (all homeworks
- * and student's submission + grade per homework). Batch-loads data to avoid N+1.
+ * Use-case service: aggregates full homework history for a student in an offering.
+ * Implements StudentHomeworkHistoryQueryApi. Uses SubjectNameResolver for subject display name.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class StudentHomeworkHistoryService {
+class StudentHomeworkHistoryService implements StudentHomeworkHistoryQueryApi {
 
     private final ScheduleApi scheduleApi;
     private final OfferingApi offeringApi;
@@ -42,8 +42,12 @@ class StudentHomeworkHistoryService {
     private final GradesApi gradesApi;
     private final DocumentApi documentApi;
     private final StudentApi studentApi;
-    private final ProgramApi programApi;
-    private final SubjectApi subjectApi;
+    private final SubjectNameResolver subjectNameResolver;
+
+    @Override
+    public StudentHomeworkHistoryDto getStudentHomeworkHistory(UUID studentId, UUID offeringId, UUID requesterId) {
+        return execute(studentId, offeringId, requesterId);
+    }
 
     StudentHomeworkHistoryDto execute(UUID studentId, UUID offeringId, UUID requesterId) {
         if (requesterId == null) {
@@ -56,7 +60,7 @@ class StudentHomeworkHistoryService {
         StudentDto student = studentApi.findById(studentId)
                 .orElseThrow(() -> Errors.notFound("Student not found: " + studentId));
 
-        String subjectName = resolveSubjectName(offering.curriculumSubjectId());
+        String subjectName = subjectNameResolver.resolve(offering.curriculumSubjectId());
 
         List<LessonDto> lessons = scheduleApi.findLessonsByOfferingId(offeringId);
         if (lessons.isEmpty()) {
@@ -142,12 +146,5 @@ class StudentHomeworkHistoryService {
             }
         }
         return filesById;
-    }
-
-    private String resolveSubjectName(UUID curriculumSubjectId) {
-        return programApi.findCurriculumSubjectById(curriculumSubjectId)
-                .flatMap(cs -> subjectApi.findSubjectById(cs.subjectId()))
-                .map(s -> s.englishName() != null && !s.englishName().isBlank() ? s.englishName() : s.chineseName())
-                .orElse("");
     }
 }

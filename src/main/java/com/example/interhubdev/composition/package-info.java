@@ -1,17 +1,27 @@
 /**
  * Composition module - read-only data aggregation for complex UI screens.
  *
- * <p>Architecture and instructions for adding new endpoints: see
- * <code>docs/composition-module-architecture.md</code>.</p>
+ * <p>Architecture and instructions for adding new use cases: see
+ * <code>.cursor/rules/composition-module-guide.mdc</code>.</p>
  *
  * <h2>Purpose</h2>
  * This module aggregates data from multiple modules into a single response to reduce
  * the number of frontend requests in complex scenarios. It follows a "read-only composition"
  * pattern: it does not contain business logic or modify data, only reads and composes.
  *
- * <h2>Public API</h2>
+ * <h2>Public API (domain Query APIs)</h2>
  * <ul>
- *   <li>{@link com.example.interhubdev.composition.CompositionApi} - data composition facade</li>
+ *   <li>{@link com.example.interhubdev.composition.LessonQueryApi} - lesson full details, roster attendance, homework submissions</li>
+ *   <li>{@link com.example.interhubdev.composition.TeacherStudentGroupsQueryApi} - teacher student groups</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentSubjectsQueryApi} - student subjects and subject detail</li>
+ *   <li>{@link com.example.interhubdev.composition.GroupSubjectQueryApi} - group subject info</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentGradeHistoryQueryApi} - student grade history</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentAttendanceHistoryQueryApi} - student attendance history</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentHomeworkHistoryQueryApi} - student homework history</li>
+ * </ul>
+ *
+ * <h2>Public DTOs</h2>
+ * <ul>
  *   <li>{@link com.example.interhubdev.composition.LessonFullDetailsDto} - aggregated lesson details container</li>
  *   <li>{@link com.example.interhubdev.composition.LessonRosterAttendanceDto} - roster attendance for lesson screen table</li>
  *   <li>{@link com.example.interhubdev.composition.LessonHomeworkSubmissionsDto} - homework submissions per student per homework for lesson screen table</li>
@@ -26,6 +36,10 @@
  *   <li>{@link com.example.interhubdev.composition.StudentSubjectInfoDto} - student subject detail: subject, curriculum, teachers, schedule, and student stats</li>
  *   <li>{@link com.example.interhubdev.composition.StudentSubjectTeacherItemDto} - one teacher with profile and user display data</li>
  *   <li>{@link com.example.interhubdev.composition.StudentSubjectStatsDto} - student statistics for attendance, homework, and points</li>
+ *   <li>{@link com.example.interhubdev.composition.TeacherStudentGroupsDto} - teacher student groups list</li>
+ *   <li>{@link com.example.interhubdev.composition.TeacherStudentGroupItemDto} - one group row for teacher dashboard</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentSubjectsDto} - student subjects list</li>
+ *   <li>{@link com.example.interhubdev.composition.StudentSubjectListItemDto} - one subject row for student dashboard</li>
  * </ul>
  *
  * <h2>Architecture</h2>

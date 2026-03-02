@@ -1,10 +1,11 @@
-package com.example.interhubdev.composition.internal;
+package com.example.interhubdev.composition.internal.teacher;
 
 import com.example.interhubdev.academic.AcademicApi;
 import com.example.interhubdev.academic.AcademicYearDto;
 import com.example.interhubdev.academic.SemesterDto;
 import com.example.interhubdev.composition.TeacherStudentGroupItemDto;
 import com.example.interhubdev.composition.TeacherStudentGroupsDto;
+import com.example.interhubdev.composition.TeacherStudentGroupsQueryApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.group.GroupApi;
 import com.example.interhubdev.group.StudentGroupDto;
@@ -38,12 +39,12 @@ import java.util.stream.Collectors;
 
 /**
  * Use-case service: aggregates student groups where the current teacher has at least one lesson.
- * For teacher dashboard "Student groups" page.
+ * Implements TeacherStudentGroupsQueryApi.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class TeacherStudentGroupsService {
+class TeacherStudentGroupsService implements TeacherStudentGroupsQueryApi {
 
     private final TeacherApi teacherApi;
     private final OfferingApi offeringApi;
@@ -54,6 +55,11 @@ class TeacherStudentGroupsService {
     private final SubjectApi subjectApi;
     private final StudentApi studentApi;
     private final UserApi userApi;
+
+    @Override
+    public TeacherStudentGroupsDto getTeacherStudentGroups(UUID requesterId) {
+        return execute(requesterId);
+    }
 
     TeacherStudentGroupsDto execute(UUID requesterId) {
         if (requesterId == null) {
@@ -89,7 +95,6 @@ class TeacherStudentGroupsService {
             return new TeacherStudentGroupsDto(List.of(), List.of(), List.of(), List.of());
         }
 
-        // Subjects: load curriculum subjects -> subject ids -> SubjectDtos; build groupId -> subjectIds
         List<CurriculumSubjectDto> curriculumSubjects = programApi.findCurriculumSubjectsByIds(curriculumSubjectIdsSet);
         Map<UUID, CurriculumSubjectDto> curriculumSubjectById = curriculumSubjects.stream()
                 .collect(Collectors.toMap(CurriculumSubjectDto::id, cs -> cs));
@@ -106,17 +111,14 @@ class TeacherStudentGroupsService {
             }
         }
 
-        // Resolve semesters: offeringId -> dates, then date -> semester, then groupId -> semesters
         Map<UUID, Set<LocalDate>> offeringToDates = scheduleApi.findLessonDatesByOfferingIds(offeringIdsSet);
         Set<LocalDate> allDates = offeringToDates.values().stream().flatMap(Set::stream).collect(Collectors.toSet());
         List<SemesterDto> allSemestersList = academicApi.findSemestersByDates(allDates);
         Map<UUID, SemesterDto> semesterById = allSemestersList.stream().collect(Collectors.toMap(SemesterDto::id, s -> s));
-        // date -> semester (first matching)
         Map<LocalDate, SemesterDto> dateToSemester = new java.util.HashMap<>();
         for (LocalDate d : allDates) {
             academicApi.findSemesterByDate(d).ifPresent(s -> dateToSemester.put(d, s));
         }
-        // groupId -> set of semester IDs (from this group's offerings' lesson dates)
         Map<UUID, Set<UUID>> groupToSemesterIds = new java.util.HashMap<>();
         for (GroupSubjectOfferingDto o : offerings) {
             Set<LocalDate> dates = offeringToDates.getOrDefault(o.id(), Set.of());
@@ -127,14 +129,12 @@ class TeacherStudentGroupsService {
                     .collect(Collectors.toSet());
             groupToSemesterIds.computeIfAbsent(o.groupId(), k -> new LinkedHashSet<>()).addAll(semesterIds);
         }
-        // Distinct academic years (from semesters) for filter dropdown; sort by startDate descending (newest first)
         Set<UUID> academicYearIds = allSemestersList.stream()
                 .map(SemesterDto::academicYearId)
                 .collect(Collectors.toSet());
         List<AcademicYearDto> academicYearsForFilter = academicApi.findAcademicYearsByIds(academicYearIds).stream()
                 .sorted(Comparator.comparing(AcademicYearDto::startDate).reversed())
                 .toList();
-        // Semesters for filter dropdown (same as before, sorted newest first)
         List<SemesterDto> semestersForFilter = allSemestersList.stream()
                 .sorted(Comparator.comparing(SemesterDto::startDate).reversed())
                 .toList();

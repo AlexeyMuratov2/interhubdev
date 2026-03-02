@@ -10,6 +10,9 @@
  *   <li>{@link com.example.interhubdev.notification.NotificationDto} - notification data transfer object</li>
  *   <li>{@link com.example.interhubdev.notification.NotificationPage} - cursor-based pagination for notifications</li>
  *   <li>{@link com.example.interhubdev.notification.NotificationTemplateKeys} - template key constants</li>
+ *   <li>{@link com.example.interhubdev.notification.NotificationContentResolver} - port for resolving rich notification content from event payloads (implemented by adapter)</li>
+ *   <li>{@link com.example.interhubdev.notification.ResolvedNotificationContent} - container for resolved items and source timestamp</li>
+ *   <li>{@link com.example.interhubdev.notification.ResolvedNotificationItem} - single notification item (recipient, templateKey, params, data)</li>
  * </ul>
  * <p>
  * <h2>Architecture</h2>
@@ -43,14 +46,15 @@
  *   <li>error - for error handling</li>
  *   <li>outbox - for event handler registration</li>
  *   <li>auth - for authentication in controllers</li>
- *   <li>schedule - for lesson/session lookup</li>
- *   <li>offering - for offering and teacher lookup</li>
- *   <li>teacher - for teacher-to-user mapping</li>
- *   <li>student - for student-to-user mapping</li>
+ *   <li>attendancerecord - for attendance-marked handler (student userId lookup)</li>
+ *   <li>student - for attendance-marked handler</li>
  * </ul>
+ * <p>
+ * Rich notification content for absence notice events is resolved via {@link com.example.interhubdev.notification.NotificationContentResolver}
+ * (implemented in the adapter module); notification does not depend on schedule, offering, teacher or absencenotice for that flow.
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Notification",
-    allowedDependencies = {"error", "outbox", "auth", "schedule", "offering", "teacher", "student", "attendancerecord", "absencenotice"}
+    allowedDependencies = {"error", "outbox", "auth", "attendancerecord", "student"}
 )
 package com.example.interhubdev.notification;

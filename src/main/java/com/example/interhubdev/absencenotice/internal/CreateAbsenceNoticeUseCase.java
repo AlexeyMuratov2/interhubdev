@@ -5,6 +5,7 @@ import com.example.interhubdev.absencenotice.AbsenceNoticeStatus;
 import com.example.interhubdev.absencenotice.SubmitAbsenceNoticeRequest;
 import com.example.interhubdev.absencenotice.internal.integration.AbsenceNoticeSubmittedEventPayload;
 import com.example.interhubdev.offering.GroupSubjectOfferingDto;
+import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.offering.OfferingApi;
 import com.example.interhubdev.outbox.OutboxEventDraft;
 import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
@@ -19,6 +20,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -115,13 +117,19 @@ class CreateAbsenceNoticeUseCase {
         List<UUID> lessonIds = savedLessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
         List<AbsenceNoticeAttachment> finalAttachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(saved.getId());
 
+        List<LessonDto> lessons = sessionGateway.getSessionsByIds(lessonIds);
+        Instant periodStart = computePeriodStart(lessons);
+        Instant periodEnd = computePeriodEnd(lessons);
+
         Instant occurredAt = Instant.now();
         AbsenceNoticeSubmittedEventPayload payload = new AbsenceNoticeSubmittedEventPayload(
                 saved.getId(),
                 lessonIds,
                 saved.getStudentId(),
                 saved.getType(),
-                toInstant(saved.getSubmittedAt())
+                toInstant(saved.getSubmittedAt()),
+                periodStart,
+                periodEnd
         );
         publisher.publish(OutboxEventDraft.builder()
                 .eventType(AbsenceNoticeEventTypes.ABSENCE_NOTICE_SUBMITTED)
@@ -134,5 +142,21 @@ class CreateAbsenceNoticeUseCase {
 
     private static Instant toInstant(LocalDateTime localDateTime) {
         return localDateTime != null ? localDateTime.toInstant(ZoneOffset.UTC) : Instant.now();
+    }
+
+    private static Instant computePeriodStart(List<LessonDto> lessons) {
+        return lessons.stream()
+                .flatMap(l -> Stream.of(LocalDateTime.of(l.date(), l.startTime())))
+                .min(LocalDateTime::compareTo)
+                .map(ldt -> ldt.toInstant(ZoneOffset.UTC))
+                .orElse(Instant.now());
+    }
+
+    private static Instant computePeriodEnd(List<LessonDto> lessons) {
+        return lessons.stream()
+                .flatMap(l -> Stream.of(LocalDateTime.of(l.date(), l.endTime())))
+                .max(LocalDateTime::compareTo)
+                .map(ldt -> ldt.toInstant(ZoneOffset.UTC))
+                .orElse(Instant.now());
     }
 }

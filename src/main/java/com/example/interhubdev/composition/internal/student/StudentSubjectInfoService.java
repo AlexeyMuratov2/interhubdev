@@ -1,6 +1,5 @@
-package com.example.interhubdev.composition.internal;
+package com.example.interhubdev.composition.internal.student;
 
-import com.example.interhubdev.academic.AcademicApi;
 import com.example.interhubdev.academic.SemesterDto;
 import com.example.interhubdev.attendance.AttendanceApi;
 import com.example.interhubdev.attendancerecord.AttendanceStatus;
@@ -8,6 +7,7 @@ import com.example.interhubdev.attendancerecord.StudentAttendanceDto;
 import com.example.interhubdev.composition.StudentSubjectInfoDto;
 import com.example.interhubdev.composition.StudentSubjectStatsDto;
 import com.example.interhubdev.composition.StudentSubjectTeacherItemDto;
+import com.example.interhubdev.composition.internal.shared.SemesterResolver;
 import com.example.interhubdev.department.DepartmentApi;
 import com.example.interhubdev.department.DepartmentDto;
 import com.example.interhubdev.document.CourseMaterialApi;
@@ -38,7 +38,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -51,14 +50,13 @@ import java.util.stream.Collectors;
 
 /**
  * Use-case service: aggregates subject detail for a student's "Subject detail" screen.
- * Only students who belong to the offering's group (or admin) can view.
+ * Uses SemesterResolver for semester resolution.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 class StudentSubjectInfoService {
 
-    private final AcademicApi academicApi;
     private final AttendanceApi attendanceApi;
     private final CourseMaterialApi courseMaterialApi;
     private final DepartmentApi departmentApi;
@@ -67,6 +65,7 @@ class StudentSubjectInfoService {
     private final OfferingApi offeringApi;
     private final ProgramApi programApi;
     private final ScheduleApi scheduleApi;
+    private final SemesterResolver semesterResolver;
     private final StudentApi studentApi;
     private final SubjectApi subjectApi;
     private final SubmissionApi submissionApi;
@@ -98,7 +97,7 @@ class StudentSubjectInfoService {
 
         List<StudentSubjectTeacherItemDto> teachers = resolveTeachers(offering);
 
-        SemesterDto semester = resolveSemester(semesterId);
+        SemesterDto semester = semesterResolver.resolve(semesterId);
         StudentSubjectStatsDto stats = computeStats(
                 student, requester, offering, semester);
 
@@ -119,10 +118,6 @@ class StudentSubjectInfoService {
         );
     }
 
-    /**
-     * Resolve the student profile and check authorization.
-     * Student must belong to the offering's group; admins can view any.
-     */
     private StudentDto resolveAndAuthorize(UserDto requester, UUID groupId) {
         boolean isAdmin = requester.hasRole(Role.ADMIN) || requester.hasRole(Role.MODERATOR)
                 || requester.hasRole(Role.SUPER_ADMIN);
@@ -150,10 +145,6 @@ class StudentSubjectInfoService {
                 .orElse(null);
     }
 
-    /**
-     * Resolve all teachers assigned to the offering (main + slot teachers) with profile and user data.
-     * Batch-loaded by teacher IDs to avoid N+1.
-     */
     private List<StudentSubjectTeacherItemDto> resolveTeachers(GroupSubjectOfferingDto offering) {
         List<OfferingTeacherItemDto> offeringTeachers = offeringApi.findTeachersByOfferingId(offering.id());
 
@@ -203,19 +194,6 @@ class StudentSubjectInfoService {
         return result;
     }
 
-    private SemesterDto resolveSemester(Optional<UUID> semesterId) {
-        if (semesterId != null && semesterId.isPresent()) {
-            return academicApi.findSemesterById(semesterId.get())
-                    .orElseThrow(() -> Errors.notFound("Semester not found"));
-        }
-        return academicApi.findSemesterByDate(LocalDate.now())
-                .orElseThrow(() -> Errors.notFound("Current semester not found"));
-    }
-
-    /**
-     * Compute student-specific statistics: attendance percent, homework counts, total points.
-     * Reuses the same patterns as GroupSubjectInfoService.
-     */
     private StudentSubjectStatsDto computeStats(
             StudentDto student, UserDto requester,
             GroupSubjectOfferingDto offering, SemesterDto semester) {
@@ -224,8 +202,8 @@ class StudentSubjectInfoService {
             return new StudentSubjectStatsDto(null, 0, 0, BigDecimal.ZERO);
         }
 
-        LocalDate from = semester.startDate();
-        LocalDate to = semester.endDate();
+        var from = semester.startDate();
+        var to = semester.endDate();
 
         Double attendancePercent = computeAttendancePercent(student, offering, from, to, requester.id());
 
@@ -247,7 +225,7 @@ class StudentSubjectInfoService {
 
     private Double computeAttendancePercent(
             StudentDto student, GroupSubjectOfferingDto offering,
-            LocalDate from, LocalDate to, UUID requesterId) {
+            java.time.LocalDate from, java.time.LocalDate to, UUID requesterId) {
         StudentAttendanceDto attendance = attendanceApi.getStudentAttendance(
                 student.id(),
                 from.atStartOfDay(),

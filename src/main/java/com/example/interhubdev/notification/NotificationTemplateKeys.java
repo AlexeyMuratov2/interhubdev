@@ -15,18 +15,20 @@ public final class NotificationTemplateKeys {
     /**
      * Template key when a student submits a new absence notice.
      * <p>
-     * Params: sessionId (UUID string), noticeId (UUID string), studentId (UUID string), noticeType (ABSENT|LATE)
+     * Params: sessionIds (list of UUID strings), noticeId, studentId, noticeType (ABSENT|LATE),
+     * studentName (display name), periodStart (ISO-8601), periodEnd (ISO-8601).
      * <p>
-     * Data: route="sessionAttendance", sessionId, focus="notices", noticeId, studentId
+     * Data: route="sessionAttendance", sessionId (first session), focus="notices", noticeId, studentId
      */
     public static final String ABSENCE_NOTICE_SUBMITTED = "attendance.absenceNotice.submitted";
 
     /**
      * Template key when a student updates an existing absence notice.
      * <p>
-     * Params: sessionId (UUID string), noticeId (UUID string), studentId (UUID string), noticeType (ABSENT|LATE)
+     * Params: sessionIds (list of UUID strings), noticeId, studentId, noticeType (ABSENT|LATE),
+     * studentName (display name), periodStart (ISO-8601), periodEnd (ISO-8601).
      * <p>
-     * Data: route="sessionAttendance", sessionId, focus="notices", noticeId, studentId
+     * Data: route="sessionAttendance", sessionId (first session), focus="notices", noticeId, studentId
      */
     public static final String ABSENCE_NOTICE_UPDATED = "attendance.absenceNotice.updated";
 
