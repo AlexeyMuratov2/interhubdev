@@ -475,6 +475,18 @@ class AttendanceRecordServiceImpl implements AttendanceRecordApi {
         }
     }
 
+    @Override
+    @Transactional
+    public void detachNoticeByNoticeIdAndSessionId(UUID noticeId, UUID sessionId) {
+        List<AttendanceRecord> records = repository.findByAbsenceNoticeIdAndLessonSessionId(noticeId, sessionId);
+        for (AttendanceRecord record : records) {
+            record.setAbsenceNoticeId(null);
+        }
+        if (!records.isEmpty()) {
+            repository.saveAll(records);
+        }
+    }
+
     private List<AttendanceRecord> getRecordsByDateRange(UUID studentId, LocalDateTime from, LocalDateTime to) {
         if (from == null && to == null) {
             return repository.findByStudentIdOrderByMarkedAtDesc(studentId);

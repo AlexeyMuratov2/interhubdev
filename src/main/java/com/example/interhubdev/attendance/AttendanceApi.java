@@ -92,6 +92,12 @@ public interface AttendanceApi {
     AbsenceNoticeDto cancelAbsenceNotice(UUID noticeId, UUID studentId);
 
     /**
+     * Remove one lesson from an active absence notice owned by the current student.
+     * If it was the last lesson, the notice becomes canceled.
+     */
+    AbsenceNoticeDto removeLessonFromAbsenceNotice(UUID noticeId, UUID lessonSessionId, UUID studentId);
+
+    /**
      * Attach an absence notice to an attendance record (teacher only).
      */
     AttendanceRecordDto attachNoticeToRecord(UUID recordId, UUID noticeId, UUID requesterId);

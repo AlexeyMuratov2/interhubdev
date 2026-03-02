@@ -29,6 +29,7 @@ public final class AbsenceNoticeErrors {
     public static final String CODE_STUDENT_NOT_IN_GROUP = "ATTENDANCE_STUDENT_NOT_IN_GROUP";
     public static final String CODE_VALIDATION_FAILED = "ATTENDANCE_VALIDATION_FAILED";
     public static final String CODE_FORBIDDEN = "ATTENDANCE_FORBIDDEN";
+    public static final String CODE_NOTICE_DOES_NOT_COVER_SESSION = "ATTENDANCE_NOTICE_DOES_NOT_COVER_SESSION";
 
     public static AppException noticeNotFound(UUID id) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_NOTICE_NOT_FOUND, "Absence notice not found: " + id);
@@ -97,5 +98,13 @@ public final class AbsenceNoticeErrors {
 
     public static AppException forbidden(String message) {
         return Errors.of(HttpStatus.FORBIDDEN, CODE_FORBIDDEN, message);
+    }
+
+    public static AppException noticeDoesNotCoverSession(UUID noticeId, UUID sessionId) {
+        return Errors.of(
+                HttpStatus.BAD_REQUEST,
+                CODE_NOTICE_DOES_NOT_COVER_SESSION,
+                "Absence notice " + noticeId + " does not cover lesson session " + sessionId
+        );
     }
 }

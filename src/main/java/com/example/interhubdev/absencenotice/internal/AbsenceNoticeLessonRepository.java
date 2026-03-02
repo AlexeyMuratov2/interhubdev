@@ -27,5 +27,9 @@ interface AbsenceNoticeLessonRepository extends JpaRepository<AbsenceNoticeLesso
     @Query("DELETE FROM AbsenceNoticeLesson anl WHERE anl.noticeId = :noticeId")
     void deleteByNoticeId(@Param("noticeId") UUID noticeId);
 
+    @Modifying
+    @Query("DELETE FROM AbsenceNoticeLesson anl WHERE anl.noticeId = :noticeId AND anl.lessonSessionId = :lessonSessionId")
+    void deleteByNoticeIdAndLessonSessionId(@Param("noticeId") UUID noticeId, @Param("lessonSessionId") UUID lessonSessionId);
+
     boolean existsByNoticeIdAndLessonSessionId(UUID noticeId, UUID lessonSessionId);
 }

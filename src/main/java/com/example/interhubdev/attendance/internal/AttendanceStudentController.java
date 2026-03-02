@@ -78,8 +78,23 @@ class AttendanceStudentController {
         return ResponseEntity.ok(notice);
     }
 
+    @DeleteMapping("/{id}/lessons/{lessonSessionId}")
+    @Operation(
+            summary = "Remove lesson from absence notice",
+            description = "Remove one lesson session from an active notice. Only the notice owner can do this. If it was the last lesson, the notice is canceled."
+    )
+    public ResponseEntity<AbsenceNoticeDto> removeLessonFromNotice(
+            @PathVariable UUID id,
+            @PathVariable UUID lessonSessionId,
+            HttpServletRequest httpRequest
+    ) {
+        UUID studentId = requireCurrentStudentId(httpRequest);
+        AbsenceNoticeDto notice = attendanceApi.removeLessonFromAbsenceNotice(id, lessonSessionId, studentId);
+        return ResponseEntity.ok(notice);
+    }
+
     @GetMapping("/mine")
-    @Operation(summary = "Get my absence notices", description = "Get paginated list of own absence notices with lesson, offering, and slot context. Query: from, to (ISO datetime), cursor (notice ID for next page), limit (max 30). Only the authenticated student can access.")
+    @Operation(summary = "Get my absence notices", description = "Get paginated list of own absence notices with aggregated absence period (startAt/endAt). Query: from, to (ISO datetime), cursor (notice ID for next page), limit (max 30). Only the authenticated student can access.")
     public ResponseEntity<StudentAbsenceNoticePage> getMyNotices(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,

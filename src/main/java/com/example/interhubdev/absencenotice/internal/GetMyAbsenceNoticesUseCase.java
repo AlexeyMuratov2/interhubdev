@@ -2,10 +2,6 @@ package com.example.interhubdev.absencenotice.internal;
 
 import com.example.interhubdev.absencenotice.*;
 import com.example.interhubdev.error.Errors;
-import com.example.interhubdev.offering.GroupSubjectOfferingDto;
-import com.example.interhubdev.offering.OfferingApi;
-import com.example.interhubdev.offering.OfferingSlotDto;
-import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.ScheduleApi;
 import lombok.RequiredArgsConstructor;
@@ -30,8 +26,6 @@ class GetMyAbsenceNoticesUseCase {
     private final AbsenceNoticeLessonRepository lessonRepository;
     private final AbsenceNoticeAttachmentRepository attachmentRepository;
     private final ScheduleApi scheduleApi;
-    private final OfferingApi offeringApi;
-    private final ProgramApi programApi;
 
     StudentAbsenceNoticePage execute(UUID studentId, LocalDateTime from, LocalDateTime to, UUID cursor, Integer limit) {
         int cappedLimit = limit == null || limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
@@ -69,78 +63,43 @@ class GetMyAbsenceNoticesUseCase {
                 ? pageNotices.get(pageNotices.size() - 1).getId()
                 : null;
 
-        Map<UUID, LessonDto> lessonBySessionId = new HashMap<>();
-        Map<UUID, GroupSubjectOfferingDto> offeringById = new HashMap<>();
-        Map<UUID, String> subjectNameByCurriculumSubjectId = new HashMap<>();
-        Map<UUID, List<OfferingSlotDto>> slotsByOfferingId = new HashMap<>();
-
         List<StudentAbsenceNoticeItemDto> items = new ArrayList<>();
         for (AbsenceNotice notice : pageNotices) {
             List<AbsenceNoticeLesson> lessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(notice.getId());
             List<UUID> lessonIds = lessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
             List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(notice.getId());
             AbsenceNoticeDto noticeDto = AbsenceNoticeMappers.toDto(notice, lessonIds, attachments);
-
-            UUID firstLessonId = lessonIds.isEmpty() ? null : lessonIds.get(0);
-            LessonDto lesson = firstLessonId != null
-                    ? lessonBySessionId.computeIfAbsent(firstLessonId, sid -> scheduleApi.findLessonById(sid).orElse(null))
-                    : null;
-            GroupSubjectOfferingDto offering = lesson != null
-                    ? offeringById.computeIfAbsent(lesson.offeringId(), oid -> offeringApi.findOfferingById(oid).orElse(null))
-                    : null;
-
-            String subjectName = null;
-            List<OfferingSlotDto> slots = null;
-            if (offering != null) {
-                subjectName = subjectNameByCurriculumSubjectId.computeIfAbsent(offering.curriculumSubjectId(),
-                        id -> programApi.getSubjectNamesByCurriculumSubjectIds(List.of(id)).getOrDefault(id, null));
-                slots = slotsByOfferingId.computeIfAbsent(offering.id(), oid -> offeringApi.findSlotsByOfferingId(oid));
-            }
-            OfferingSlotDto slotDto = null;
-            if (lesson != null && lesson.offeringSlotId() != null && slots != null) {
-                slotDto = slots.stream()
-                        .filter(s -> Objects.equals(s.id(), lesson.offeringSlotId()))
-                        .findFirst()
-                        .orElse(null);
-            }
-            String lessonType = slotDto != null ? slotDto.lessonType() : null;
-
-            StudentNoticeLessonSummary lessonSummary = lesson != null
-                    ? new StudentNoticeLessonSummary(
-                            lesson.id(),
-                            lesson.offeringId(),
-                            lesson.date(),
-                            lesson.startTime(),
-                            lesson.endTime(),
-                            lesson.topic(),
-                            lesson.status(),
-                            lessonType)
-                    : null;
-            StudentNoticeOfferingSummary offeringSummary = offering != null
-                    ? new StudentNoticeOfferingSummary(
-                            offering.id(),
-                            offering.groupId(),
-                            offering.curriculumSubjectId(),
-                            subjectName,
-                            offering.format(),
-                            offering.notes())
-                    : null;
-            StudentNoticeSlotSummary slotSummary = slotDto != null
-                    ? new StudentNoticeSlotSummary(
-                            slotDto.id(),
-                            slotDto.offeringId(),
-                            slotDto.dayOfWeek(),
-                            slotDto.startTime(),
-                            slotDto.endTime(),
-                            slotDto.lessonType(),
-                            slotDto.roomId(),
-                            slotDto.teacherId(),
-                            slotDto.timeslotId())
-                    : null;
-
-            items.add(new StudentAbsenceNoticeItemDto(noticeDto, lessonSummary, offeringSummary, slotSummary));
+            List<LessonDto> lessonDtos = lessonIds.isEmpty() ? List.of() : scheduleApi.findLessonsByIds(lessonIds);
+            StudentNoticePeriodSummary period = buildPeriodSummary(lessonDtos);
+            items.add(new StudentAbsenceNoticeItemDto(noticeDto, period));
         }
 
         return new StudentAbsenceNoticePage(items, nextCursor);
+    }
+
+    private StudentNoticePeriodSummary buildPeriodSummary(List<LessonDto> lessons) {
+        if (lessons == null || lessons.isEmpty()) {
+            return null;
+        }
+        LocalDateTime startAt = lessons.stream()
+                .map(this::lessonStartAt)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+        LocalDateTime endAt = lessons.stream()
+                .map(this::lessonEndAt)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+        if (startAt == null || endAt == null) {
+            return null;
+        }
+        return new StudentNoticePeriodSummary(startAt, endAt);
+    }
+
+    private LocalDateTime lessonStartAt(LessonDto lesson) {
+        return LocalDateTime.of(lesson.date(), lesson.startTime());
+    }
+
+    private LocalDateTime lessonEndAt(LessonDto lesson) {
+        return LocalDateTime.of(lesson.date(), lesson.endTime());
     }
 }

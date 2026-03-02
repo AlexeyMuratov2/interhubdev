@@ -48,4 +48,6 @@ interface AttendanceRecordRepository extends JpaRepository<AttendanceRecord, UUI
     );
 
     List<AttendanceRecord> findByAbsenceNoticeId(UUID absenceNoticeId);
+
+    List<AttendanceRecord> findByAbsenceNoticeIdAndLessonSessionId(UUID absenceNoticeId, UUID lessonSessionId);
 }

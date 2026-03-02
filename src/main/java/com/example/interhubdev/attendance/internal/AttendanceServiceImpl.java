@@ -219,6 +219,14 @@ class AttendanceServiceImpl implements AttendanceApi {
 
     @Override
     @Transactional
+    public AbsenceNoticeDto removeLessonFromAbsenceNotice(UUID noticeId, UUID lessonSessionId, UUID studentId) {
+        AbsenceNoticeDto dto = noticeApi.removeLessonFromAbsenceNotice(noticeId, lessonSessionId, studentId);
+        recordApi.detachNoticeByNoticeIdAndSessionId(noticeId, lessonSessionId);
+        return dto;
+    }
+
+    @Override
+    @Transactional
     public AttendanceRecordDto attachNoticeToRecord(UUID recordId, UUID noticeId, UUID requesterId) {
         noticeApi.attachToRecord(noticeId, recordId, requesterId);
         return recordApi.findRecordById(recordId)

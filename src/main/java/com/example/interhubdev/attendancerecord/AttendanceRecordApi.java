@@ -143,4 +143,12 @@ public interface AttendanceRecordApi {
      * @param noticeId absence notice ID
      */
     void detachNoticeByNoticeId(UUID noticeId);
+
+    /**
+     * Detach absence notice from records of a specific lesson session.
+     *
+     * @param noticeId  absence notice ID
+     * @param sessionId lesson session ID
+     */
+    void detachNoticeByNoticeIdAndSessionId(UUID noticeId, UUID sessionId);
 }

@@ -32,6 +32,7 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
     private final CreateAbsenceNoticeUseCase createUseCase;
     private final UpdateAbsenceNoticeUseCase updateUseCase;
     private final CancelAbsenceNoticeUseCase cancelUseCase;
+    private final RemoveAbsenceNoticeLessonUseCase removeLessonUseCase;
     private final GetTeacherAbsenceNoticesUseCase getTeacherNoticesUseCase;
     private final GetMyAbsenceNoticesUseCase getMyNoticesUseCase;
 
@@ -51,6 +52,12 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
     @Transactional
     public AbsenceNoticeDto cancelAbsenceNotice(UUID noticeId, UUID studentId) {
         return cancelUseCase.execute(noticeId, studentId);
+    }
+
+    @Override
+    @Transactional
+    public AbsenceNoticeDto removeLessonFromAbsenceNotice(UUID noticeId, UUID lessonSessionId, UUID studentId) {
+        return removeLessonUseCase.execute(noticeId, lessonSessionId, studentId);
     }
 
     @Override

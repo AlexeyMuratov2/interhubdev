@@ -19,6 +19,13 @@ public interface AbsenceNoticeApi {
 
     AbsenceNoticeDto cancelAbsenceNotice(UUID noticeId, UUID studentId);
 
+    /**
+     * Remove one lesson session from an active absence notice.
+     * Only the notice owner can remove lessons.
+     * If this is the last lesson in the notice, the notice is canceled.
+     */
+    AbsenceNoticeDto removeLessonFromAbsenceNotice(UUID noticeId, UUID lessonSessionId, UUID studentId);
+
     TeacherAbsenceNoticePage getTeacherAbsenceNotices(
             UUID teacherId,
             List<AbsenceNoticeStatus> statuses,
