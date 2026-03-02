@@ -77,6 +77,8 @@ class JwtAuthenticationFilter extends OncePerRequestFilter implements Ordered {
         // Skip filter for public endpoints
         return path.startsWith("/api/auth/login") ||
                path.startsWith("/api/auth/refresh") ||
+               path.startsWith("/api/auth/forgot-password") ||
+               path.startsWith("/api/auth/reset-password") ||
                path.startsWith("/api-docs") ||
                path.startsWith("/swagger-ui") ||
                path.startsWith("/actuator/health") ||

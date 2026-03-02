@@ -32,7 +32,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -58,7 +57,7 @@ class AttendanceServiceImpl implements AttendanceApi {
         for (AttendanceRecordDto record : saved) {
             publishAttendanceMarked(record, markedBy, occurredAt);
             record.absenceNoticeId().ifPresent(noticeId ->
-                    noticeApi.attachToRecord(noticeId, record.id(), markedBy));
+                    noticeApi.attachToRecord(noticeId, record.id(), markedBy)); // validates notice covers lesson and updates link
         }
         return saved;
     }
@@ -213,27 +212,22 @@ class AttendanceServiceImpl implements AttendanceApi {
     @Override
     @Transactional
     public AbsenceNoticeDto cancelAbsenceNotice(UUID noticeId, UUID studentId) {
-        return noticeApi.cancelAbsenceNotice(noticeId, studentId);
-    }
-
-    @Override
-    @Transactional
-    public AbsenceNoticeDto respondToAbsenceNotice(UUID noticeId, boolean approved, String comment, UUID teacherId) {
-        return noticeApi.respondToAbsenceNotice(noticeId, approved, comment, teacherId);
+        AbsenceNoticeDto dto = noticeApi.cancelAbsenceNotice(noticeId, studentId);
+        recordApi.detachNoticeByNoticeId(noticeId);
+        return dto;
     }
 
     @Override
     @Transactional
     public AttendanceRecordDto attachNoticeToRecord(UUID recordId, UUID noticeId, UUID requesterId) {
-        AttendanceRecordDto record = recordApi.attachNotice(recordId, noticeId, requesterId);
         noticeApi.attachToRecord(noticeId, recordId, requesterId);
-        return record;
+        return recordApi.findRecordById(recordId)
+                .orElseThrow(() -> new IllegalStateException("Record not found after attach: " + recordId));
     }
 
     @Override
     @Transactional
     public AttendanceRecordDto detachNoticeFromRecord(UUID recordId, UUID requesterId) {
-        noticeApi.detachFromRecordByRecordId(recordId, requesterId);
         return recordApi.detachNotice(recordId, requesterId);
     }
 

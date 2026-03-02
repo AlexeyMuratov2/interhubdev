@@ -1,5 +1,6 @@
 package com.example.interhubdev.absencenotice;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,4 +25,14 @@ public interface AttendanceRecordAttachmentPort {
      * @param requesterId user ID (for authorization)
      */
     void detachNotice(UUID recordId, UUID requesterId);
+
+    /**
+     * Get the absence notice ID attached to this record, if any.
+     */
+    Optional<UUID> getNoticeIdByRecordId(UUID recordId);
+
+    /**
+     * Get the lesson session ID for this attendance record.
+     */
+    Optional<UUID> getLessonSessionIdByRecordId(UUID recordId);
 }

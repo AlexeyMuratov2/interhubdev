@@ -17,10 +17,7 @@ public final class AbsenceNoticeErrors {
     public static final String CODE_NOTICE_NOT_FOUND = "ATTENDANCE_NOTICE_NOT_FOUND";
     public static final String CODE_NOTICE_NOT_OWNED = "ATTENDANCE_NOTICE_NOT_OWNED";
     public static final String CODE_NOTICE_NOT_CANCELABLE = "ATTENDANCE_NOTICE_NOT_CANCELABLE";
-    public static final String CODE_NOTICE_ALREADY_RESPONDED = "ATTENDANCE_NOTICE_ALREADY_RESPONDED";
     public static final String CODE_NOTICE_CANNOT_UPDATE_AFTER_RESPONSE = "ATTENDANCE_NOTICE_CANNOT_UPDATE_AFTER_RESPONSE";
-    public static final String CODE_NOTICE_CANNOT_CANCEL_AFTER_RESPONSE = "ATTENDANCE_NOTICE_CANNOT_CANCEL_AFTER_RESPONSE";
-    public static final String CODE_TEACHER_CANNOT_RESPOND = "ATTENDANCE_TEACHER_CANNOT_RESPOND";
     public static final String CODE_NOTICE_ALREADY_EXISTS = "ATTENDANCE_NOTICE_ALREADY_EXISTS";
     public static final String CODE_SESSION_NOT_FOUND = "ATTENDANCE_SESSION_NOT_FOUND";
     public static final String CODE_INVALID_ATTACHMENT_COUNT = "ATTENDANCE_INVALID_ATTACHMENT_COUNT";
@@ -47,24 +44,9 @@ public final class AbsenceNoticeErrors {
                 "Absence notice " + noticeId + " cannot be canceled: " + reason);
     }
 
-    public static AppException noticeAlreadyResponded(UUID noticeId) {
-        return Errors.of(HttpStatus.BAD_REQUEST, CODE_NOTICE_ALREADY_RESPONDED,
-                "Absence notice " + noticeId + " has already been responded to by a teacher");
-    }
-
     public static AppException noticeCannotBeUpdatedAfterResponse(UUID noticeId) {
         return Errors.of(HttpStatus.BAD_REQUEST, CODE_NOTICE_CANNOT_UPDATE_AFTER_RESPONSE,
-                "Absence notice " + noticeId + " cannot be updated after teacher has responded");
-    }
-
-    public static AppException noticeCannotBeCanceledAfterResponse(UUID noticeId) {
-        return Errors.of(HttpStatus.BAD_REQUEST, CODE_NOTICE_CANNOT_CANCEL_AFTER_RESPONSE,
-                "Absence notice " + noticeId + " cannot be canceled after teacher has responded");
-    }
-
-    public static AppException teacherCannotRespond(UUID noticeId, UUID teacherId) {
-        return Errors.of(HttpStatus.FORBIDDEN, CODE_TEACHER_CANNOT_RESPOND,
-                "Teacher cannot respond to absence notice " + noticeId);
+                "Absence notice " + noticeId + " cannot be updated in current status");
     }
 
     public static AppException noticeAlreadyExistsForSession(UUID sessionId, UUID studentId) {

@@ -9,6 +9,7 @@ import com.example.interhubdev.offering.OfferingApi;
 import com.example.interhubdev.outbox.OutboxEventDraft;
 import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ class CreateAbsenceNoticeUseCase {
     private static final int MAX_ATTACHMENTS = 10;
 
     private final AbsenceNoticeRepository noticeRepository;
+    private final AbsenceNoticeLessonRepository lessonRepository;
     private final AbsenceNoticeAttachmentRepository attachmentRepository;
     private final SessionGateway sessionGateway;
     private final RosterGateway rosterGateway;
@@ -34,18 +36,35 @@ class CreateAbsenceNoticeUseCase {
     private final OutboxIntegrationEventPublisher publisher;
 
     AbsenceNoticeDto execute(SubmitAbsenceNoticeRequest request, UUID studentId) {
-        var session = sessionGateway.getSessionById(request.lessonSessionId())
-                .orElseThrow(() -> AbsenceNoticeErrors.sessionNotFound(request.lessonSessionId()));
-
-        GroupSubjectOfferingDto offering = offeringApi.findOfferingById(session.offeringId())
-                .orElseThrow(() -> AbsenceNoticeErrors.offeringNotFound(session.offeringId()));
-
-        if (!rosterGateway.isStudentInGroup(studentId, offering.groupId())) {
-            throw AbsenceNoticeErrors.studentNotInGroup(studentId, offering.groupId());
+        List<UUID> sessionIds = request.lessonSessionIds();
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            throw AbsenceNoticeErrors.validationFailed("lessonSessionIds is required and must not be empty");
         }
 
-        if (noticeRepository.findActiveBySessionAndStudent(request.lessonSessionId(), studentId, AbsenceNoticeStatus.SUBMITTED).isPresent()) {
-            throw AbsenceNoticeErrors.noticeAlreadyExistsForSession(request.lessonSessionId(), studentId);
+        for (UUID sessionId : sessionIds) {
+            var session = sessionGateway.getSessionById(sessionId)
+                    .orElseThrow(() -> AbsenceNoticeErrors.sessionNotFound(sessionId));
+
+            GroupSubjectOfferingDto offering = offeringApi.findOfferingById(session.offeringId())
+                    .orElseThrow(() -> AbsenceNoticeErrors.offeringNotFound(session.offeringId()));
+
+            if (!rosterGateway.isStudentInGroup(studentId, offering.groupId())) {
+                throw AbsenceNoticeErrors.studentNotInGroup(studentId, offering.groupId());
+            }
+
+            // Check no other SUBMITTED notice for this student already covers this session
+            List<AbsenceNoticeLesson> existingForSession = lessonRepository.findByLessonSessionId(sessionId);
+            if (!existingForSession.isEmpty()) {
+                List<UUID> existingNoticeIds = existingForSession.stream()
+                        .map(AbsenceNoticeLesson::getNoticeId)
+                        .distinct()
+                        .toList();
+                List<AbsenceNotice> conflicting = noticeRepository.findByIdInAndStudentIdAndStatusOrderBySubmittedAtDesc(
+                        existingNoticeIds, studentId, AbsenceNoticeStatus.SUBMITTED, PageRequest.of(0, 1));
+                if (!conflicting.isEmpty()) {
+                    throw AbsenceNoticeErrors.noticeAlreadyExistsForSession(sessionId, studentId);
+                }
+            }
         }
 
         List<String> fileIds = request.fileIds() != null ? request.fileIds() : List.of();
@@ -64,7 +83,6 @@ class CreateAbsenceNoticeUseCase {
         }
 
         AbsenceNotice notice = AbsenceNotice.builder()
-                .lessonSessionId(request.lessonSessionId())
                 .studentId(studentId)
                 .type(request.type())
                 .reasonText(request.reasonText() != null && !request.reasonText().isBlank() ? request.reasonText() : null)
@@ -72,6 +90,15 @@ class CreateAbsenceNoticeUseCase {
                 .build();
 
         AbsenceNotice saved = noticeRepository.save(notice);
+
+        List<AbsenceNoticeLesson> lessonsToCreate = new ArrayList<>();
+        for (UUID sessionId : sessionIds) {
+            lessonsToCreate.add(AbsenceNoticeLesson.builder()
+                    .noticeId(saved.getId())
+                    .lessonSessionId(sessionId)
+                    .build());
+        }
+        lessonRepository.saveAll(lessonsToCreate);
 
         List<AbsenceNoticeAttachment> toCreate = new ArrayList<>();
         for (String fileId : fileIds) {
@@ -84,12 +111,14 @@ class CreateAbsenceNoticeUseCase {
             attachmentRepository.saveAll(toCreate);
         }
 
+        List<AbsenceNoticeLesson> savedLessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(saved.getId());
+        List<UUID> lessonIds = savedLessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
         List<AbsenceNoticeAttachment> finalAttachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(saved.getId());
 
         Instant occurredAt = Instant.now();
         AbsenceNoticeSubmittedEventPayload payload = new AbsenceNoticeSubmittedEventPayload(
                 saved.getId(),
-                saved.getLessonSessionId(),
+                lessonIds,
                 saved.getStudentId(),
                 saved.getType(),
                 toInstant(saved.getSubmittedAt())
@@ -100,7 +129,7 @@ class CreateAbsenceNoticeUseCase {
                 .occurredAt(occurredAt)
                 .build());
 
-        return AbsenceNoticeMappers.toDto(saved, finalAttachments);
+        return AbsenceNoticeMappers.toDto(saved, lessonIds, finalAttachments);
     }
 
     private static Instant toInstant(LocalDateTime localDateTime) {

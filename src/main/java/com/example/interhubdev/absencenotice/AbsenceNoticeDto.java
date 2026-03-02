@@ -6,11 +6,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * DTO for absence notice submitted by a student.
+ * DTO for absence notice submitted by a student. Covers multiple lessons via lessonSessionIds.
  */
 public record AbsenceNoticeDto(
         UUID id,
-        UUID lessonSessionId,
+        List<UUID> lessonSessionIds,
         UUID studentId,
         AbsenceNoticeType type,
         Optional<String> reasonText,
@@ -18,10 +18,6 @@ public record AbsenceNoticeDto(
         LocalDateTime submittedAt,
         LocalDateTime updatedAt,
         Optional<LocalDateTime> canceledAt,
-        Optional<UUID> attachedRecordId,
-        List<String> fileIds,
-        Optional<String> teacherComment,
-        Optional<LocalDateTime> respondedAt,
-        Optional<UUID> respondedBy
+        List<String> fileIds
 ) {
 }

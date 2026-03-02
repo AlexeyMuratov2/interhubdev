@@ -87,10 +87,9 @@ public interface AttendanceApi {
 
     /**
      * Cancel an active (SUBMITTED) absence notice. Only the notice owner can cancel.
+     * Also detaches the notice from any attendance records.
      */
     AbsenceNoticeDto cancelAbsenceNotice(UUID noticeId, UUID studentId);
-
-    AbsenceNoticeDto respondToAbsenceNotice(UUID noticeId, boolean approved, String comment, UUID teacherId);
 
     /**
      * Attach an absence notice to an attendance record (teacher only).

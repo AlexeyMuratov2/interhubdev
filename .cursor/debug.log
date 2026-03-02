@@ -1,0 +1,2 @@
+{"hypothesisId":"H1","location":"EmailServiceImpl.java:send","message":"Mail config before send","data":{"mailHost":"smtp.gmail.com","mailPort":"465","enabled":true,"logOnly":false,"willAttemptSend":true},"timestamp":1772357888816}
+{"hypothesisId":"H1","location":"EmailServiceImpl.java:send","message":"Mail config before send","data":{"mailHost":"smtp.gmail.com","mailPort":"587","enabled":true,"logOnly":true,"willAttemptSend":false},"timestamp":1772358262529}

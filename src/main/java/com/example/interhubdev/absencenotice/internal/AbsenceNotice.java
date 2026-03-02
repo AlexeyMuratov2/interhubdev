@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * JPA entity for absence_notice.
+ * JPA entity for absence_notice. Lessons are linked via absence_notice_lesson.
  */
 @Entity
 @Table(name = "absence_notice")
@@ -27,9 +27,6 @@ class AbsenceNotice {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(name = "lesson_session_id", nullable = false)
-    private UUID lessonSessionId;
 
     @Column(name = "student_id", nullable = false)
     private UUID studentId;
@@ -56,18 +53,6 @@ class AbsenceNotice {
 
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
-
-    @Column(name = "attached_record_id")
-    private UUID attachedRecordId;
-
-    @Column(name = "teacher_comment", columnDefinition = "TEXT")
-    private String teacherComment;
-
-    @Column(name = "responded_at")
-    private LocalDateTime respondedAt;
-
-    @Column(name = "responded_by")
-    private UUID respondedBy;
 
     @Version
     @Column(name = "version")

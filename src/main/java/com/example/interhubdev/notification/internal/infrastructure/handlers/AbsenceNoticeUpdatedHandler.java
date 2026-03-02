@@ -19,12 +19,11 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Handler for attendance.absence_notice.updated event.
  * <p>
- * Creates notifications for teachers of the lesson session when a student updates an absence notice.
+ * Creates one notification per teacher (deduped across lessons). Payload has sessionIds (list).
  */
 @Component
 @RequiredArgsConstructor
@@ -46,65 +45,54 @@ class AbsenceNoticeUpdatedHandler implements OutboxEventHandler {
     public void handle(OutboxEvent event) throws Exception {
         Map<String, Object> payload = event.getPayload();
 
-        // Parse payload
         UUID noticeId = UUID.fromString(payload.get("noticeId").toString());
-        UUID sessionId = UUID.fromString(payload.get("sessionId").toString());
         UUID studentId = UUID.fromString(payload.get("studentId").toString());
         AbsenceNoticeType noticeType = AbsenceNoticeType.valueOf(payload.get("type").toString());
         Instant occurredAt = parseInstantFromPayload(payload.get("updatedAt"));
 
-        log.debug("Processing absence notice updated event: noticeId={}, sessionId={}, studentId={}",
-                noticeId, sessionId, studentId);
+        @SuppressWarnings("unchecked")
+        List<String> sessionIdStrs = (List<String>) payload.get("sessionIds");
+        if (sessionIdStrs == null || sessionIdStrs.isEmpty()) {
+            log.warn("No sessionIds in payload: noticeId={}", noticeId);
+            return;
+        }
+        List<UUID> sessionIds = sessionIdStrs.stream().map(UUID::fromString).toList();
 
-        // Get lesson to find offeringId
-        LessonDto lesson = scheduleApi.findLessonById(sessionId)
-                .orElseThrow(() -> new IllegalStateException("Lesson not found: " + sessionId));
+        log.debug("Processing absence notice updated event: noticeId={}, sessionIds={}, studentId={}",
+                noticeId, sessionIds.size(), studentId);
 
-        UUID offeringId = lesson.offeringId();
+        Set<UUID> teacherUserIds = new HashSet<>();
+        UUID firstSessionId = sessionIds.get(0);
+        for (UUID sessionId : sessionIds) {
+            LessonDto lesson = scheduleApi.findLessonById(sessionId).orElse(null);
+            if (lesson == null) continue;
+            List<OfferingTeacherItemDto> offeringTeachers = offeringApi.findTeachersByOfferingId(lesson.offeringId());
+            for (OfferingTeacherItemDto ot : offeringTeachers) {
+                teacherApi.findById(ot.teacherId()).map(TeacherDto::userId).ifPresent(teacherUserIds::add);
+            }
+        }
 
-        // Get teachers for the offering
-        List<OfferingTeacherItemDto> offeringTeachers = offeringApi.findTeachersByOfferingId(offeringId);
-        if (offeringTeachers.isEmpty()) {
-            log.warn("No teachers found for offering: offeringId={}, sessionId={}", offeringId, sessionId);
+        if (teacherUserIds.isEmpty()) {
+            log.warn("No teachers found for notice sessions: noticeId={}", noticeId);
             return;
         }
 
-        // Get teacher entity IDs and batch-load teacher profiles
-        List<UUID> teacherEntityIds = offeringTeachers.stream()
-                .map(OfferingTeacherItemDto::teacherId)
-                .distinct()
-                .collect(Collectors.toList());
-
-        List<TeacherDto> teachers = teacherApi.findByIds(teacherEntityIds);
-        if (teachers.isEmpty()) {
-            log.warn("No teacher profiles found for offering: offeringId={}", offeringId);
-            return;
-        }
-
-        // Create notifications for each teacher (user ID)
-        for (TeacherDto teacher : teachers) {
-            UUID teacherUserId = teacher.userId();
-
-            // Build params JSON
+        for (UUID teacherUserId : teacherUserIds) {
             Map<String, Object> params = Map.of(
-                    "sessionId", sessionId.toString(),
+                    "sessionIds", sessionIds.stream().map(UUID::toString).toList(),
                     "noticeId", noticeId.toString(),
                     "studentId", studentId.toString(),
                     "noticeType", noticeType.name()
             );
-
-            // Build data JSON for deep-linking
             Map<String, Object> data = Map.of(
                     "route", "sessionAttendance",
-                    "sessionId", sessionId.toString(),
+                    "sessionId", firstSessionId.toString(),
                     "focus", "notices",
                     "noticeId", noticeId.toString(),
                     "studentId", studentId.toString()
             );
-
             String paramsJson = objectMapper.writeValueAsString(params);
             String dataJson = objectMapper.writeValueAsString(data);
-
             Notification notification = new Notification(
                     teacherUserId,
                     NotificationTemplateKeys.ABSENCE_NOTICE_UPDATED,
@@ -114,13 +102,10 @@ class AbsenceNoticeUpdatedHandler implements OutboxEventHandler {
                     event.getEventType(),
                     occurredAt
             );
-
             createNotificationUseCase.execute(notification);
         }
 
-        log.info("Created notifications for {} teachers: noticeId={}, sessionId={}", teachers.size(), noticeId, sessionId);
-
-        // TODO: In future, after creating in-app notification, enqueue push delivery (mobile) based on user preferences.
+        log.info("Created notifications for {} teachers: noticeId={}", teacherUserIds.size(), noticeId);
     }
 
     private static Instant parseInstantFromPayload(Object value) {

@@ -457,6 +457,24 @@ class AttendanceRecordServiceImpl implements AttendanceRecordApi {
         return AttendanceRecordMappers.toDto(saved);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<AttendanceRecordDto> findRecordById(UUID recordId) {
+        return repository.findById(recordId).map(AttendanceRecordMappers::toDto);
+    }
+
+    @Override
+    @Transactional
+    public void detachNoticeByNoticeId(UUID noticeId) {
+        List<AttendanceRecord> records = repository.findByAbsenceNoticeId(noticeId);
+        for (AttendanceRecord record : records) {
+            record.setAbsenceNoticeId(null);
+        }
+        if (!records.isEmpty()) {
+            repository.saveAll(records);
+        }
+    }
+
     private List<AttendanceRecord> getRecordsByDateRange(UUID studentId, LocalDateTime from, LocalDateTime to) {
         if (from == null && to == null) {
             return repository.findByStudentIdOrderByMarkedAtDesc(studentId);

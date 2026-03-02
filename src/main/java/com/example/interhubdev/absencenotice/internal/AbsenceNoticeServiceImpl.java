@@ -6,13 +6,14 @@ import com.example.interhubdev.outbox.OutboxEventDraft;
 import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import com.example.interhubdev.schedule.LessonDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Implementation of {@link AbsenceNoticeApi}.
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
 
     private final AbsenceNoticeRepository noticeRepository;
+    private final AbsenceNoticeLessonRepository lessonRepository;
     private final AbsenceNoticeAttachmentRepository attachmentRepository;
     private final SessionGateway sessionGateway;
     private final AbsenceNoticeAccessPolicy accessPolicy;
@@ -30,7 +32,6 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
     private final CreateAbsenceNoticeUseCase createUseCase;
     private final UpdateAbsenceNoticeUseCase updateUseCase;
     private final CancelAbsenceNoticeUseCase cancelUseCase;
-    private final RespondToAbsenceNoticeUseCase respondUseCase;
     private final GetTeacherAbsenceNoticesUseCase getTeacherNoticesUseCase;
     private final GetMyAbsenceNoticesUseCase getMyNoticesUseCase;
 
@@ -53,12 +54,6 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
     }
 
     @Override
-    @Transactional
-    public AbsenceNoticeDto respondToAbsenceNotice(UUID noticeId, boolean approved, String comment, UUID teacherId) {
-        return respondUseCase.execute(noticeId, approved, comment, teacherId);
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public TeacherAbsenceNoticePage getTeacherAbsenceNotices(
             UUID teacherId,
@@ -73,8 +68,8 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
     @Transactional(readOnly = true)
     public StudentAbsenceNoticePage getMyAbsenceNotices(
             UUID studentId,
-            LocalDateTime from,
-            LocalDateTime to,
+            java.time.LocalDateTime from,
+            java.time.LocalDateTime to,
             UUID cursor,
             Integer limit
     ) {
@@ -84,17 +79,24 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
     @Override
     @Transactional(readOnly = true)
     public Map<UUID, List<StudentNoticeSummaryDto>> getSessionNotices(UUID sessionId, boolean includeCanceled) {
-        List<AbsenceNotice> notices = includeCanceled
-                ? noticeRepository.findByLessonSessionId(sessionId)
-                : noticeRepository.findByLessonSessionIdAndStatus(sessionId, AbsenceNoticeStatus.SUBMITTED);
+        List<AbsenceNoticeLesson> lessonLinks = lessonRepository.findByLessonSessionId(sessionId);
+        if (lessonLinks.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> noticeIds = lessonLinks.stream().map(AbsenceNoticeLesson::getNoticeId).distinct().toList();
+        List<AbsenceNoticeStatus> statuses = includeCanceled
+                ? List.of(AbsenceNoticeStatus.SUBMITTED, AbsenceNoticeStatus.CANCELED)
+                : List.of(AbsenceNoticeStatus.SUBMITTED);
+        List<AbsenceNotice> notices = noticeRepository.findByIdInAndStatusInOrderBySubmittedAtDescIdDesc(noticeIds, statuses);
+        if (notices.isEmpty()) {
+            return Map.of();
+        }
 
-        Set<UUID> noticeIds = notices.stream().map(AbsenceNotice::getId).collect(Collectors.toSet());
+        Set<UUID> noticeIdSet = notices.stream().map(AbsenceNotice::getId).collect(Collectors.toSet());
         Map<UUID, List<String>> fileIdsByNoticeId = new HashMap<>();
-        if (!noticeIds.isEmpty()) {
-            List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdIn(new ArrayList<>(noticeIds));
-            for (AbsenceNoticeAttachment a : attachments) {
-                fileIdsByNoticeId.computeIfAbsent(a.getNoticeId(), k -> new ArrayList<>()).add(a.getFileId());
-            }
+        List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdIn(new ArrayList<>(noticeIdSet));
+        for (AbsenceNoticeAttachment a : attachments) {
+            fileIdsByNoticeId.computeIfAbsent(a.getNoticeId(), k -> new ArrayList<>()).add(a.getFileId());
         }
 
         Map<UUID, List<StudentNoticeSummaryDto>> byStudent = new HashMap<>();
@@ -116,13 +118,21 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
     @Override
     @Transactional(readOnly = true)
     public List<AbsenceNoticeDto> getSessionNoticesAsList(UUID sessionId, boolean includeCanceled) {
-        List<AbsenceNotice> notices = includeCanceled
-                ? noticeRepository.findByLessonSessionIdOrderBySubmittedAtDesc(sessionId)
-                : noticeRepository.findByLessonSessionIdAndStatus(sessionId, AbsenceNoticeStatus.SUBMITTED);
+        List<AbsenceNoticeLesson> lessonLinks = lessonRepository.findByLessonSessionId(sessionId);
+        if (lessonLinks.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> noticeIds = lessonLinks.stream().map(AbsenceNoticeLesson::getNoticeId).distinct().toList();
+        List<AbsenceNoticeStatus> statuses = includeCanceled
+                ? List.of(AbsenceNoticeStatus.SUBMITTED, AbsenceNoticeStatus.CANCELED)
+                : List.of(AbsenceNoticeStatus.SUBMITTED);
+        List<AbsenceNotice> notices = noticeRepository.findByIdInAndStatusInOrderBySubmittedAtDescIdDesc(noticeIds, statuses);
         List<AbsenceNoticeDto> result = new ArrayList<>();
         for (AbsenceNotice n : notices) {
+            List<AbsenceNoticeLesson> lessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(n.getId());
+            List<UUID> lessonIds = lessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
             List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(n.getId());
-            result.add(AbsenceNoticeMappers.toDto(n, attachments));
+            result.add(AbsenceNoticeMappers.toDto(n, lessonIds, attachments));
         }
         return result;
     }
@@ -133,28 +143,49 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
         if (lessonIds == null || lessonIds.isEmpty()) {
             return Map.of();
         }
-        List<AbsenceNotice> notices = noticeRepository.findByStudentIdAndLessonSessionIdIn(studentId, lessonIds);
-        Set<UUID> noticeIds = notices.stream().map(AbsenceNotice::getId).collect(Collectors.toSet());
+        List<AbsenceNoticeLesson> lessonLinks = lessonRepository.findByLessonSessionIdIn(lessonIds);
+        if (lessonLinks.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> noticeIds = lessonLinks.stream().map(AbsenceNoticeLesson::getNoticeId).distinct().toList();
+        List<AbsenceNotice> notices = noticeRepository.findByIdInOrderBySubmittedAtDescIdDesc(noticeIds);
+        notices = notices.stream().filter(n -> n.getStudentId().equals(studentId)).toList();
+        if (notices.isEmpty()) {
+            return Map.of();
+        }
+
+        Set<UUID> noticeIdSet = notices.stream().map(AbsenceNotice::getId).collect(Collectors.toSet());
         Map<UUID, List<String>> fileIdsByNoticeId = new HashMap<>();
-        if (!noticeIds.isEmpty()) {
-            List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdIn(new ArrayList<>(noticeIds));
-            for (AbsenceNoticeAttachment a : attachments) {
-                fileIdsByNoticeId.computeIfAbsent(a.getNoticeId(), k -> new ArrayList<>()).add(a.getFileId());
+        List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdIn(new ArrayList<>(noticeIdSet));
+        for (AbsenceNoticeAttachment a : attachments) {
+            fileIdsByNoticeId.computeIfAbsent(a.getNoticeId(), k -> new ArrayList<>()).add(a.getFileId());
+        }
+
+        Map<UUID, Set<UUID>> lessonToNoticeIds = new HashMap<>();
+        for (AbsenceNoticeLesson anl : lessonLinks) {
+            if (!noticeIdSet.contains(anl.getNoticeId())) {
+                continue;
             }
+            lessonToNoticeIds
+                    .computeIfAbsent(anl.getLessonSessionId(), k -> new HashSet<>())
+                    .add(anl.getNoticeId());
         }
 
         Map<UUID, List<StudentNoticeSummaryDto>> byLesson = new HashMap<>();
-        for (AbsenceNotice n : notices) {
-            List<String> fileIds = fileIdsByNoticeId.getOrDefault(n.getId(), List.of());
-            StudentNoticeSummaryDto dto = new StudentNoticeSummaryDto(
-                    n.getId(),
-                    n.getType(),
-                    n.getStatus(),
-                    Optional.ofNullable(n.getReasonText()).filter(s -> !s.isBlank()),
-                    n.getSubmittedAt(),
-                    fileIds
-            );
-            byLesson.computeIfAbsent(n.getLessonSessionId(), k -> new ArrayList<>()).add(dto);
+        for (UUID lessonId : lessonIds) {
+            Set<UUID> nIds = lessonToNoticeIds.getOrDefault(lessonId, Set.of());
+            List<StudentNoticeSummaryDto> list = notices.stream()
+                    .filter(n -> nIds.contains(n.getId()))
+                    .map(n -> new StudentNoticeSummaryDto(
+                            n.getId(),
+                            n.getType(),
+                            n.getStatus(),
+                            Optional.ofNullable(n.getReasonText()).filter(s -> !s.isBlank()),
+                            n.getSubmittedAt(),
+                            fileIdsByNoticeId.getOrDefault(n.getId(), List.of())
+                    ))
+                    .toList();
+            byLesson.put(lessonId, list);
         }
         return byLesson;
     }
@@ -169,12 +200,18 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
             throw AbsenceNoticeErrors.noticeCanceled(noticeId);
         }
 
-        LessonDto lesson = sessionGateway.getSessionById(notice.getLessonSessionId())
-                .orElseThrow(() -> AbsenceNoticeErrors.sessionNotFound(notice.getLessonSessionId()));
-        accessPolicy.ensureCanManageSession(requesterId, lesson);
+        UUID recordLessonId = recordAttachmentPort.getLessonSessionIdByRecordId(recordId)
+                .orElseThrow(() -> AbsenceNoticeErrors.recordNotFound(recordId));
+        List<AbsenceNoticeLesson> noticeLessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(noticeId);
+        boolean noticeCoversRecordLesson = noticeLessons.stream()
+                .anyMatch(anl -> anl.getLessonSessionId().equals(recordLessonId));
+        if (!noticeCoversRecordLesson) {
+            throw AbsenceNoticeErrors.noticeDoesNotMatchRecord(noticeId, recordId, "Notice does not cover this lesson");
+        }
 
-        notice.setAttachedRecordId(recordId);
-        AbsenceNotice saved = noticeRepository.save(notice);
+        LessonDto lesson = sessionGateway.getSessionById(recordLessonId)
+                .orElseThrow(() -> AbsenceNoticeErrors.sessionNotFound(recordLessonId));
+        accessPolicy.ensureCanManageSession(requesterId, lesson);
 
         recordAttachmentPort.attachNotice(recordId, noticeId, requesterId);
 
@@ -182,7 +219,7 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
         AbsenceNoticeAttachedEventPayload payload = new AbsenceNoticeAttachedEventPayload(
                 recordId,
                 noticeId,
-                notice.getLessonSessionId(),
+                recordLessonId,
                 notice.getStudentId(),
                 requesterId,
                 occurredAt
@@ -193,47 +230,47 @@ class AbsenceNoticeServiceImpl implements AbsenceNoticeApi {
                 .occurredAt(occurredAt)
                 .build());
 
+        List<UUID> lessonIds = noticeLessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
         List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(noticeId);
-        return AbsenceNoticeMappers.toDto(saved, attachments);
-    }
-
-    @Override
-    @Transactional
-    public AbsenceNoticeDto detachFromRecord(UUID noticeId, UUID requesterId) {
-        AbsenceNotice notice = noticeRepository.findById(noticeId)
-                .orElseThrow(() -> AbsenceNoticeErrors.noticeNotFound(noticeId));
-
-        LessonDto lesson = sessionGateway.getSessionById(notice.getLessonSessionId())
-                .orElseThrow(() -> AbsenceNoticeErrors.sessionNotFound(notice.getLessonSessionId()));
-        accessPolicy.ensureCanManageSession(requesterId, lesson);
-
-        UUID recordId = notice.getAttachedRecordId();
-        notice.setAttachedRecordId(null);
-        AbsenceNotice saved = noticeRepository.save(notice);
-
-        if (recordId != null) {
-            recordAttachmentPort.detachNotice(recordId, requesterId);
-        }
-
-        List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(noticeId);
-        return AbsenceNoticeMappers.toDto(saved, attachments);
+        return AbsenceNoticeMappers.toDto(notice, lessonIds, attachments);
     }
 
     @Override
     @Transactional
     public AbsenceNoticeDto detachFromRecordByRecordId(UUID recordId, UUID requesterId) {
-        AbsenceNotice notice = noticeRepository.findByAttachedRecordId(recordId).orElse(null);
-        if (notice == null) {
+        UUID noticeId = recordAttachmentPort.getNoticeIdByRecordId(recordId).orElse(null);
+        if (noticeId == null) {
             return null;
         }
-        return detachFromRecord(notice.getId(), requesterId);
+        AbsenceNotice notice = noticeRepository.findById(noticeId).orElse(null);
+        if (notice == null) {
+            recordAttachmentPort.detachNotice(recordId, requesterId);
+            return null;
+        }
+        UUID recordLessonId = recordAttachmentPort.getLessonSessionIdByRecordId(recordId).orElse(null);
+        if (recordLessonId != null) {
+            LessonDto lesson = sessionGateway.getSessionById(recordLessonId).orElse(null);
+            if (lesson != null) {
+                accessPolicy.ensureCanManageSession(requesterId, lesson);
+            }
+        }
+        recordAttachmentPort.detachNotice(recordId, requesterId);
+        List<AbsenceNoticeLesson> lessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(noticeId);
+        List<UUID> lessonIds = lessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
+        List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(noticeId);
+        return AbsenceNoticeMappers.toDto(notice, lessonIds, attachments);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<UUID> findLastSubmittedNoticeIdForSessionAndStudent(UUID sessionId, UUID studentId) {
-        return noticeRepository.findLastSubmittedBySessionAndStudent(
-                sessionId, studentId, AbsenceNoticeStatus.SUBMITTED
-        ).map(AbsenceNotice::getId);
+        List<AbsenceNoticeLesson> lessonLinks = lessonRepository.findByLessonSessionId(sessionId);
+        if (lessonLinks.isEmpty()) {
+            return Optional.empty();
+        }
+        List<UUID> noticeIds = lessonLinks.stream().map(AbsenceNoticeLesson::getNoticeId).distinct().toList();
+        List<AbsenceNotice> notices = noticeRepository.findByIdInAndStudentIdAndStatusOrderBySubmittedAtDesc(
+                noticeIds, studentId, AbsenceNoticeStatus.SUBMITTED, PageRequest.of(0, 1));
+        return notices.isEmpty() ? Optional.empty() : Optional.of(notices.get(0).getId());
     }
 }

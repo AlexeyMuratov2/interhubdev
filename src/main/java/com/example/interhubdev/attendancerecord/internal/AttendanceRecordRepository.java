@@ -46,4 +46,6 @@ interface AttendanceRecordRepository extends JpaRepository<AttendanceRecord, UUI
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to
     );
+
+    List<AttendanceRecord> findByAbsenceNoticeId(UUID absenceNoticeId);
 }

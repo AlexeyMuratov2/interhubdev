@@ -2,7 +2,6 @@ package com.example.interhubdev.attendance.internal;
 
 import com.example.interhubdev.absencenotice.AbsenceNoticeDto;
 import com.example.interhubdev.absencenotice.AbsenceNoticeStatus;
-import com.example.interhubdev.absencenotice.RespondToAbsenceNoticeRequest;
 import com.example.interhubdev.absencenotice.TeacherAbsenceNoticePage;
 import com.example.interhubdev.attendance.AttendanceApi;
 import com.example.interhubdev.auth.AuthApi;
@@ -10,7 +9,6 @@ import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -83,31 +81,5 @@ class AttendanceTeacherController {
         );
 
         return ResponseEntity.ok(page);
-    }
-
-    @PostMapping("/notices/{id}/approve")
-    @Operation(summary = "Approve absence notice", description = "Approve an absence notice. Only teachers of the session can approve. Optional comment in body.")
-    public ResponseEntity<AbsenceNoticeDto> approveNotice(
-            @PathVariable UUID id,
-            @Valid @RequestBody(required = false) RespondToAbsenceNoticeRequest body,
-            HttpServletRequest httpRequest
-    ) {
-        UUID requesterId = requireCurrentUser(httpRequest);
-        String comment = body != null ? body.comment() : null;
-        AbsenceNoticeDto notice = attendanceApi.respondToAbsenceNotice(id, true, comment, requesterId);
-        return ResponseEntity.ok(notice);
-    }
-
-    @PostMapping("/notices/{id}/reject")
-    @Operation(summary = "Reject absence notice", description = "Reject an absence notice. Only teachers of the session can reject. Optional comment in body.")
-    public ResponseEntity<AbsenceNoticeDto> rejectNotice(
-            @PathVariable UUID id,
-            @Valid @RequestBody(required = false) RespondToAbsenceNoticeRequest body,
-            HttpServletRequest httpRequest
-    ) {
-        UUID requesterId = requireCurrentUser(httpRequest);
-        String comment = body != null ? body.comment() : null;
-        AbsenceNoticeDto notice = attendanceApi.respondToAbsenceNotice(id, false, comment, requesterId);
-        return ResponseEntity.ok(notice);
     }
 }

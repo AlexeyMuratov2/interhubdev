@@ -15,11 +15,13 @@ import com.example.interhubdev.student.StudentDto;
 import com.example.interhubdev.teacher.TeacherApi;
 import com.example.interhubdev.teacher.TeacherDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,7 @@ class GetTeacherAbsenceNoticesUseCase {
     private static final int MAX_SESSION_IDS_PER_QUERY = 100;
 
     private final AbsenceNoticeRepository noticeRepository;
+    private final AbsenceNoticeLessonRepository lessonRepository;
     private final AbsenceNoticeAttachmentRepository attachmentRepository;
     private final TeacherApi teacherApi;
     private final OfferingApi offeringApi;
@@ -58,7 +61,20 @@ class GetTeacherAbsenceNoticesUseCase {
             return new TeacherAbsenceNoticePage(List.of(), null);
         }
 
+        List<UUID> noticeIds = new ArrayList<>();
+        for (int i = 0; i < sessionIds.size(); i += MAX_SESSION_IDS_PER_QUERY) {
+            int to = Math.min(i + MAX_SESSION_IDS_PER_QUERY, sessionIds.size());
+            List<UUID> chunk = sessionIds.subList(i, to);
+            List<AbsenceNoticeLesson> lessonLinks = lessonRepository.findByLessonSessionIdIn(chunk);
+            noticeIds.addAll(lessonLinks.stream().map(AbsenceNoticeLesson::getNoticeId).distinct().toList());
+        }
+        noticeIds = noticeIds.stream().distinct().toList();
+        if (noticeIds.isEmpty()) {
+            return new TeacherAbsenceNoticePage(List.of(), null);
+        }
+
         int cappedLimit = limit == null || limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        int limitPlusOne = cappedLimit + 1;
 
         LocalDateTime cursorSubmittedAt = null;
         UUID cursorId = null;
@@ -69,7 +85,16 @@ class GetTeacherAbsenceNoticesUseCase {
             cursorId = cursorNotice.getId();
         }
 
-        List<AbsenceNotice> notices = queryNoticesBatched(sessionIds, statuses, cursorSubmittedAt, cursorId, cappedLimit + 1);
+        List<AbsenceNotice> notices;
+        if (statuses != null && !statuses.isEmpty()) {
+            notices = cursorSubmittedAt != null && cursorId != null
+                    ? noticeRepository.findNextPageByNoticeIdsAndStatuses(noticeIds, statuses, cursorSubmittedAt, cursorId, PageRequest.of(0, limitPlusOne))
+                    : noticeRepository.findFirstPageByNoticeIdsAndStatuses(noticeIds, statuses, PageRequest.of(0, limitPlusOne));
+        } else {
+            notices = cursorSubmittedAt != null && cursorId != null
+                    ? noticeRepository.findNextPageByNoticeIds(noticeIds, cursorSubmittedAt, cursorId, PageRequest.of(0, limitPlusOne))
+                    : noticeRepository.findFirstPageByNoticeIds(noticeIds, PageRequest.of(0, limitPlusOne));
+        }
 
         boolean hasMore = notices.size() > cappedLimit;
         List<AbsenceNotice> pageNotices = hasMore ? notices.subList(0, cappedLimit) : notices;
@@ -86,11 +111,15 @@ class GetTeacherAbsenceNoticesUseCase {
 
         List<TeacherAbsenceNoticeItemDto> items = new ArrayList<>();
         for (AbsenceNotice notice : pageNotices) {
+            List<AbsenceNoticeLesson> lessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(notice.getId());
+            List<UUID> lessonIds = lessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
             List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(notice.getId());
-            AbsenceNoticeDto noticeDto = AbsenceNoticeMappers.toDto(notice, attachments);
+            AbsenceNoticeDto noticeDto = AbsenceNoticeMappers.toDto(notice, lessonIds, attachments);
 
-            LessonDto lesson = lessonBySessionId.computeIfAbsent(notice.getLessonSessionId(),
-                    sid -> scheduleApi.findLessonById(sid).orElse(null));
+            UUID firstLessonId = lessonIds.isEmpty() ? null : lessonIds.get(0);
+            LessonDto lesson = firstLessonId != null
+                    ? lessonBySessionId.computeIfAbsent(firstLessonId, sid -> scheduleApi.findLessonById(sid).orElse(null))
+                    : null;
             GroupSubjectOfferingDto offering = lesson != null
                     ? offeringById.computeIfAbsent(lesson.offeringId(), oid -> offeringApi.findOfferingById(oid).orElse(null))
                     : null;
@@ -163,40 +192,5 @@ class GetTeacherAbsenceNoticesUseCase {
         }
 
         return new TeacherAbsenceNoticePage(items, nextCursor);
-    }
-
-    private List<AbsenceNotice> queryNoticesBatched(
-            List<UUID> sessionIds,
-            List<AbsenceNoticeStatus> statuses,
-            LocalDateTime cursorSubmittedAt,
-            UUID cursorId,
-            int limitPlusOne
-    ) {
-        boolean hasCursor = cursorSubmittedAt != null && cursorId != null;
-        boolean hasStatusFilter = statuses != null && !statuses.isEmpty();
-
-        List<AbsenceNotice> merged = new ArrayList<>();
-        for (int i = 0; i < sessionIds.size(); i += MAX_SESSION_IDS_PER_QUERY) {
-            int to = Math.min(i + MAX_SESSION_IDS_PER_QUERY, sessionIds.size());
-            List<UUID> chunk = sessionIds.subList(i, to);
-            List<AbsenceNotice> chunkResult;
-            if (hasStatusFilter) {
-                chunkResult = hasCursor
-                        ? noticeRepository.findNextPageBySessionIdsAndStatuses(chunk, statuses, cursorSubmittedAt, cursorId)
-                        : noticeRepository.findFirstPageBySessionIdsAndStatuses(chunk, statuses);
-            } else {
-                chunkResult = hasCursor
-                        ? noticeRepository.findNextPageBySessionIds(chunk, cursorSubmittedAt, cursorId)
-                        : noticeRepository.findFirstPageBySessionIds(chunk);
-            }
-            merged.addAll(chunkResult);
-        }
-
-        Comparator<AbsenceNotice> order = Comparator
-                .comparing(AbsenceNotice::getSubmittedAt, Comparator.reverseOrder())
-                .thenComparing(AbsenceNotice::getId, Comparator.reverseOrder());
-        merged.sort(order);
-
-        return merged.size() <= limitPlusOne ? merged : merged.subList(0, limitPlusOne);
     }
 }

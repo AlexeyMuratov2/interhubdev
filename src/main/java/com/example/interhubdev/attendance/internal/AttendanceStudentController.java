@@ -45,7 +45,7 @@ class AttendanceStudentController {
     }
 
     @PostMapping
-    @Operation(summary = "Create absence notice", description = "Create a new absence notice for a lesson session. Students can only create notices for sessions in their groups. Only one active notice per student per session.")
+    @Operation(summary = "Create absence notice", description = "Create a new absence notice for one or more lesson sessions. Students can only create notices for sessions in their groups. Request body: lessonSessionIds (list), type, reasonText, fileIds.")
     public ResponseEntity<AbsenceNoticeDto> createNotice(
             @Valid @RequestBody SubmitAbsenceNoticeRequest request,
             HttpServletRequest httpRequest

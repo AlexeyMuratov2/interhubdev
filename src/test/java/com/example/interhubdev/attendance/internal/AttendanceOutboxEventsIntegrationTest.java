@@ -144,7 +144,7 @@ class AttendanceOutboxEventsIntegrationTest {
         void publishesSubmittedEvent() {
             // Given
             SubmitAbsenceNoticeRequest request = new SubmitAbsenceNoticeRequest(
-                    SESSION_ID, AbsenceNoticeType.ABSENT, "Test reason", List.of()
+                    List.of(SESSION_ID), AbsenceNoticeType.ABSENT, "Test reason", List.of()
             );
 
             // When
@@ -162,7 +162,8 @@ class AttendanceOutboxEventsIntegrationTest {
             // Verify payload
             JsonNode payload = parsePayload(event.payloadJson());
             assertThat(payload.get("noticeId")).isNotNull();
-            assertThat(payload.get("sessionId").asText()).isEqualTo(SESSION_ID.toString());
+            assertThat(payload.get("sessionIds")).isNotNull();
+            assertThat(payload.get("sessionIds").get(0).asText()).isEqualTo(SESSION_ID.toString());
             assertThat(payload.get("studentId").asText()).isEqualTo(STUDENT_ID.toString());
             assertThat(payload.get("type").asText()).isEqualTo("ABSENT");
             assertThat(payload.get("submittedAt")).isNotNull();
@@ -173,7 +174,7 @@ class AttendanceOutboxEventsIntegrationTest {
         void publishesUpdatedEvent() {
             // Given - first create a notice
             SubmitAbsenceNoticeRequest firstRequest = new SubmitAbsenceNoticeRequest(
-                    SESSION_ID, AbsenceNoticeType.ABSENT, "First reason", List.of()
+                    List.of(SESSION_ID), AbsenceNoticeType.ABSENT, "First reason", List.of()
             );
             AbsenceNoticeDto firstNotice = attendanceApi.createAbsenceNotice(firstRequest, STUDENT_ID);
 
@@ -182,7 +183,7 @@ class AttendanceOutboxEventsIntegrationTest {
 
             // When - update the notice
             SubmitAbsenceNoticeRequest updateRequest = new SubmitAbsenceNoticeRequest(
-                    SESSION_ID, AbsenceNoticeType.LATE, "Updated reason", List.of()
+                    List.of(SESSION_ID), AbsenceNoticeType.LATE, "Updated reason", List.of()
             );
             attendanceApi.updateAbsenceNotice(firstNotice.id(), updateRequest, STUDENT_ID);
 
@@ -197,7 +198,7 @@ class AttendanceOutboxEventsIntegrationTest {
             // Verify payload
             JsonNode payload = parsePayload(event.payloadJson());
             assertThat(payload.get("noticeId").asText()).isEqualTo(firstNotice.id().toString());
-            assertThat(payload.get("sessionId").asText()).isEqualTo(SESSION_ID.toString());
+            assertThat(payload.get("sessionIds").get(0).asText()).isEqualTo(SESSION_ID.toString());
             assertThat(payload.get("studentId").asText()).isEqualTo(STUDENT_ID.toString());
             assertThat(payload.get("type").asText()).isEqualTo("LATE");
             assertThat(payload.get("updatedAt")).isNotNull();
@@ -208,7 +209,7 @@ class AttendanceOutboxEventsIntegrationTest {
         void publishesCanceledEvent() {
             // Given - create a notice first
             SubmitAbsenceNoticeRequest request = new SubmitAbsenceNoticeRequest(
-                    SESSION_ID, AbsenceNoticeType.ABSENT, "Test reason", List.of()
+                    List.of(SESSION_ID), AbsenceNoticeType.ABSENT, "Test reason", List.of()
             );
             AbsenceNoticeDto notice = attendanceApi.createAbsenceNotice(request, STUDENT_ID);
 
@@ -229,7 +230,7 @@ class AttendanceOutboxEventsIntegrationTest {
             // Verify payload
             JsonNode payload = parsePayload(event.payloadJson());
             assertThat(payload.get("noticeId").asText()).isEqualTo(notice.id().toString());
-            assertThat(payload.get("sessionId").asText()).isEqualTo(SESSION_ID.toString());
+            assertThat(payload.get("sessionIds").get(0).asText()).isEqualTo(SESSION_ID.toString());
             assertThat(payload.get("studentId").asText()).isEqualTo(STUDENT_ID.toString());
             assertThat(payload.get("canceledAt")).isNotNull();
         }
@@ -276,7 +277,7 @@ class AttendanceOutboxEventsIntegrationTest {
         void publishesAttachedEvent() {
             // Given - create a notice and an attendance record
             SubmitAbsenceNoticeRequest noticeRequest = new SubmitAbsenceNoticeRequest(
-                    SESSION_ID, AbsenceNoticeType.ABSENT, "Test reason", List.of()
+                    List.of(SESSION_ID), AbsenceNoticeType.ABSENT, "Test reason", List.of()
             );
             AbsenceNoticeDto notice = attendanceApi.createAbsenceNotice(noticeRequest, STUDENT_ID);
 

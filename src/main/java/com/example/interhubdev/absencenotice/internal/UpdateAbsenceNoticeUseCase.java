@@ -4,9 +4,12 @@ import com.example.interhubdev.absencenotice.AbsenceNoticeDto;
 import com.example.interhubdev.absencenotice.AbsenceNoticeStatus;
 import com.example.interhubdev.absencenotice.SubmitAbsenceNoticeRequest;
 import com.example.interhubdev.absencenotice.internal.integration.AbsenceNoticeUpdatedEventPayload;
+import com.example.interhubdev.offering.GroupSubjectOfferingDto;
+import com.example.interhubdev.offering.OfferingApi;
 import com.example.interhubdev.outbox.OutboxEventDraft;
 import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +28,11 @@ class UpdateAbsenceNoticeUseCase {
     private static final int MAX_ATTACHMENTS = 10;
 
     private final AbsenceNoticeRepository noticeRepository;
+    private final AbsenceNoticeLessonRepository lessonRepository;
     private final AbsenceNoticeAttachmentRepository attachmentRepository;
+    private final SessionGateway sessionGateway;
+    private final RosterGateway rosterGateway;
+    private final OfferingApi offeringApi;
     private final OutboxIntegrationEventPublisher publisher;
 
     AbsenceNoticeDto execute(UUID noticeId, SubmitAbsenceNoticeRequest request, UUID studentId) {
@@ -36,8 +43,36 @@ class UpdateAbsenceNoticeUseCase {
             throw AbsenceNoticeErrors.noticeCannotBeUpdatedAfterResponse(noticeId);
         }
 
-        if (!notice.getLessonSessionId().equals(request.lessonSessionId())) {
-            throw AbsenceNoticeErrors.validationFailed("lessonSessionId cannot be changed");
+        List<UUID> sessionIds = request.lessonSessionIds();
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            throw AbsenceNoticeErrors.validationFailed("lessonSessionIds is required and must not be empty");
+        }
+
+        for (UUID sessionId : sessionIds) {
+            var session = sessionGateway.getSessionById(sessionId)
+                    .orElseThrow(() -> AbsenceNoticeErrors.sessionNotFound(sessionId));
+
+            GroupSubjectOfferingDto offering = offeringApi.findOfferingById(session.offeringId())
+                    .orElseThrow(() -> AbsenceNoticeErrors.offeringNotFound(session.offeringId()));
+
+            if (!rosterGateway.isStudentInGroup(studentId, offering.groupId())) {
+                throw AbsenceNoticeErrors.studentNotInGroup(studentId, offering.groupId());
+            }
+
+            // Check no other SUBMITTED notice (except current) for this student already covers this session
+            List<AbsenceNoticeLesson> existingForSession = lessonRepository.findByLessonSessionId(sessionId);
+            List<UUID> otherNoticeIds = existingForSession.stream()
+                    .map(AbsenceNoticeLesson::getNoticeId)
+                    .filter(id -> !id.equals(noticeId))
+                    .distinct()
+                    .toList();
+            if (!otherNoticeIds.isEmpty()) {
+                List<AbsenceNotice> conflicting = noticeRepository.findByIdInAndStudentIdAndStatusOrderBySubmittedAtDesc(
+                        otherNoticeIds, studentId, AbsenceNoticeStatus.SUBMITTED, PageRequest.of(0, 1));
+                if (!conflicting.isEmpty()) {
+                    throw AbsenceNoticeErrors.noticeAlreadyExistsForSession(sessionId, studentId);
+                }
+            }
         }
 
         List<String> fileIds = request.fileIds() != null ? request.fileIds() : List.of();
@@ -57,6 +92,16 @@ class UpdateAbsenceNoticeUseCase {
 
         notice.setType(request.type());
         notice.setReasonText(request.reasonText() != null && !request.reasonText().isBlank() ? request.reasonText() : null);
+
+        lessonRepository.deleteByNoticeId(noticeId);
+        List<AbsenceNoticeLesson> lessonsToCreate = new ArrayList<>();
+        for (UUID sessionId : sessionIds) {
+            lessonsToCreate.add(AbsenceNoticeLesson.builder()
+                    .noticeId(noticeId)
+                    .lessonSessionId(sessionId)
+                    .build());
+        }
+        lessonRepository.saveAll(lessonsToCreate);
 
         AbsenceNotice saved = noticeRepository.save(notice);
 
@@ -78,12 +123,14 @@ class UpdateAbsenceNoticeUseCase {
             attachmentRepository.saveAll(toCreate);
         }
 
+        List<AbsenceNoticeLesson> savedLessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(noticeId);
+        List<UUID> lessonIds = savedLessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
         List<AbsenceNoticeAttachment> finalAttachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(noticeId);
 
         Instant occurredAt = Instant.now();
         AbsenceNoticeUpdatedEventPayload payload = new AbsenceNoticeUpdatedEventPayload(
                 saved.getId(),
-                saved.getLessonSessionId(),
+                lessonIds,
                 saved.getStudentId(),
                 saved.getType(),
                 toInstant(saved.getUpdatedAt())
@@ -94,7 +141,7 @@ class UpdateAbsenceNoticeUseCase {
                 .occurredAt(occurredAt)
                 .build());
 
-        return AbsenceNoticeMappers.toDto(saved, finalAttachments);
+        return AbsenceNoticeMappers.toDto(saved, lessonIds, finalAttachments);
     }
 
     private static Instant toInstant(LocalDateTime localDateTime) {

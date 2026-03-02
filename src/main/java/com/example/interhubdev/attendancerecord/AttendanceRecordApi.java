@@ -128,4 +128,19 @@ public interface AttendanceRecordApi {
      * @throws AppException NOT_FOUND if record not found, FORBIDDEN if not allowed
      */
     AttendanceRecordDto detachNotice(UUID recordId, UUID requesterId);
+
+    /**
+     * Find a single record by ID (for port callers that need record details).
+     *
+     * @param recordId attendance record ID
+     * @return record DTO if found
+     */
+    java.util.Optional<AttendanceRecordDto> findRecordById(UUID recordId);
+
+    /**
+     * Detach absence notice from all records that reference it (e.g. when student cancels notice).
+     *
+     * @param noticeId absence notice ID
+     */
+    void detachNoticeByNoticeId(UUID noticeId);
 }

@@ -8,7 +8,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Public API for absence notices: create, update, cancel, respond, list, attach/detach to record.
+ * Public API for absence notices: create, update, cancel, list, attach/detach to record.
+ * One notice can cover multiple lessons. No teacher approval; notices are notifications.
  */
 public interface AbsenceNoticeApi {
 
@@ -17,8 +18,6 @@ public interface AbsenceNoticeApi {
     AbsenceNoticeDto updateAbsenceNotice(UUID noticeId, SubmitAbsenceNoticeRequest request, UUID studentId);
 
     AbsenceNoticeDto cancelAbsenceNotice(UUID noticeId, UUID studentId);
-
-    AbsenceNoticeDto respondToAbsenceNotice(UUID noticeId, boolean approved, String comment, UUID teacherId);
 
     TeacherAbsenceNoticePage getTeacherAbsenceNotices(
             UUID teacherId,
@@ -59,7 +58,7 @@ public interface AbsenceNoticeApi {
     Map<UUID, List<StudentNoticeSummaryDto>> getNoticesByStudentAndLessons(UUID studentId, List<UUID> lessonIds);
 
     /**
-     * Attach notice to record: update notice.attachedRecordId and call port to set record.absenceNoticeId.
+     * Attach notice to an attendance record (record must be for one of the notice's lessons).
      *
      * @param noticeId    absence notice ID
      * @param recordId    attendance record ID
@@ -69,16 +68,7 @@ public interface AbsenceNoticeApi {
     AbsenceNoticeDto attachToRecord(UUID noticeId, UUID recordId, UUID requesterId);
 
     /**
-     * Detach notice from record: clear notice.attachedRecordId and call port to clear record.absenceNoticeId.
-     *
-     * @param noticeId    absence notice ID
-     * @param requesterId user ID (teacher)
-     * @return updated notice DTO
-     */
-    AbsenceNoticeDto detachFromRecord(UUID noticeId, UUID requesterId);
-
-    /**
-     * Detach notice from record by record ID (find notice with attachedRecordId = recordId, then detach).
+     * Detach notice from a specific record (by record ID).
      *
      * @param recordId    attendance record ID
      * @param requesterId user ID (teacher)

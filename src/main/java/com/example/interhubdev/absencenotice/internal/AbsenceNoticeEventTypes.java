@@ -12,5 +12,4 @@ public final class AbsenceNoticeEventTypes {
     public static final String ABSENCE_NOTICE_UPDATED = "attendance.absence_notice.updated";
     public static final String ABSENCE_NOTICE_CANCELED = "attendance.absence_notice.canceled";
     public static final String ABSENCE_NOTICE_ATTACHED = "attendance.record.notice_attached";
-    public static final String ABSENCE_NOTICE_TEACHER_RESPONDED = "attendance.absence_notice.teacher_responded";
 }

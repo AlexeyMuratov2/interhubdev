@@ -27,6 +27,7 @@ class GetMyAbsenceNoticesUseCase {
     private static final LocalDateTime PG_TIMESTAMP_MAX = LocalDateTime.of(9999, 12, 31, 23, 59, 59);
 
     private final AbsenceNoticeRepository noticeRepository;
+    private final AbsenceNoticeLessonRepository lessonRepository;
     private final AbsenceNoticeAttachmentRepository attachmentRepository;
     private final ScheduleApi scheduleApi;
     private final OfferingApi offeringApi;
@@ -75,11 +76,15 @@ class GetMyAbsenceNoticesUseCase {
 
         List<StudentAbsenceNoticeItemDto> items = new ArrayList<>();
         for (AbsenceNotice notice : pageNotices) {
+            List<AbsenceNoticeLesson> lessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(notice.getId());
+            List<UUID> lessonIds = lessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
             List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(notice.getId());
-            AbsenceNoticeDto noticeDto = AbsenceNoticeMappers.toDto(notice, attachments);
+            AbsenceNoticeDto noticeDto = AbsenceNoticeMappers.toDto(notice, lessonIds, attachments);
 
-            LessonDto lesson = lessonBySessionId.computeIfAbsent(notice.getLessonSessionId(),
-                    sid -> scheduleApi.findLessonById(sid).orElse(null));
+            UUID firstLessonId = lessonIds.isEmpty() ? null : lessonIds.get(0);
+            LessonDto lesson = firstLessonId != null
+                    ? lessonBySessionId.computeIfAbsent(firstLessonId, sid -> scheduleApi.findLessonById(sid).orElse(null))
+                    : null;
             GroupSubjectOfferingDto offering = lesson != null
                     ? offeringById.computeIfAbsent(lesson.offeringId(), oid -> offeringApi.findOfferingById(oid).orElse(null))
                     : null;

@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +22,7 @@ import java.util.UUID;
 class CancelAbsenceNoticeUseCase {
 
     private final AbsenceNoticeRepository noticeRepository;
+    private final AbsenceNoticeLessonRepository lessonRepository;
     private final AbsenceNoticeAttachmentRepository attachmentRepository;
     private final OutboxIntegrationEventPublisher publisher;
 
@@ -32,9 +34,6 @@ class CancelAbsenceNoticeUseCase {
             throw AbsenceNoticeErrors.noticeNotOwned(noticeId);
         }
 
-        if (notice.getStatus() == AbsenceNoticeStatus.APPROVED || notice.getStatus() == AbsenceNoticeStatus.REJECTED) {
-            throw AbsenceNoticeErrors.noticeCannotBeCanceledAfterResponse(noticeId);
-        }
         if (notice.getStatus() != AbsenceNoticeStatus.SUBMITTED) {
             throw AbsenceNoticeErrors.noticeNotCancelable(noticeId,
                     "Only SUBMITTED notices can be canceled. Current status: " + notice.getStatus());
@@ -44,12 +43,14 @@ class CancelAbsenceNoticeUseCase {
         notice.setCanceledAt(LocalDateTime.now());
         AbsenceNotice saved = noticeRepository.save(notice);
 
+        List<AbsenceNoticeLesson> lessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(noticeId);
+        List<UUID> sessionIds = lessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).collect(Collectors.toList());
         List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(noticeId);
 
         Instant occurredAt = Instant.now();
         AbsenceNoticeCanceledEventPayload payload = new AbsenceNoticeCanceledEventPayload(
                 saved.getId(),
-                saved.getLessonSessionId(),
+                sessionIds,
                 saved.getStudentId(),
                 toInstant(saved.getCanceledAt())
         );
@@ -59,7 +60,7 @@ class CancelAbsenceNoticeUseCase {
                 .occurredAt(occurredAt)
                 .build());
 
-        return AbsenceNoticeMappers.toDto(saved, attachments);
+        return AbsenceNoticeMappers.toDto(saved, sessionIds, attachments);
     }
 
     private static Instant toInstant(LocalDateTime localDateTime) {
