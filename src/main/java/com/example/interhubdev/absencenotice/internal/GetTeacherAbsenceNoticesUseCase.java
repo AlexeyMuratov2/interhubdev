@@ -111,40 +111,13 @@ class GetTeacherAbsenceNoticesUseCase {
 
         List<TeacherAbsenceNoticeItemDto> items = new ArrayList<>();
         for (AbsenceNotice notice : pageNotices) {
-            List<AbsenceNoticeLesson> lessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(notice.getId());
-            List<UUID> lessonIds = lessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
+            List<AbsenceNoticeLesson> noticeLessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(notice.getId());
+            List<UUID> lessonIds = noticeLessons.stream().map(AbsenceNoticeLesson::getLessonSessionId).toList();
             List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(notice.getId());
             AbsenceNoticeDto noticeDto = AbsenceNoticeMappers.toDto(notice, lessonIds, attachments);
 
-            UUID firstLessonId = lessonIds.isEmpty() ? null : lessonIds.get(0);
-            LessonDto lesson = firstLessonId != null
-                    ? lessonBySessionId.computeIfAbsent(firstLessonId, sid -> scheduleApi.findLessonById(sid).orElse(null))
-                    : null;
-            GroupSubjectOfferingDto offering = lesson != null
-                    ? offeringById.computeIfAbsent(lesson.offeringId(), oid -> offeringApi.findOfferingById(oid).orElse(null))
-                    : null;
-            StudentGroupDto group = offering != null
-                    ? groupById.computeIfAbsent(offering.groupId(), gid -> groupApi.findGroupById(gid).orElse(null))
-                    : null;
             StudentDto student = studentById.computeIfAbsent(notice.getStudentId(),
                     sid -> studentApi.findById(sid).orElse(null));
-
-            String subjectName = null;
-            List<OfferingSlotDto> slots = null;
-            if (offering != null) {
-                subjectName = subjectNameByCurriculumSubjectId.computeIfAbsent(offering.curriculumSubjectId(),
-                        id -> programApi.getSubjectNamesByCurriculumSubjectIds(List.of(id)).getOrDefault(id, null));
-                slots = slotsByOfferingId.computeIfAbsent(offering.id(), oid -> offeringApi.findSlotsByOfferingId(oid));
-            }
-            OfferingSlotDto slotDto = null;
-            if (lesson != null && lesson.offeringSlotId() != null && slots != null) {
-                slotDto = slots.stream()
-                        .filter(s -> Objects.equals(s.id(), lesson.offeringSlotId()))
-                        .findFirst()
-                        .orElse(null);
-            }
-            String lessonType = slotDto != null ? slotDto.lessonType() : null;
-
             TeacherNoticeStudentSummary studentSummary = student != null
                     ? new TeacherNoticeStudentSummary(
                             student.id(),
@@ -152,45 +125,120 @@ class GetTeacherAbsenceNoticesUseCase {
                             (student.chineseName() != null && !student.chineseName().isBlank()) ? student.chineseName() : student.studentId(),
                             student.groupName())
                     : null;
-            TeacherNoticeLessonSummary lessonSummary = lesson != null
-                    ? new TeacherNoticeLessonSummary(
-                            lesson.id(),
-                            lesson.offeringId(),
-                            lesson.date(),
-                            lesson.startTime(),
-                            lesson.endTime(),
-                            lesson.topic(),
-                            lesson.status(),
-                            lessonType)
-                    : null;
-            TeacherNoticeOfferingSummary offeringSummary = offering != null
-                    ? new TeacherNoticeOfferingSummary(
-                            offering.id(),
-                            offering.groupId(),
-                            offering.curriculumSubjectId(),
-                            subjectName,
-                            offering.format(),
-                            offering.notes())
-                    : null;
-            TeacherNoticeSlotSummary slotSummary = slotDto != null
-                    ? new TeacherNoticeSlotSummary(
-                            slotDto.id(),
-                            slotDto.offeringId(),
-                            slotDto.dayOfWeek(),
-                            slotDto.startTime(),
-                            slotDto.endTime(),
-                            slotDto.lessonType(),
-                            slotDto.roomId(),
-                            slotDto.teacherId(),
-                            slotDto.timeslotId())
-                    : null;
-            TeacherNoticeGroupSummary groupSummary = group != null
-                    ? new TeacherNoticeGroupSummary(group.id(), group.code(), group.name())
-                    : null;
 
-            items.add(new TeacherAbsenceNoticeItemDto(noticeDto, studentSummary, lessonSummary, offeringSummary, slotSummary, groupSummary));
+            TeacherNoticePeriodSummary periodSummary;
+            TeacherNoticeLessonSummary lessonSummary;
+            TeacherNoticeOfferingSummary offeringSummary;
+            TeacherNoticeSlotSummary slotSummary;
+            TeacherNoticeGroupSummary groupSummary;
+
+            if (lessonIds.isEmpty()) {
+                periodSummary = null;
+                lessonSummary = null;
+                offeringSummary = null;
+                slotSummary = null;
+                groupSummary = null;
+            } else if (lessonIds.size() == 1) {
+                UUID firstLessonId = lessonIds.get(0);
+                LessonDto lesson = lessonBySessionId.computeIfAbsent(firstLessonId, sid -> scheduleApi.findLessonById(sid).orElse(null));
+                GroupSubjectOfferingDto offering = lesson != null
+                        ? offeringById.computeIfAbsent(lesson.offeringId(), oid -> offeringApi.findOfferingById(oid).orElse(null))
+                        : null;
+                StudentGroupDto group = offering != null
+                        ? groupById.computeIfAbsent(offering.groupId(), gid -> groupApi.findGroupById(gid).orElse(null))
+                        : null;
+                String subjectName = null;
+                List<OfferingSlotDto> slots = null;
+                if (offering != null) {
+                    subjectName = subjectNameByCurriculumSubjectId.computeIfAbsent(offering.curriculumSubjectId(),
+                            id -> programApi.getSubjectNamesByCurriculumSubjectIds(List.of(id)).getOrDefault(id, null));
+                    slots = slotsByOfferingId.computeIfAbsent(offering.id(), oid -> offeringApi.findSlotsByOfferingId(oid));
+                }
+                OfferingSlotDto slotDto = null;
+                if (lesson != null && lesson.offeringSlotId() != null && slots != null) {
+                    slotDto = slots.stream()
+                            .filter(s -> Objects.equals(s.id(), lesson.offeringSlotId()))
+                            .findFirst()
+                            .orElse(null);
+                }
+                String lessonType = slotDto != null ? slotDto.lessonType() : null;
+
+                periodSummary = lesson != null
+                        ? new TeacherNoticePeriodSummary(lessonStartAt(lesson), lessonEndAt(lesson))
+                        : null;
+                lessonSummary = lesson != null
+                        ? new TeacherNoticeLessonSummary(
+                                lesson.id(),
+                                lesson.offeringId(),
+                                lesson.date(),
+                                lesson.startTime(),
+                                lesson.endTime(),
+                                lesson.topic(),
+                                lesson.status(),
+                                lessonType)
+                        : null;
+                offeringSummary = offering != null
+                        ? new TeacherNoticeOfferingSummary(
+                                offering.id(),
+                                offering.groupId(),
+                                offering.curriculumSubjectId(),
+                                subjectName,
+                                offering.format(),
+                                offering.notes())
+                        : null;
+                slotSummary = slotDto != null
+                        ? new TeacherNoticeSlotSummary(
+                                slotDto.id(),
+                                slotDto.offeringId(),
+                                slotDto.dayOfWeek(),
+                                slotDto.startTime(),
+                                slotDto.endTime(),
+                                slotDto.lessonType(),
+                                slotDto.roomId(),
+                                slotDto.teacherId(),
+                                slotDto.timeslotId())
+                        : null;
+                groupSummary = group != null
+                        ? new TeacherNoticeGroupSummary(group.id(), group.code(), group.name())
+                        : null;
+            } else {
+                List<LessonDto> lessons = scheduleApi.findLessonsByIds(lessonIds);
+                periodSummary = buildTeacherPeriodSummary(lessons);
+                lessonSummary = null;
+                offeringSummary = null;
+                slotSummary = null;
+                groupSummary = null;
+            }
+
+            items.add(new TeacherAbsenceNoticeItemDto(noticeDto, studentSummary, periodSummary, lessonSummary, offeringSummary, slotSummary, groupSummary));
         }
 
         return new TeacherAbsenceNoticePage(items, nextCursor);
+    }
+
+    private TeacherNoticePeriodSummary buildTeacherPeriodSummary(List<LessonDto> lessons) {
+        if (lessons == null || lessons.isEmpty()) {
+            return null;
+        }
+        LocalDateTime startAt = lessons.stream()
+                .map(this::lessonStartAt)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+        LocalDateTime endAt = lessons.stream()
+                .map(this::lessonEndAt)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+        if (startAt == null || endAt == null) {
+            return null;
+        }
+        return new TeacherNoticePeriodSummary(startAt, endAt);
+    }
+
+    private LocalDateTime lessonStartAt(LessonDto lesson) {
+        return LocalDateTime.of(lesson.date(), lesson.startTime());
+    }
+
+    private LocalDateTime lessonEndAt(LessonDto lesson) {
+        return LocalDateTime.of(lesson.date(), lesson.endTime());
     }
 }
