@@ -1,7 +1,7 @@
 package com.example.interhubdev.composition.internal.student;
 
 import com.example.interhubdev.academic.SemesterDto;
-import com.example.interhubdev.attendance.AttendanceApi;
+import com.example.interhubdev.attendancerecord.AttendanceRecordApi;
 import com.example.interhubdev.attendancerecord.AttendanceStatus;
 import com.example.interhubdev.attendancerecord.StudentAttendanceDto;
 import com.example.interhubdev.composition.StudentSubjectInfoDto;
@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 class StudentSubjectInfoService {
 
-    private final AttendanceApi attendanceApi;
+    private final AttendanceRecordApi recordApi;
     private final CourseMaterialApi courseMaterialApi;
     private final DepartmentApi departmentApi;
     private final GradesApi gradesApi;
@@ -226,7 +226,7 @@ class StudentSubjectInfoService {
     private Double computeAttendancePercent(
             StudentDto student, GroupSubjectOfferingDto offering,
             java.time.LocalDate from, java.time.LocalDate to, UUID requesterId) {
-        StudentAttendanceDto attendance = attendanceApi.getStudentAttendance(
+        StudentAttendanceDto attendance = recordApi.getStudentAttendance(
                 student.id(),
                 from.atStartOfDay(),
                 to.atTime(23, 59, 59),

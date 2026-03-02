@@ -16,6 +16,7 @@
  *   <li>{@link com.example.interhubdev.composition.StudentSubjectsQueryApi} - student subjects and subject detail</li>
  *   <li>{@link com.example.interhubdev.composition.GroupSubjectQueryApi} - group subject info</li>
  *   <li>{@link com.example.interhubdev.composition.StudentGradeHistoryQueryApi} - student grade history</li>
+ *   <li>{@link com.example.interhubdev.composition.SessionAttendanceQueryApi} - session attendance and notices (merged)</li>
  *   <li>{@link com.example.interhubdev.composition.StudentAttendanceHistoryQueryApi} - student attendance history</li>
  *   <li>{@link com.example.interhubdev.composition.StudentHomeworkHistoryQueryApi} - student homework history</li>
  * </ul>
@@ -30,6 +31,7 @@
  *   <li>{@link com.example.interhubdev.composition.StudentGradeHistoryDto} - full grade history for a student in an offering</li>
  *   <li>{@link com.example.interhubdev.composition.StudentGradeHistoryItemDto} - one grade entry with lesson/homework/submission/gradedBy context</li>
  *   <li>{@link com.example.interhubdev.composition.StudentAttendanceHistoryDto} - attendance history for a student in an offering (all lessons + attendance + notices)</li>
+ *   <li>{@link com.example.interhubdev.composition.SessionAttendanceViewDto} - session attendance with notices per student (merged view)</li>
  *   <li>{@link com.example.interhubdev.composition.StudentAttendanceHistoryLessonItemDto} - one lesson row with attendance and absence notices</li>
  *   <li>{@link com.example.interhubdev.composition.StudentHomeworkHistoryDto} - full homework history for a student in an offering (all homeworks + submission + grade per row)</li>
  *   <li>{@link com.example.interhubdev.composition.StudentHomeworkHistoryItemDto} - one homework row with lesson, submission, grade and files</li>
@@ -72,7 +74,8 @@
  *   <li>auth - current user for authentication</li>
  *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors}</li>
  *   <li>student - roster by group for attendance table</li>
- *   <li>attendance - session attendance and absence notices</li>
+ *   <li>attendancerecord - attendance records for session/student/group</li>
+ *   <li>absencenotice - absence notices for session/student</li>
  *   <li>grades - points per student for this lesson</li>
  *   <li>submission - homework submissions by students</li>
  *   <li>user - UserDto for student display in group subject info</li>
@@ -86,6 +89,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Composition",
-    allowedDependencies = {"academic", "schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendance", "attendancerecord", "absencenotice", "grades", "submission", "user", "department"}
+    allowedDependencies = {"academic", "schedule", "offering", "subject", "group", "document", "teacher", "program", "auth", "error", "student", "attendancerecord", "absencenotice", "grades", "submission", "user", "department"}
 )
 package com.example.interhubdev.composition;

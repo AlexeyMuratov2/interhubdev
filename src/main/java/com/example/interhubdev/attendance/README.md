@@ -88,11 +88,11 @@ PUT /api/attendance/sessions/{sessionId}/students/{studentId}
 ```
 Отметить или обновить посещаемость для одного студента.
 
-### 3. Get session attendance
+### 3. Get session attendance (read)
+Session attendance (records + notices merged) is provided by the **composition** module:
 ```
-GET /api/attendance/sessions/{sessionId}
+GET /api/composition/sessions/{sessionId}/attendance?includeCanceled=false
 ```
-Получить список посещаемости по занятию с подсчетами и статусами для всех студентов из ростер группы.
 
 ### 4. Get student attendance
 ```
@@ -129,9 +129,10 @@ GET /api/attendance/notices/mine?from=...&to=...
 
 ### Absence Notices (Teacher Operations)
 
-### 9. Get session absence notices
+### 9. Get session absence notices (read)
+Session notices list is provided by the **composition** module:
 ```
-GET /api/attendance/sessions/{sessionId}/notices?includeCanceled=false
+GET /api/composition/sessions/{sessionId}/notices?includeCanceled=false
 ```
 Получить список уведомлений об отсутствии для занятия (по умолчанию только активные SUBMITTED).
 

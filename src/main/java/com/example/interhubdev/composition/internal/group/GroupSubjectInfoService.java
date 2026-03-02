@@ -1,6 +1,6 @@
 package com.example.interhubdev.composition.internal.group;
 
-import com.example.interhubdev.attendance.AttendanceApi;
+import com.example.interhubdev.attendancerecord.AttendanceRecordApi;
 import com.example.interhubdev.attendancerecord.GroupAttendanceSummaryDto;
 import com.example.interhubdev.composition.GroupSubjectInfoDto;
 import com.example.interhubdev.composition.GroupSubjectQueryApi;
@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 class GroupSubjectInfoService implements GroupSubjectQueryApi {
 
-    private final AttendanceApi attendanceApi;
+    private final AttendanceRecordApi recordApi;
     private final GroupApi groupApi;
     private final GradesApi gradesApi;
     private final HomeworkApi homeworkApi;
@@ -150,7 +150,7 @@ class GroupSubjectInfoService implements GroupSubjectQueryApi {
         List<GroupLeaderDetailDto> leaders = groupApi.findLeadersByGroupId(groupId);
         GroupOfferingSummaryDto grades = gradesApi.getGroupOfferingSummary(
                 groupId, offering.id(), from.atStartOfDay(), to.atTime(23, 59, 59), false, requesterId);
-        GroupAttendanceSummaryDto attendance = attendanceApi.getGroupAttendanceSummary(
+        GroupAttendanceSummaryDto attendance = recordApi.getGroupAttendanceSummary(
                 groupId, from, to, offering.id(), requesterId);
 
         List<LessonDto> lessons = scheduleApi.findLessonsByOfferingId(offering.id());

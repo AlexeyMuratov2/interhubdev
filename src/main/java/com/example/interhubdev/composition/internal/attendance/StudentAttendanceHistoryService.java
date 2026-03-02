@@ -1,11 +1,12 @@
 package com.example.interhubdev.composition.internal.attendance;
 
+import com.example.interhubdev.absencenotice.AbsenceNoticeApi;
 import com.example.interhubdev.absencenotice.StudentNoticeSummaryDto;
+import com.example.interhubdev.attendancerecord.AttendanceRecordApi;
 import com.example.interhubdev.attendancerecord.AttendanceRecordDto;
 import com.example.interhubdev.attendancerecord.AttendanceStatus;
-import com.example.interhubdev.attendance.AttendanceApi;
-import com.example.interhubdev.attendance.StudentAttendanceByLessonsDto;
-import com.example.interhubdev.attendance.StudentLessonAttendanceItemDto;
+import com.example.interhubdev.attendancerecord.LessonAttendanceRecordItemDto;
+import com.example.interhubdev.attendancerecord.StudentAttendanceRecordsByLessonsDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryLessonItemDto;
 import com.example.interhubdev.composition.StudentAttendanceHistoryQueryApi;
@@ -37,7 +38,8 @@ class StudentAttendanceHistoryService implements StudentAttendanceHistoryQueryAp
     private final ScheduleApi scheduleApi;
     private final OfferingApi offeringApi;
     private final StudentApi studentApi;
-    private final AttendanceApi attendanceApi;
+    private final AttendanceRecordApi recordApi;
+    private final AbsenceNoticeApi noticeApi;
     private final SubjectNameResolver subjectNameResolver;
 
     @Override
@@ -72,18 +74,19 @@ class StudentAttendanceHistoryService implements StudentAttendanceHistoryQueryAp
         }
 
         List<UUID> lessonIds = lessons.stream().map(LessonDto::id).toList();
-        StudentAttendanceByLessonsDto batch = attendanceApi.getStudentAttendanceByLessonIds(studentId, lessonIds, requesterId);
+        StudentAttendanceRecordsByLessonsDto records = recordApi.getStudentAttendanceByLessonIds(studentId, lessonIds, requesterId);
+        var noticesByLesson = noticeApi.getNoticesByStudentAndLessons(studentId, lessonIds);
 
-        List<StudentLessonAttendanceItemDto> batchItems = batch.items();
         int missedCount = 0;
         int absenceNoticesSubmittedCount = 0;
 
         List<StudentAttendanceHistoryLessonItemDto> historyLessons = new ArrayList<>(lessons.size());
+        List<LessonAttendanceRecordItemDto> recordItems = records.items();
         for (int i = 0; i < lessons.size(); i++) {
             LessonDto lesson = lessons.get(i);
-            StudentLessonAttendanceItemDto item = i < batchItems.size() ? batchItems.get(i) : null;
-            Optional<AttendanceRecordDto> attendance = item != null ? item.record() : Optional.empty();
-            List<StudentNoticeSummaryDto> notices = item != null ? item.notices() : List.of();
+            LessonAttendanceRecordItemDto recordItem = i < recordItems.size() ? recordItems.get(i) : null;
+            Optional<AttendanceRecordDto> attendance = recordItem != null ? recordItem.record() : Optional.empty();
+            List<StudentNoticeSummaryDto> notices = noticesByLesson.getOrDefault(lesson.id(), List.of());
 
             if (attendance.isPresent()) {
                 AttendanceStatus status = attendance.get().status();

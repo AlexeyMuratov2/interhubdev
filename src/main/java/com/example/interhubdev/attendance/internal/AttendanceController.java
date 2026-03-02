@@ -1,12 +1,12 @@
 package com.example.interhubdev.attendance.internal;
 
+import com.example.interhubdev.attendancerecord.AttendanceRecordApi;
 import com.example.interhubdev.attendancerecord.AttendanceRecordDto;
 import com.example.interhubdev.attendancerecord.AttendanceStatus;
 import com.example.interhubdev.attendancerecord.GroupAttendanceSummaryDto;
 import com.example.interhubdev.attendancerecord.MarkAttendanceItem;
 import com.example.interhubdev.attendancerecord.StudentAttendanceDto;
 import com.example.interhubdev.attendance.AttendanceApi;
-import com.example.interhubdev.attendance.SessionAttendanceDto;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +31,7 @@ import java.util.UUID;
 class AttendanceController {
 
     private final AttendanceApi attendanceApi;
+    private final AttendanceRecordApi recordApi;
     private final AuthApi authApi;
 
     private UUID requireCurrentUser(HttpServletRequest request) {
@@ -73,18 +74,6 @@ class AttendanceController {
         return ResponseEntity.ok(record);
     }
 
-    @GetMapping("/sessions/{sessionId}")
-    @Operation(summary = "Get session attendance", description = "Get attendance records for a lesson session with roster and counts. Query: includeCanceled (default: false). Requires TEACHER (of session) or ADMIN role.")
-    public ResponseEntity<SessionAttendanceDto> getSessionAttendance(
-            @PathVariable UUID sessionId,
-            @RequestParam(required = false, defaultValue = "false") boolean includeCanceled,
-            HttpServletRequest request
-    ) {
-        UUID requesterId = requireCurrentUser(request);
-        SessionAttendanceDto dto = attendanceApi.getSessionAttendance(sessionId, requesterId, includeCanceled);
-        return ResponseEntity.ok(dto);
-    }
-
     @GetMapping("/students/{studentId}")
     @Operation(summary = "Get student attendance history", description = "Get attendance history for a student with summary. Query: from, to (ISO datetime), offeringId, groupId. Students can only view own records.")
     public ResponseEntity<StudentAttendanceDto> getStudentAttendance(
@@ -96,7 +85,7 @@ class AttendanceController {
             HttpServletRequest request
     ) {
         UUID requesterId = requireCurrentUser(request);
-        StudentAttendanceDto dto = attendanceApi.getStudentAttendance(
+        StudentAttendanceDto dto = recordApi.getStudentAttendance(
                 studentId, from, to, offeringId, groupId, requesterId
         );
         return ResponseEntity.ok(dto);
@@ -112,7 +101,7 @@ class AttendanceController {
             HttpServletRequest request
     ) {
         UUID requesterId = requireCurrentUser(request);
-        GroupAttendanceSummaryDto dto = attendanceApi.getGroupAttendanceSummary(
+        GroupAttendanceSummaryDto dto = recordApi.getGroupAttendanceSummary(
                 groupId, from, to, offeringId, requesterId
         );
         return ResponseEntity.ok(dto);

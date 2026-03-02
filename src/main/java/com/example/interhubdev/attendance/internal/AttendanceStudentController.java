@@ -1,5 +1,6 @@
 package com.example.interhubdev.attendance.internal;
 
+import com.example.interhubdev.absencenotice.AbsenceNoticeApi;
 import com.example.interhubdev.absencenotice.AbsenceNoticeDto;
 import com.example.interhubdev.absencenotice.StudentAbsenceNoticePage;
 import com.example.interhubdev.absencenotice.SubmitAbsenceNoticeRequest;
@@ -27,6 +28,7 @@ import java.util.UUID;
 @Tag(name = "Attendance - Student Notices", description = "Student operations for absence notices")
 class AttendanceStudentController {
 
+    private final AbsenceNoticeApi noticeApi;
     private final AttendanceApi attendanceApi;
     private final AuthApi authApi;
     private final StudentApi studentApi;
@@ -103,7 +105,7 @@ class AttendanceStudentController {
             HttpServletRequest httpRequest
     ) {
         UUID studentId = requireCurrentStudentId(httpRequest);
-        StudentAbsenceNoticePage page = attendanceApi.getMyAbsenceNotices(studentId, from, to, cursor, limit);
+        StudentAbsenceNoticePage page = noticeApi.getMyAbsenceNotices(studentId, from, to, cursor, limit);
         return ResponseEntity.ok(page);
     }
 }

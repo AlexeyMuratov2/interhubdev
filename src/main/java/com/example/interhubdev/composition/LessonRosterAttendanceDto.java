@@ -2,7 +2,6 @@ package com.example.interhubdev.composition;
 
 import com.example.interhubdev.absencenotice.StudentNoticeSummaryDto;
 import com.example.interhubdev.attendancerecord.AttendanceStatus;
-import com.example.interhubdev.attendance.SessionAttendanceDto;
 import com.example.interhubdev.group.StudentGroupDto;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.student.StudentDto;

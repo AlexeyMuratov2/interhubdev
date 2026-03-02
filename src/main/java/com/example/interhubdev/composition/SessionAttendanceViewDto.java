@@ -1,4 +1,4 @@
-package com.example.interhubdev.attendance;
+package com.example.interhubdev.composition;
 
 import com.example.interhubdev.absencenotice.StudentNoticeSummaryDto;
 import com.example.interhubdev.attendancerecord.AttendanceStatus;
@@ -10,18 +10,19 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * DTO for attendance records of a lesson session (merged: records + notices per student).
+ * Read-only view DTO for attendance records of a lesson session (merged: records + notices per student).
+ * For use by composition layer and UI.
  */
-public record SessionAttendanceDto(
+public record SessionAttendanceViewDto(
         UUID sessionId,
         Map<AttendanceStatus, Integer> counts,
         Integer unmarkedCount,
-        List<SessionAttendanceStudentDto> students
+        List<SessionAttendanceStudentRowDto> students
 ) {
     /**
-     * Student row: attendance record + list of absence notices for this student and session.
+     * One student row: attendance record + list of absence notices for this student and session.
      */
-    public record SessionAttendanceStudentDto(
+    public record SessionAttendanceStudentRowDto(
             UUID studentId,
             AttendanceStatus status,
             Integer minutesLate,

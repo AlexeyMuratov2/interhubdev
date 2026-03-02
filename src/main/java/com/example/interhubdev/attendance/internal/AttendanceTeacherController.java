@@ -1,9 +1,8 @@
 package com.example.interhubdev.attendance.internal;
 
-import com.example.interhubdev.absencenotice.AbsenceNoticeDto;
+import com.example.interhubdev.absencenotice.AbsenceNoticeApi;
 import com.example.interhubdev.absencenotice.AbsenceNoticeStatus;
 import com.example.interhubdev.absencenotice.TeacherAbsenceNoticePage;
-import com.example.interhubdev.attendance.AttendanceApi;
 import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.error.Errors;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,25 +26,13 @@ class AttendanceTeacherController {
     private static final int DEFAULT_LIMIT = 30;
     private static final int MAX_LIMIT = 30;
 
-    private final AttendanceApi attendanceApi;
+    private final AbsenceNoticeApi noticeApi;
     private final AuthApi authApi;
 
     private UUID requireCurrentUser(HttpServletRequest request) {
         return authApi.getCurrentUser(request)
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
-    }
-
-    @GetMapping("/sessions/{sessionId}/notices")
-    @Operation(summary = "Get session absence notices", description = "Get list of absence notices for a lesson session. Query: includeCanceled (default: false). Only teachers of the session or admins can access.")
-    public ResponseEntity<List<AbsenceNoticeDto>> getSessionNotices(
-            @PathVariable UUID sessionId,
-            @RequestParam(required = false, defaultValue = "false") boolean includeCanceled,
-            HttpServletRequest httpRequest
-    ) {
-        UUID requesterId = requireCurrentUser(httpRequest);
-        List<AbsenceNoticeDto> notices = attendanceApi.getSessionNotices(sessionId, requesterId, includeCanceled);
-        return ResponseEntity.ok(notices);
     }
 
     @GetMapping("/teachers/me/notices")
@@ -73,7 +60,7 @@ class AttendanceTeacherController {
 
         int cappedLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
 
-        TeacherAbsenceNoticePage page = attendanceApi.getTeacherAbsenceNotices(
+        TeacherAbsenceNoticePage page = noticeApi.getTeacherAbsenceNotices(
                 requesterId,
                 statusList,
                 cursor,

@@ -1,8 +1,8 @@
 package com.example.interhubdev.composition.internal.lessons;
 
-import com.example.interhubdev.attendance.AttendanceApi;
-import com.example.interhubdev.attendance.SessionAttendanceDto;
 import com.example.interhubdev.composition.LessonRosterAttendanceDto;
+import com.example.interhubdev.composition.SessionAttendanceQueryApi;
+import com.example.interhubdev.composition.SessionAttendanceViewDto;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.grades.GradesApi;
 import com.example.interhubdev.grades.LessonGradesSummaryDto;
@@ -38,7 +38,7 @@ class LessonRosterAttendanceService {
     private final GroupApi groupApi;
     private final ProgramApi programApi;
     private final StudentApi studentApi;
-    private final AttendanceApi attendanceApi;
+    private final SessionAttendanceQueryApi sessionAttendanceQueryApi;
     private final GradesApi gradesApi;
 
     LessonRosterAttendanceDto execute(UUID lessonId, UUID requesterId, boolean includeCanceled) {
@@ -63,10 +63,10 @@ class LessonRosterAttendanceService {
 
         List<StudentDto> roster = studentApi.findByGroupId(offering.groupId());
 
-        SessionAttendanceDto sessionAttendance = attendanceApi.getSessionAttendance(lessonId, requesterId, includeCanceled);
+        SessionAttendanceViewDto sessionAttendance = sessionAttendanceQueryApi.getSessionAttendance(lessonId, requesterId, includeCanceled);
 
-        Map<UUID, SessionAttendanceDto.SessionAttendanceStudentDto> attendanceByStudentId = sessionAttendance.students().stream()
-                .collect(Collectors.toMap(SessionAttendanceDto.SessionAttendanceStudentDto::studentId, s -> s));
+        Map<UUID, SessionAttendanceViewDto.SessionAttendanceStudentRowDto> attendanceByStudentId = sessionAttendance.students().stream()
+                .collect(Collectors.toMap(SessionAttendanceViewDto.SessionAttendanceStudentRowDto::studentId, s -> s));
 
         LessonGradesSummaryDto lessonGrades = gradesApi.getLessonGradesSummary(lessonId, requesterId);
         Map<UUID, BigDecimal> pointsByStudentId = lessonGrades.rows().stream()
@@ -74,7 +74,7 @@ class LessonRosterAttendanceService {
 
         List<LessonRosterAttendanceDto.LessonRosterAttendanceRowDto> rows = roster.stream()
                 .map(student -> {
-                    SessionAttendanceDto.SessionAttendanceStudentDto att = attendanceByStudentId.get(student.id());
+                    SessionAttendanceViewDto.SessionAttendanceStudentRowDto att = attendanceByStudentId.get(student.id());
                     BigDecimal lessonPoints = pointsByStudentId.getOrDefault(student.id(), BigDecimal.ZERO);
                     if (att == null) {
                         return new LessonRosterAttendanceDto.LessonRosterAttendanceRowDto(
