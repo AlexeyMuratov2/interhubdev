@@ -36,6 +36,7 @@
  * <h2>Dependencies</h2>
  * <ul>
  *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors} or {@link com.example.interhubdev.schedule.internal.ScheduleErrors}</li>
+ *   <li>outbox - publish integration events when lesson date/time is changed or lesson is deleted (for student notifications)</li>
  *   <li>offering is used via port {@link com.example.interhubdev.schedule.OfferingLookupPort} (adapter in adapter package)</li>
  * </ul>
  *
@@ -51,6 +52,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Schedule",
-    allowedDependencies = {"error"}
+    allowedDependencies = {"error", "outbox"}
 )
 package com.example.interhubdev.schedule;

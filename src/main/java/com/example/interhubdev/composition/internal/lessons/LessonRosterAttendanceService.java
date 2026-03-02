@@ -13,6 +13,8 @@ import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
 import com.example.interhubdev.subject.SubjectApi;
+import com.example.interhubdev.user.UserApi;
+import com.example.interhubdev.user.UserDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -38,6 +41,7 @@ class LessonRosterAttendanceService {
     private final GroupApi groupApi;
     private final ProgramApi programApi;
     private final StudentApi studentApi;
+    private final UserApi userApi;
     private final SessionAttendanceQueryApi sessionAttendanceQueryApi;
     private final GradesApi gradesApi;
 
@@ -63,6 +67,10 @@ class LessonRosterAttendanceService {
 
         List<StudentDto> roster = studentApi.findByGroupId(offering.groupId());
 
+        Set<UUID> userIds = roster.stream().map(StudentDto::userId).collect(Collectors.toSet());
+        Map<UUID, UserDto> userById = userIds.isEmpty() ? Map.of()
+                : userApi.findByIds(userIds).stream().collect(Collectors.toMap(UserDto::id, u -> u));
+
         SessionAttendanceViewDto sessionAttendance = sessionAttendanceQueryApi.getSessionAttendance(lessonId, requesterId, includeCanceled);
 
         Map<UUID, SessionAttendanceViewDto.SessionAttendanceStudentRowDto> attendanceByStudentId = sessionAttendance.students().stream()
@@ -74,11 +82,14 @@ class LessonRosterAttendanceService {
 
         List<LessonRosterAttendanceDto.LessonRosterAttendanceRowDto> rows = roster.stream()
                 .map(student -> {
+                    String displayName = studentApi.studentDisplayName(student,
+                            Optional.ofNullable(userById.get(student.userId())).map(UserDto::getFullName).orElse(""));
                     SessionAttendanceViewDto.SessionAttendanceStudentRowDto att = attendanceByStudentId.get(student.id());
                     BigDecimal lessonPoints = pointsByStudentId.getOrDefault(student.id(), BigDecimal.ZERO);
                     if (att == null) {
                         return new LessonRosterAttendanceDto.LessonRosterAttendanceRowDto(
                                 student,
+                                displayName,
                                 null,
                                 null,
                                 null,
@@ -91,6 +102,7 @@ class LessonRosterAttendanceService {
                     }
                     return new LessonRosterAttendanceDto.LessonRosterAttendanceRowDto(
                             student,
+                            displayName,
                             att.status(),
                             att.minutesLate(),
                             att.teacherComment(),

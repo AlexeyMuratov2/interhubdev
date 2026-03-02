@@ -40,4 +40,31 @@ public final class NotificationTemplateKeys {
      * Data: route="studentAttendance", sessionId, recordId
      */
     public static final String ATTENDANCE_MARKED = "attendance.record.marked";
+
+    /**
+     * Template key when a student submits a homework solution.
+     * <p>
+     * Params: lessonId (UUID string), lessonDisplay (e.g. date + time or slot), subjectName, studentName (display name).
+     * <p>
+     * Data: route (e.g. lesson homework submissions), lessonId, homeworkId, submissionId, studentId (authorId)
+     */
+    public static final String HOMEWORK_SUBMISSION_SUBMITTED = "submission.homeworkSubmission.submitted";
+
+    /**
+     * Template key when a lesson is rescheduled (date/time changed).
+     * <p>
+     * Params: lessonId, subjectName, oldDateTime (e.g. "2025-03-01 10:00–11:30"), newDateTime, offeringId.
+     * <p>
+     * Data: route (e.g. schedule/lesson), lessonId, offeringId
+     */
+    public static final String LESSON_RESCHEDULED = "schedule.lesson.rescheduled";
+
+    /**
+     * Template key when a lesson is deleted.
+     * <p>
+     * Params: lessonId, subjectName, lessonDate (date of the removed lesson), offeringId.
+     * <p>
+     * Data: route (e.g. schedule), lessonId, offeringId
+     */
+    public static final String LESSON_DELETED = "schedule.lesson.deleted";
 }

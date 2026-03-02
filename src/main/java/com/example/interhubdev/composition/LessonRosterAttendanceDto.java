@@ -59,6 +59,11 @@ public record LessonRosterAttendanceDto(
             StudentDto student,
 
             /**
+             * Non-empty display name for the student (chineseName or user full name; see StudentApi.studentDisplayName).
+             */
+            String displayName,
+
+            /**
              * Attendance status for this lesson. Null if not yet marked.
              */
             AttendanceStatus status,

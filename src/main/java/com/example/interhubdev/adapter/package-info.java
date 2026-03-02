@@ -77,6 +77,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Adapter",
-    allowedDependencies = {"schedule", "offering", "group", "group :: port", "document", "document :: api", "subject :: port", "program", "academic", "submission", "notification", "student", "teacher", "error"}
+    allowedDependencies = {"schedule", "offering", "group", "group :: port", "document", "document :: api", "subject :: port", "program", "academic", "submission", "notification", "student", "teacher", "user", "error"}
 )
 package com.example.interhubdev.adapter;

@@ -171,6 +171,8 @@ class AttendanceOutboxEventsIntegrationTest {
             assertThat(payload.get("submittedAt")).isNotNull();
             assertThat(payload.get("periodStart")).isNotNull();
             assertThat(payload.get("periodEnd")).isNotNull();
+            // One session → one offering → singleOfferingId set for notification subject enrichment
+            assertThat(payload.get("singleOfferingId").asText()).isEqualTo(OFFERING_ID.toString());
         }
 
         @Test

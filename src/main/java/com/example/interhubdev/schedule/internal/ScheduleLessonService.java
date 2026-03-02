@@ -1,6 +1,8 @@
 package com.example.interhubdev.schedule.internal;
 
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.outbox.OutboxEventDraft;
+import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import com.example.interhubdev.schedule.LessonBulkCreateRequest;
 import com.example.interhubdev.schedule.LessonDto;
 import com.example.interhubdev.schedule.LessonEnrichmentData;
@@ -27,6 +29,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -37,8 +41,12 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 class ScheduleLessonService {
 
+    private static final String EVENT_LESSON_RESCHEDULED = "schedule.lesson.rescheduled";
+    private static final String EVENT_LESSON_DELETED = "schedule.lesson.deleted";
+
     private final LessonRepository lessonRepository;
     private final RoomRepository roomRepository;
+    private final OutboxIntegrationEventPublisher outboxPublisher;
     private final TimeslotRepository timeslotRepository;
     private final GroupLookupPort groupLookupPort;
     private final OfferingLookupPort offeringLookupPort;
@@ -329,6 +337,8 @@ class ScheduleLessonService {
     LessonDto update(UUID id, LocalTime startTime, LocalTime endTime, UUID roomId, String topic, String status) {
         Lesson entity = lessonRepository.findById(id)
                 .orElseThrow(() -> ScheduleErrors.lessonNotFound(id));
+        LocalTime oldStart = entity.getStartTime();
+        LocalTime oldEnd = entity.getEndTime();
         if (startTime != null && endTime != null) {
             if (!endTime.isAfter(startTime)) {
                 throw Errors.badRequest("End time must be after start time");
@@ -345,15 +355,50 @@ class ScheduleLessonService {
             entity.setStatus(ScheduleValidation.normalizeLessonStatusForStorage(status));
         }
         entity.setUpdatedAt(LocalDateTime.now());
-        return ScheduleMappers.toLessonDto(lessonRepository.save(entity));
+        LessonDto result = ScheduleMappers.toLessonDto(lessonRepository.save(entity));
+
+        boolean timeChanged = (startTime != null || endTime != null)
+                && (!Objects.equals(oldStart, entity.getStartTime()) || !Objects.equals(oldEnd, entity.getEndTime()));
+        if (timeChanged) {
+            java.time.Instant occurredAt = java.time.Instant.now();
+            Map<String, Object> payload = Map.of(
+                    "lessonId", id.toString(),
+                    "offeringId", entity.getOfferingId().toString(),
+                    "date", entity.getDate().toString(),
+                    "oldStartTime", oldStart.toString(),
+                    "oldEndTime", oldEnd.toString(),
+                    "newStartTime", entity.getStartTime().toString(),
+                    "newEndTime", entity.getEndTime().toString(),
+                    "occurredAt", occurredAt.toString()
+            );
+            outboxPublisher.publish(OutboxEventDraft.builder()
+                    .eventType(EVENT_LESSON_RESCHEDULED)
+                    .payload(payload)
+                    .occurredAt(occurredAt)
+                    .build());
+        }
+        return result;
     }
 
     @Transactional
     void delete(UUID id) {
-        if (!lessonRepository.existsById(id)) {
-            throw ScheduleErrors.lessonNotFound(id);
-        }
-        lessonRepository.deleteById(id);
+        Lesson lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> ScheduleErrors.lessonNotFound(id));
+        UUID offeringId = lesson.getOfferingId();
+        LocalDate date = lesson.getDate();
+        lessonRepository.delete(lesson);
+        java.time.Instant occurredAt = java.time.Instant.now();
+        Map<String, Object> payload = Map.of(
+                "lessonId", id.toString(),
+                "offeringId", offeringId.toString(),
+                "date", date.toString(),
+                "occurredAt", occurredAt.toString()
+        );
+        outboxPublisher.publish(OutboxEventDraft.builder()
+                .eventType(EVENT_LESSON_DELETED)
+                .payload(payload)
+                .occurredAt(occurredAt)
+                .build());
     }
 
     @Transactional

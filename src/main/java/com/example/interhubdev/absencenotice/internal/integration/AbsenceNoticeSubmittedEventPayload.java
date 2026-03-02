@@ -8,6 +8,8 @@ import java.util.UUID;
 
 /**
  * Payload for absence notice submitted event. One notice can cover multiple lessons.
+ * When all lessons belong to a single offering (one subject), {@code singleOfferingId} is set
+ * so notification content can include subject name; otherwise it is null.
  */
 public record AbsenceNoticeSubmittedEventPayload(
         UUID noticeId,
@@ -16,6 +18,7 @@ public record AbsenceNoticeSubmittedEventPayload(
         AbsenceNoticeType type,
         Instant submittedAt,
         Instant periodStart,
-        Instant periodEnd
+        Instant periodEnd,
+        UUID singleOfferingId
 ) {
 }

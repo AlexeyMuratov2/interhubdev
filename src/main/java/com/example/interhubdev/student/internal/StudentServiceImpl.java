@@ -262,6 +262,34 @@ class StudentServiceImpl implements StudentApi {
         studentRepository.delete(student);
     }
 
+    @Override
+    public String studentDisplayName(StudentDto student, String userFullName) {
+        return studentDisplayNameOrFallback(student, userFullName);
+    }
+
+    /**
+     * Display name priority: chineseName → user full name → studentId → fallback. Result is never blank.
+     */
+    private static String studentDisplayNameOrFallback(StudentDto student, String userFullName) {
+        if (student != null) {
+            String cn = student.chineseName();
+            if (cn != null && !cn.isBlank()) {
+                return cn;
+            }
+        }
+        String full = userFullName != null ? userFullName.trim() : "";
+        if (!full.isEmpty()) {
+            return full;
+        }
+        if (student != null) {
+            String sid = student.studentId();
+            if (sid != null && !sid.isBlank()) {
+                return sid;
+            }
+        }
+        return "—";
+    }
+
     private StudentDto toDto(Student student) {
         return new StudentDto(
                 student.getId(),

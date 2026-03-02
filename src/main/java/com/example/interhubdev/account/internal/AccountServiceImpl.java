@@ -271,7 +271,7 @@ class AccountServiceImpl implements AccountApi {
         List<UserDto> users = userApi.findByIds(userIds);
         var userMap = users.stream().collect(Collectors.toMap(UserDto::id, u -> u));
         List<StudentProfileItem> items = page.items().stream()
-                .map(s -> new StudentProfileItem(s, studentDisplayName(s, userMap.get(s.userId()))))
+                .map(s -> new StudentProfileItem(s, studentApi.studentDisplayName(s, Optional.ofNullable(userMap.get(s.userId())).map(UserDto::getFullName).orElse(""))))
                 .toList();
         return new StudentListPage(items, page.nextCursor());
     }
@@ -280,7 +280,7 @@ class AccountServiceImpl implements AccountApi {
     public Optional<StudentProfileItem> getStudent(UUID userId) {
         return studentApi.findByUserId(userId)
                 .flatMap(student -> userApi.findById(userId)
-                        .map(user -> new StudentProfileItem(student, studentDisplayName(student, user))));
+                        .map(user -> new StudentProfileItem(student, studentApi.studentDisplayName(student, user.getFullName()))));
     }
 
     @Override
@@ -301,13 +301,6 @@ class AccountServiceImpl implements AccountApi {
     private static String teacherDisplayName(TeacherDto teacher, UserDto user) {
         if (teacher.englishName() != null && !teacher.englishName().isBlank()) {
             return teacher.englishName();
-        }
-        return user != null ? user.getFullName() : "";
-    }
-
-    private static String studentDisplayName(StudentDto student, UserDto user) {
-        if (student.chineseName() != null && !student.chineseName().isBlank()) {
-            return student.chineseName();
         }
         return user != null ? user.getFullName() : "";
     }

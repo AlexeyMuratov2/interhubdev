@@ -162,4 +162,16 @@ public interface StudentApi {
      * @throws IllegalArgumentException if profile not found
      */
     void delete(UUID userId);
+
+    /**
+     * Compute display name for a student. Never returns empty string.
+     * Priority: 1) student's chineseName (if non-blank), 2) user's full name (e.g. firstName + lastName),
+     * 3) studentId, 4) fallback placeholder.
+     * Use this whenever the frontend or other modules need a non-empty label for the student.
+     *
+     * @param student     student DTO (may be null; then only userFullName and fallback apply)
+     * @param userFullName full name of the linked user (e.g. from {@code UserDto.getFullName()}); may be null or blank
+     * @return non-empty display name
+     */
+    String studentDisplayName(StudentDto student, String userFullName);
 }

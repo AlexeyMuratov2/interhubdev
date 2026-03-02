@@ -26,10 +26,11 @@
  *   <li>teacher - teacher by user id (teacher-of-lesson check)</li>
  *   <li>program - curriculum subject (for subject id from offering)</li>
  *   <li>subject - subject name for archive filename</li>
+ *   <li>outbox - publish integration event when student submits homework (for teacher notification)</li>
  * </ul>
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Submission",
-    allowedDependencies = {"document", "auth", "user", "error", "schedule", "offering", "teacher", "program", "subject"}
+    allowedDependencies = {"document", "auth", "user", "error", "schedule", "offering", "teacher", "program", "subject", "outbox"}
 )
 package com.example.interhubdev.submission;

@@ -13,6 +13,8 @@ import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.student.StudentApi;
 import com.example.interhubdev.student.StudentDto;
 import com.example.interhubdev.teacher.TeacherApi;
+import com.example.interhubdev.user.UserApi;
+import com.example.interhubdev.user.UserDto;
 import com.example.interhubdev.teacher.TeacherDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +41,7 @@ class GetTeacherAbsenceNoticesUseCase {
     private final OfferingApi offeringApi;
     private final ScheduleApi scheduleApi;
     private final StudentApi studentApi;
+    private final UserApi userApi;
     private final GroupApi groupApi;
     private final ProgramApi programApi;
 
@@ -109,6 +112,18 @@ class GetTeacherAbsenceNoticesUseCase {
         Map<UUID, String> subjectNameByCurriculumSubjectId = new HashMap<>();
         Map<UUID, List<OfferingSlotDto>> slotsByOfferingId = new HashMap<>();
 
+        // Pre-load students and users for this page to build display names without N+1
+        Set<UUID> pageStudentIds = pageNotices.stream().map(AbsenceNotice::getStudentId).filter(Objects::nonNull).collect(Collectors.toSet());
+        for (UUID sid : pageStudentIds) {
+            studentById.put(sid, studentApi.findById(sid).orElse(null));
+        }
+        Set<UUID> userIds = studentById.values().stream()
+                .filter(Objects::nonNull)
+                .map(StudentDto::userId)
+                .collect(Collectors.toSet());
+        Map<UUID, UserDto> userById = userIds.isEmpty() ? Map.of()
+                : userApi.findByIds(userIds).stream().collect(Collectors.toMap(UserDto::id, u -> u));
+
         List<TeacherAbsenceNoticeItemDto> items = new ArrayList<>();
         for (AbsenceNotice notice : pageNotices) {
             List<AbsenceNoticeLesson> noticeLessons = lessonRepository.findByNoticeIdOrderByLessonSessionId(notice.getId());
@@ -116,13 +131,12 @@ class GetTeacherAbsenceNoticesUseCase {
             List<AbsenceNoticeAttachment> attachments = attachmentRepository.findByNoticeIdOrderByCreatedAtAsc(notice.getId());
             AbsenceNoticeDto noticeDto = AbsenceNoticeMappers.toDto(notice, lessonIds, attachments);
 
-            StudentDto student = studentById.computeIfAbsent(notice.getStudentId(),
-                    sid -> studentApi.findById(sid).orElse(null));
+            StudentDto student = studentById.get(notice.getStudentId());
             TeacherNoticeStudentSummary studentSummary = student != null
                     ? new TeacherNoticeStudentSummary(
                             student.id(),
                             student.studentId(),
-                            (student.chineseName() != null && !student.chineseName().isBlank()) ? student.chineseName() : student.studentId(),
+                            studentApi.studentDisplayName(student, Optional.ofNullable(userById.get(student.userId())).map(UserDto::getFullName).orElse("")),
                             student.groupName())
                     : null;
 

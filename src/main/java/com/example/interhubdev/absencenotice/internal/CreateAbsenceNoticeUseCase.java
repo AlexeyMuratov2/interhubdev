@@ -19,7 +19,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -120,6 +123,7 @@ class CreateAbsenceNoticeUseCase {
         List<LessonDto> lessons = sessionGateway.getSessionsByIds(lessonIds);
         Instant periodStart = computePeriodStart(lessons);
         Instant periodEnd = computePeriodEnd(lessons);
+        UUID singleOfferingId = singleOfferingIdOrNull(lessons);
 
         Instant occurredAt = Instant.now();
         AbsenceNoticeSubmittedEventPayload payload = new AbsenceNoticeSubmittedEventPayload(
@@ -129,7 +133,8 @@ class CreateAbsenceNoticeUseCase {
                 saved.getType(),
                 toInstant(saved.getSubmittedAt()),
                 periodStart,
-                periodEnd
+                periodEnd,
+                singleOfferingId
         );
         publisher.publish(OutboxEventDraft.builder()
                 .eventType(AbsenceNoticeEventTypes.ABSENCE_NOTICE_SUBMITTED)
@@ -158,5 +163,15 @@ class CreateAbsenceNoticeUseCase {
                 .max(LocalDateTime::compareTo)
                 .map(ldt -> ldt.toInstant(ZoneOffset.UTC))
                 .orElse(Instant.now());
+    }
+
+    /** When all lessons belong to one offering (one subject), returns that offering id; otherwise null. */
+    private static UUID singleOfferingIdOrNull(List<LessonDto> lessons) {
+        if (lessons == null || lessons.isEmpty()) return null;
+        Set<UUID> offeringIds = lessons.stream()
+                .map(LessonDto::offeringId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        return offeringIds.size() == 1 ? offeringIds.iterator().next() : null;
     }
 }

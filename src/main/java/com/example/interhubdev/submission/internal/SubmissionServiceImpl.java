@@ -6,7 +6,6 @@ import com.example.interhubdev.document.HomeworkDto;
 import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.offering.OfferingApi;
-import com.example.interhubdev.offering.OfferingTeacherItemDto;
 import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.schedule.ScheduleApi;
 import com.example.interhubdev.subject.SubjectApi;
@@ -18,10 +17,13 @@ import com.example.interhubdev.submission.internal.archive.ArchiveEntry;
 import com.example.interhubdev.submission.internal.archive.ArchiveInfo;
 import com.example.interhubdev.submission.SubmissionsArchiveHandle;
 import com.example.interhubdev.submission.internal.archive.ArchiveNamingService;
+import com.example.interhubdev.submission.internal.integration.HomeworkSubmissionSubmittedEventPayload;
 import com.example.interhubdev.teacher.TeacherApi;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
+import com.example.interhubdev.outbox.OutboxEventDraft;
+import com.example.interhubdev.outbox.OutboxIntegrationEventPublisher;
 import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +31,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -59,6 +63,7 @@ class SubmissionServiceImpl implements SubmissionApi {
     private final ProgramApi programApi;
     private final SubjectApi subjectApi;
     private final DocumentApi documentApi;
+    private final OutboxIntegrationEventPublisher outboxPublisher;
 
     @Override
     @Transactional
@@ -66,9 +71,8 @@ class SubmissionServiceImpl implements SubmissionApi {
         validateRequester(requesterId);
         checkStudentRole(requesterId);
 
-        if (homeworkApi.get(homeworkId, requesterId).isEmpty()) {
-            throw SubmissionErrors.homeworkNotFound(homeworkId);
-        }
+        HomeworkDto homework = homeworkApi.get(homeworkId, requesterId)
+                .orElseThrow(() -> SubmissionErrors.homeworkNotFound(homeworkId));
         if (description != null && description.length() > MAX_DESCRIPTION_LENGTH) {
             throw SubmissionErrors.validationFailed("Description must not exceed " + MAX_DESCRIPTION_LENGTH + " characters");
         }
@@ -103,6 +107,20 @@ class SubmissionServiceImpl implements SubmissionApi {
             }
             HomeworkSubmission withFiles = submissionRepository.findByIdWithFiles(saved.getId())
                 .orElse(saved);
+
+            HomeworkSubmissionSubmittedEventPayload eventPayload = new HomeworkSubmissionSubmittedEventPayload(
+                    saved.getId(),
+                    homeworkId,
+                    homework.lessonId(),
+                    requesterId,
+                    saved.getSubmittedAt().atZone(ZoneOffset.UTC).toInstant()
+            );
+            outboxPublisher.publish(OutboxEventDraft.builder()
+                    .eventType(SubmissionEventTypes.HOMEWORK_SUBMISSION_SUBMITTED)
+                    .payload(eventPayload)
+                    .occurredAt(eventPayload.submittedAt())
+                    .build());
+
             return toDto(withFiles);
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save submission (homeworkId={}): {}", homeworkId, e.getMessage());
