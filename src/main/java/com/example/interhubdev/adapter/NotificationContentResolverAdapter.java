@@ -396,10 +396,28 @@ public class NotificationContentResolverAdapter implements NotificationContentRe
         }
     }
 
+    /**
+     * Parses Instant from payload value. Handles:
+     * <ul>
+     *   <li>Already Instant</li>
+     *   <li>Number: values &lt; 1e12 are treated as epoch seconds (Jackson JavaTimeModule default for Instant),
+     *       larger values as epoch milliseconds</li>
+     *   <li>String: ISO-8601</li>
+     * </ul>
+     */
     private static Instant parseInstant(Object value) {
         if (value == null) return null;
         if (value instanceof Instant i) return i;
-        if (value instanceof Number n) return Instant.ofEpochMilli(n.longValue());
+        if (value instanceof Number n) {
+            double v = n.doubleValue();
+            if (Math.abs(v) < 1e12) {
+                // Epoch seconds (Jackson serializes Instant as seconds by default)
+                long sec = (long) Math.floor(v);
+                long nano = Math.round((v - sec) * 1_000_000_000);
+                return Instant.ofEpochSecond(sec, nano);
+            }
+            return Instant.ofEpochMilli(n.longValue());
+        }
         try {
             return Instant.parse(value.toString());
         } catch (Exception e) {

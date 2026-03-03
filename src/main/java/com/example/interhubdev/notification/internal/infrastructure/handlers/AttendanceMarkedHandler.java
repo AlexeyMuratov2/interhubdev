@@ -90,9 +90,22 @@ class AttendanceMarkedHandler implements OutboxEventHandler {
         // TODO: In future, after creating in-app notification, enqueue push delivery (mobile) based on user preferences.
     }
 
+    /**
+     * Parses Instant from outbox payload. Jackson serializes Instant as epoch seconds by default;
+     * values with magnitude >= 1e12 are treated as epoch milliseconds.
+     */
     private static Instant parseInstantFromPayload(Object value) {
         if (value == null) return Instant.now();
-        if (value instanceof Number n) return Instant.ofEpochMilli(n.longValue());
+        if (value instanceof Instant i) return i;
+        if (value instanceof Number n) {
+            double v = n.doubleValue();
+            if (Math.abs(v) < 1e12) {
+                long sec = (long) Math.floor(v);
+                long nano = Math.round((v - sec) * 1_000_000_000);
+                return Instant.ofEpochSecond(sec, nano);
+            }
+            return Instant.ofEpochMilli(n.longValue());
+        }
         return Instant.parse(value.toString());
     }
 }
