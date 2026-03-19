@@ -14,7 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import com.example.interhubdev.document.internal.storedFile.StoredFile;
+import com.example.interhubdev.storedfile.StoredFile;
 
 import java.io.Serializable;
 import java.util.UUID;

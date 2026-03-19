@@ -1,4 +1,4 @@
-package com.example.interhubdev.document.internal.uploadSecurity;
+package com.example.interhubdev.storedfile.internal.uploadSecurity;
 
 import org.springframework.stereotype.Component;
 
@@ -8,17 +8,12 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 /**
- * Detects MIME type from magic bytes (file signature).
- * Supports: PDF, PNG, JPEG, GIF, WebP, ZIP (and Office OpenXML as ZIP).
- *
- * <p>Office OpenXML (docx/xlsx): detected as application/zip. Full validation (peek inside
- * for word/document.xml or xl/workbook.xml) is planned for Phase 2.
+ * Detects MIME type from magic bytes.
  */
 @Component
 class MagicBytesSniffer implements ContentSniffer {
 
-    private static final int MAX_READ = 16 * 1024; // 16 KB
-
+    private static final int MAX_READ = 16 * 1024;
     private static final byte[] PDF = "%PDF".getBytes();
     private static final byte[] PNG = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47};
     private static final byte[] JPEG = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
@@ -29,7 +24,6 @@ class MagicBytesSniffer implements ContentSniffer {
     private static final byte[] ZIP_SPANNED = new byte[]{0x50, 0x4B, 0x07, 0x08};
     private static final byte[] WEBP_RIFF = "RIFF".getBytes();
     private static final byte[] WEBP_WEBP = "WEBP".getBytes();
-    private static final byte[] TXT_UTF8_BOM = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 
     @Override
     public Optional<String> detectMimeFromContent(Path file) {
@@ -46,7 +40,6 @@ class MagicBytesSniffer implements ContentSniffer {
             return Optional.empty();
         }
         int len = Math.min(head.length, MAX_READ);
-
         if (startsWith(head, len, PDF)) {
             return Optional.of("application/pdf");
         }
@@ -65,7 +58,6 @@ class MagicBytesSniffer implements ContentSniffer {
         if (len >= 12 && startsWith(head, 4, WEBP_RIFF) && startsAt(head, 8, WEBP_WEBP)) {
             return Optional.of("image/webp");
         }
-        // CSV/txt: no reliable magic; heuristic: plain text. Do not enforce to avoid false positives.
         return Optional.empty();
     }
 

@@ -1,4 +1,4 @@
-package com.example.interhubdev.document.internal.uploadSecurity;
+package com.example.interhubdev.storedfile.internal.uploadSecurity;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -6,8 +6,7 @@ import org.springframework.stereotype.Component;
 import java.nio.file.Path;
 
 /**
- * No-op antivirus adapter when ClamAV is disabled ({@code clamav.enabled=false}).
- * Always returns CLEAN; used so {@link UploadSecurityService} does not need optional injection.
+ * No-op antivirus when ClamAV is disabled.
  */
 @Component
 @ConditionalOnProperty(name = "clamav.enabled", havingValue = "false", matchIfMissing = true)

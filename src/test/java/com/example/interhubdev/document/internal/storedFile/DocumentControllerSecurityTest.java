@@ -4,7 +4,7 @@ import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
-import com.example.interhubdev.document.internal.uploadSecurity.UploadSecurityErrors;
+import com.example.interhubdev.storedfile.internal.uploadSecurity.UploadSecurityErrors;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserDto;
 import com.example.interhubdev.user.UserStatus;
@@ -193,17 +193,17 @@ class DocumentControllerSecurityTest {
         }
 
         @Test
-        @DisplayName("returns 400 and UPLOAD_EXTENSION_MISMATCH when extension does not match MIME")
+        @DisplayName("returns 400 and UPLOAD_CONTENT_TYPE_MISMATCH when extension does not match MIME")
         void extensionMismatch() throws Exception {
             when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
             when(documentApi.uploadFile(any(), any(), any(), anyLong(), any()))
-                    .thenThrow(UploadSecurityErrors.extensionMismatch("File extension 'exe' does not match content type application/pdf"));
+                    .thenThrow(UploadSecurityErrors.contentTypeMismatch("File extension 'exe' does not match content type application/pdf"));
 
             mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload")
                             .file("file", "content".getBytes())
                             .contentType(MediaType.MULTIPART_FORM_DATA))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.code").value(UploadSecurityErrors.CODE_EXTENSION_MISMATCH));
+                    .andExpect(jsonPath("$.code").value(UploadSecurityErrors.CODE_CONTENT_TYPE_MISMATCH));
         }
 
         @Test

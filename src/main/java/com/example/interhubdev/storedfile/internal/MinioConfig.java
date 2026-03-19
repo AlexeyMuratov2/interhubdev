@@ -1,4 +1,4 @@
-package com.example.interhubdev.document.internal.storedFile;
+package com.example.interhubdev.storedfile.internal;
 
 import io.minio.MinioClient;
 import lombok.extern.slf4j.Slf4j;
@@ -12,16 +12,16 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @Slf4j
 class MinioConfig {
-    
+
     @Value("${app.storage.endpoint}")
     private String endpoint;
-    
+
     @Value("${app.storage.access-key}")
     private String accessKey;
-    
+
     @Value("${app.storage.secret-key}")
     private String secretKey;
-    
+
     @Bean
     MinioClient minioClient() {
         log.info("Initializing MinIO client with endpoint: {}", endpoint);

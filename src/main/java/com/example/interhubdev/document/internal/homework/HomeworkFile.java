@@ -1,6 +1,6 @@
 package com.example.interhubdev.document.internal.homework;
 
-import com.example.interhubdev.document.internal.storedFile.StoredFile;
+import com.example.interhubdev.storedfile.StoredFile;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

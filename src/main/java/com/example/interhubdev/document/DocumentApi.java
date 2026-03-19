@@ -99,4 +99,13 @@ public interface DocumentApi {
      *                      CONFLICT if file is in use
      */
     void deleteStoredFile(UUID id, UUID currentUserId);
+
+    /**
+     * Check if the given stored file is referenced by any document attachment (course material, lesson material file, homework file).
+     * Used by storedfile module via adapter to prevent deletion of files still in use.
+     *
+     * @param storedFileId stored file UUID
+     * @return true if any document entity references this file
+     */
+    boolean isStoredFileInUse(UUID storedFileId);
 }

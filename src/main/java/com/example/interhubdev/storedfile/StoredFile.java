@@ -1,4 +1,4 @@
-package com.example.interhubdev.document.internal.storedFile;
+package com.example.interhubdev.storedfile;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * JPA entity for file metadata stored in object storage (S3/MinIO).
- * No business context (homework, lesson material) — that will be in Document later.
+ * JPA entity for file metadata in object storage (S3/MinIO). No business context.
+ * Exposed so document module entities can reference it via @ManyToOne for FK consistency.
  */
 @Entity
 @Table(name = "stored_file")

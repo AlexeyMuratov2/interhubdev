@@ -41,9 +41,9 @@
  *   <li>{@link com.example.interhubdev.adapter.OfferingLookupAdapterForDocument} - implements Document's
  *       {@link com.example.interhubdev.document.OfferingLookupPort} using Offering's
  *       {@link com.example.interhubdev.offering.OfferingExistsPort} (for course material offering validation).</li>
- *   <li>{@link com.example.interhubdev.adapter.StoredFileUsageAdapterForDocument} - implements Document's
- *       {@link com.example.interhubdev.document.api.StoredFileUsagePort} using Submission's
- *       {@link com.example.interhubdev.submission.SubmissionApi#isStoredFileInUse} (prevents deleting files attached to submissions).</li>
+ *   <li>{@link com.example.interhubdev.adapter.StoredFileUsageAdapterForStoredfile} - implements Storedfile's
+ *       {@link com.example.interhubdev.storedfile.StoredFileUsagePort} using Document and Submission
+ *       (prevents deleting files still referenced by document attachments or submissions).</li>
  *   <li>{@link com.example.interhubdev.adapter.CurriculumSubjectLookupAdapter} - implements Offering's
  *       {@link com.example.interhubdev.offering.CurriculumSubjectLookupPort} using Program's
  *       {@link com.example.interhubdev.program.ProgramApi} (to avoid circular dependency between offering and program).</li>
@@ -77,6 +77,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Adapter",
-    allowedDependencies = {"schedule", "offering", "group", "group :: port", "document", "document :: api", "subject :: port", "program", "academic", "submission", "notification", "student", "teacher", "user", "error"}
+    allowedDependencies = {"schedule", "offering", "group", "group :: port", "document", "document :: api", "storedfile", "subject :: port", "program", "academic", "submission", "notification", "student", "teacher", "user", "error"}
 )
 package com.example.interhubdev.adapter;

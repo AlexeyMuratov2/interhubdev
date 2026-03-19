@@ -1,5 +1,6 @@
-package com.example.interhubdev.document.internal.storedFile;
+package com.example.interhubdev.storedfile.internal;
 
+import com.example.interhubdev.storedfile.StoredFile;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.UUID;

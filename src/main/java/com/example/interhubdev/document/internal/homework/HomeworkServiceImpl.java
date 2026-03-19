@@ -3,8 +3,8 @@ package com.example.interhubdev.document.internal.homework;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
 import com.example.interhubdev.document.LessonLookupPort;
-import com.example.interhubdev.document.internal.storedFile.StoredFile;
-import com.example.interhubdev.document.internal.storedFile.StoredFileRepository;
+import com.example.interhubdev.storedfile.StoredFile;
+import com.example.interhubdev.storedfile.StoredFileApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
@@ -36,7 +36,7 @@ class HomeworkServiceImpl implements HomeworkApi {
     private final HomeworkRepository homeworkRepository;
     private final HomeworkFileRepository homeworkFileRepository;
     private final LessonHomeworkRepository lessonHomeworkRepository;
-    private final StoredFileRepository storedFileRepository;
+    private final StoredFileApi storedFileApi;
     private final LessonLookupPort lessonLookupPort;
     private final UserApi userApi;
     
@@ -72,8 +72,7 @@ class HomeworkServiceImpl implements HomeworkApi {
 
             for (int i = 0; i < fileIds.size(); i++) {
                 UUID fileId = fileIds.get(i);
-                StoredFile file = storedFileRepository.findById(fileId)
-                    .orElseThrow(() -> HomeworkErrors.fileNotFound(fileId));
+                StoredFile file = storedFileApi.getReference(fileId);
                 HomeworkFile hf = new HomeworkFile(saved.getId(), fileId, i, null, file);
                 homeworkFileRepository.save(hf);
             }
@@ -171,8 +170,7 @@ class HomeworkServiceImpl implements HomeworkApi {
             homework.getFiles().clear();
             for (int i = 0; i < storedFileIds.size(); i++) {
                 UUID fileId = storedFileIds.get(i);
-                StoredFile file = storedFileRepository.findById(fileId)
-                    .orElseThrow(() -> HomeworkErrors.fileNotFound(fileId));
+                StoredFile file = storedFileApi.getReference(fileId);
                 HomeworkFile hf = new HomeworkFile(homework.getId(), fileId, i, homework, file);
                 homework.getFiles().add(hf);
             }

@@ -5,8 +5,8 @@ import com.example.interhubdev.document.LessonMaterialApi;
 import com.example.interhubdev.document.LessonMaterialDto;
 import com.example.interhubdev.document.LessonLookupPort;
 import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
-import com.example.interhubdev.document.internal.storedFile.StoredFile;
-import com.example.interhubdev.document.internal.storedFile.StoredFileRepository;
+import com.example.interhubdev.storedfile.StoredFile;
+import com.example.interhubdev.storedfile.StoredFileApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
@@ -38,7 +38,7 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
 
     private final LessonMaterialRepository lessonMaterialRepository;
     private final LessonMaterialFileRepository lessonMaterialFileRepository;
-    private final StoredFileRepository storedFileRepository;
+    private final StoredFileApi storedFileApi;
     private final DocumentApi documentApi;
     private final LessonLookupPort lessonLookupPort;
     private final UserApi userApi;
@@ -61,8 +61,7 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
 
         List<StoredFile> storedFiles = new ArrayList<>();
         for (UUID fileId : fileIds) {
-            StoredFile file = storedFileRepository.findById(fileId)
-                .orElseThrow(() -> DocumentErrors.storedFileNotFound(fileId));
+            StoredFile file = storedFileApi.getReference(fileId);
             storedFiles.add(file);
         }
 
@@ -164,8 +163,7 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
 
         int nextOrder = lessonMaterialFileRepository.findMaxSortOrderByLessonMaterialId(materialId) + 1;
         for (UUID fileId : toAdd) {
-            StoredFile file = storedFileRepository.findById(fileId)
-                .orElseThrow(() -> LessonMaterialErrors.storedFileNotFound(fileId));
+            StoredFile file = storedFileApi.getReference(fileId);
             LessonMaterialFile lmf = new LessonMaterialFile(
                 materialId, file.getId(), nextOrder++, null, file
             );

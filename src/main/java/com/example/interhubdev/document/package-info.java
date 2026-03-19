@@ -13,25 +13,22 @@
  *   <li>{@link com.example.interhubdev.document.LessonMaterialDto} - lesson material DTO (includes list of StoredFileDto)</li>
  *   <li>{@link com.example.interhubdev.document.LessonLookupPort} - port to check lesson existence (implemented by adapter)</li>
  *   <li>{@link com.example.interhubdev.document.OfferingLookupPort} - port to check offering existence (implemented by adapter)</li>
- *   <li>{@link com.example.interhubdev.document.api.StoredFileUsagePort} - port to check if stored file is in use by other modules (e.g. submissions)</li>
  *   <li>{@link com.example.interhubdev.document.api.StoredFileDownloadAccessPort} - port to allow download in specific contexts (e.g. teacher downloading submission files)</li>
- *   <li>{@link com.example.interhubdev.document.StoragePort} - storage port (S3-compatible)</li>
- *   <li>{@link com.example.interhubdev.document.UploadSecurityPort} - upload security (allowed types, malicious file checks)</li>
- *   <li>{@link com.example.interhubdev.document.UploadContext} - context for upload security check</li>
- *   <li>{@link com.example.interhubdev.document.UploadResult} - upload result from storage port</li>
+ *   <li>{@link com.example.interhubdev.document.DocumentStoredFileUsagePort} - port to query if a stored file is in use by document entities (used by adapters, no dependency on storedfile)</li>
  *   <li>{@link com.example.interhubdev.document.FileUploadInput} - input for a single file in batch upload</li>
  * </ul>
+ * <p>Storage and upload security are delegated to the storedfile module.</p>
  * 
  * <h2>Dependencies</h2>
  * <ul>
  *   <li>error - all business errors via {@link com.example.interhubdev.error.Errors}</li>
  *   <li>auth - current user for upload and access control (AuthApi.getCurrentUser)</li>
  *   <li>user - user roles for permission checks (UserApi)</li>
+ *   <li>storedfile - file storage and upload security (StoredFileApi)</li>
  * </ul>
  * 
  * <h2>Storage</h2>
- * Uses MinIO (S3-compatible) for file storage. Upload is atomic: on DB failure after S3 upload,
- * the file is removed from S3. Can be replaced with AWS S3 by implementing StoragePort.
+ * Delegates to storedfile module (MinIO/S3). Document enforces access control and business rules.
  * 
  * <h2>Access control</h2>
  * All endpoints require authentication.
@@ -66,6 +63,6 @@
  */
 @org.springframework.modulith.ApplicationModule(
     displayName = "Document",
-    allowedDependencies = {"error", "auth", "user"}
+    allowedDependencies = {"error", "auth", "user", "storedfile"}
 )
 package com.example.interhubdev.document;

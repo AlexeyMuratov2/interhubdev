@@ -103,7 +103,7 @@ class DocumentController {
     @PostMapping(value = "/upload/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload multiple files", description = "Upload multiple files in one request; returns list of stored file metadata. All-or-nothing: if any file fails, no files are persisted. Requires authentication.")
     public ResponseEntity<List<StoredFileDto>> uploadBatch(
-            @RequestPart("files") @Parameter(description = "Files to upload (multipart form, same part name 'files')") List<MultipartFile> files,
+            @RequestPart(value = "files", required = false) @Parameter(description = "Files to upload (multipart form, same part name 'files')") List<MultipartFile> files,
             HttpServletRequest request
     ) {
         UUID uploadedBy = authApi.getCurrentUser(request)

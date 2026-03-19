@@ -18,7 +18,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import com.example.interhubdev.document.internal.storedFile.StoredFile;
+import com.example.interhubdev.storedfile.StoredFile;
 
 /**
  * JPA entity for course material (business entity linking group_subject_offering to stored file).

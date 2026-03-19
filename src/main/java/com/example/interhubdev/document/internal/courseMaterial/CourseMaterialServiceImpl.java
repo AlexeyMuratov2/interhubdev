@@ -5,8 +5,8 @@ import com.example.interhubdev.document.CourseMaterialDto;
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.OfferingLookupPort;
 import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
-import com.example.interhubdev.document.internal.storedFile.StoredFile;
-import com.example.interhubdev.document.internal.storedFile.StoredFileRepository;
+import com.example.interhubdev.storedfile.StoredFile;
+import com.example.interhubdev.storedfile.StoredFileApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
 import jakarta.persistence.PersistenceException;
@@ -31,7 +31,7 @@ import java.util.UUID;
 class CourseMaterialServiceImpl implements CourseMaterialApi {
 
     private final CourseMaterialRepository courseMaterialRepository;
-    private final StoredFileRepository storedFileRepository;
+    private final StoredFileApi storedFileApi;
     private final DocumentApi documentApi;
     private final UserApi userApi;
     private final OfferingLookupPort offeringLookupPort;
@@ -50,9 +50,8 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
             throw CourseMaterialErrors.offeringNotFound(offeringId);
         }
 
-        // Get stored file
-        StoredFile storedFile = storedFileRepository.findById(storedFileId)
-            .orElseThrow(() -> DocumentErrors.storedFileNotFound(storedFileId));
+        // Get stored file reference
+        StoredFile storedFile = storedFileApi.getReference(storedFileId);
 
         // Check if material with same offering+file already exists
         courseMaterialRepository.findByOfferingIdOrderByUploadedAtDesc(offeringId).stream()
