@@ -4,6 +4,7 @@ import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
 import com.example.interhubdev.document.LessonLookupPort;
+import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
 import com.example.interhubdev.storedfile.StoredFileApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
@@ -76,7 +77,11 @@ class HomeworkServiceImpl implements HomeworkApi {
 
             for (int i = 0; i < fileIds.size(); i++) {
                 UUID fileId = fileIds.get(i);
-                storedFileApi.getMetadataOrThrow(fileId);
+                com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(fileId)
+                    .orElseThrow(() -> DocumentErrors.storedFileNotFound(fileId));
+                if (!fileDto.isActive()) {
+                    throw DocumentErrors.fileNotActiveForBind();
+                }
                 HomeworkFile hf = new HomeworkFile(saved.getId(), fileId, i, saved);
                 homeworkFileRepository.save(hf);
             }
@@ -186,7 +191,11 @@ class HomeworkServiceImpl implements HomeworkApi {
                 throw HomeworkErrors.validationFailed("Duplicate file IDs in request");
             }
             for (UUID fileId : storedFileIds) {
-                storedFileApi.getMetadataOrThrow(fileId);
+                com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(fileId)
+                    .orElseThrow(() -> DocumentErrors.storedFileNotFound(fileId));
+                if (!fileDto.isActive()) {
+                    throw DocumentErrors.fileNotActiveForBind();
+                }
             }
             homework.getFiles().clear();
             for (int i = 0; i < storedFileIds.size(); i++) {

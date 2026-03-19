@@ -52,8 +52,12 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
             throw CourseMaterialErrors.offeringNotFound(offeringId);
         }
 
-        // Validate stored file exists
-        storedFileApi.getMetadataOrThrow(storedFileId);
+        // Validate stored file exists and is ACTIVE (activation gate: bind only after checks passed)
+        com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(storedFileId)
+            .orElseThrow(() -> DocumentErrors.storedFileNotFound(storedFileId));
+        if (!fileDto.isActive()) {
+            throw DocumentErrors.fileNotActiveForBind();
+        }
 
         // Check if material with same offering+file already exists
         courseMaterialRepository.findByOfferingIdOrderByUploadedAtDesc(offeringId).stream()

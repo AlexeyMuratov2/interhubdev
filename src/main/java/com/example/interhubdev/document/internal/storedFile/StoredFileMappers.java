@@ -18,7 +18,8 @@ public final class StoredFileMappers {
             m.contentType(),
             m.originalName(),
             m.uploadedAt(),
-            m.uploadedBy()
+            m.uploadedBy(),
+            m.status()
         );
     }
 }

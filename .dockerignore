@@ -1,0 +1,10 @@
+target/
+.git/
+.env
+*.md
+compose*.yaml
+.idea/
+.cursor/
+*.iml
+node_modules/
+docs/

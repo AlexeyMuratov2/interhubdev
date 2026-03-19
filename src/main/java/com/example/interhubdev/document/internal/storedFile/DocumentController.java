@@ -174,13 +174,12 @@ class DocumentController {
         String contentType = meta.contentType() != null && !meta.contentType().isBlank()
                 ? meta.contentType()
                 : "application/octet-stream";
-        String filename = meta.originalName() != null && !meta.originalName().isBlank()
-                ? meta.originalName()
-                : "download";
-        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        String safeFilename = FilenameSanitizer.sanitizeForContentDisposition(meta.originalName());
+        String encodedFilename = URLEncoder.encode(safeFilename, StandardCharsets.UTF_8).replace("+", "%20");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(contentType));
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename);
+        headers.add("X-Content-Type-Options", "nosniff");
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(new InputStreamResource(stream));

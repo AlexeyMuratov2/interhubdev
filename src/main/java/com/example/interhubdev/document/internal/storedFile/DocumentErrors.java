@@ -37,6 +37,13 @@ public final class DocumentErrors {
     public static final String CODE_SAVE_FAILED = "SAVE_FAILED";
     /** Used when batch upload has too many files. */
     public static final String CODE_BATCH_TOO_LARGE = "BATCH_TOO_LARGE";
+    /** File is not ACTIVE; binding to business entity forbidden until activation gate passed. */
+    public static final String CODE_FILE_NOT_ACTIVE_FOR_BIND = "FILE_NOT_ACTIVE_FOR_BIND";
+
+    public static AppException fileNotActiveForBind() {
+        return Errors.of(HttpStatus.BAD_REQUEST, CODE_FILE_NOT_ACTIVE_FOR_BIND,
+            "File is not available for binding (security checks not yet complete). Try again shortly or re-upload.");
+    }
 
     public static AppException storedFileNotFound(UUID id) {
         return Errors.of(HttpStatus.NOT_FOUND, CODE_STORED_FILE_NOT_FOUND, "Stored file not found: " + id);

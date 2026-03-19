@@ -60,7 +60,11 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
         }
 
         for (UUID fileId : fileIds) {
-            storedFileApi.getMetadataOrThrow(fileId);
+            com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(fileId)
+                .orElseThrow(() -> DocumentErrors.storedFileNotFound(fileId));
+            if (!fileDto.isActive()) {
+                throw DocumentErrors.fileNotActiveForBind();
+            }
         }
 
         LessonMaterial material = LessonMaterial.builder()
@@ -171,7 +175,11 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
 
         int nextOrder = lessonMaterialFileRepository.findMaxSortOrderByLessonMaterialId(materialId) + 1;
         for (UUID fileId : toAdd) {
-            storedFileApi.getMetadataOrThrow(fileId);
+            com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(fileId)
+                .orElseThrow(() -> DocumentErrors.storedFileNotFound(fileId));
+            if (!fileDto.isActive()) {
+                throw DocumentErrors.fileNotActiveForBind();
+            }
             LessonMaterialFile lmf = new LessonMaterialFile(
                 materialId, fileId, nextOrder++, material
             );

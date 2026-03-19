@@ -2,11 +2,17 @@ package com.example.interhubdev.storedfile.internal;
 
 import com.example.interhubdev.error.AppException;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.storedfile.DeliveryContext;
+import com.example.interhubdev.storedfile.FileStatus;
+import com.example.interhubdev.storedfile.FileSafetyClass;
 import com.example.interhubdev.storedfile.StoredFile;
 import com.example.interhubdev.storedfile.StoredFileApi;
 import com.example.interhubdev.storedfile.StoredFileInput;
 import com.example.interhubdev.storedfile.StoredFileMeta;
 import com.example.interhubdev.storedfile.StoredFileUsagePort;
+import com.example.interhubdev.storedfile.UploadContextKey;
+import com.example.interhubdev.storedfile.internal.policy.ClassificationPolicy;
+import com.example.interhubdev.storedfile.internal.policy.DeliveryPolicyEvaluator;
 import com.example.interhubdev.storedfile.internal.uploadSecurity.UploadContext;
 import com.example.interhubdev.storedfile.internal.uploadSecurity.UploadSecurityPort;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +46,8 @@ import java.util.stream.Collectors;
 class StoredFileServiceImpl implements StoredFileApi {
 
     private final UploadSecurityPort uploadSecurityPort;
+    private final ClassificationPolicy classificationPolicy;
+    private final DeliveryPolicyEvaluator deliveryPolicyEvaluator;
     private final StoragePort storagePort;
     private final StoredFileRepository storedFileRepository;
     private final FileValidation fileValidation;
@@ -50,14 +58,15 @@ class StoredFileServiceImpl implements StoredFileApi {
 
     @Override
     @Transactional
-    public StoredFileMeta upload(Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy) {
-        StoredFileAndPath result = uploadOne(tempFile, originalFilename, contentType, size, uploadedBy);
+    public StoredFileMeta upload(Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy, UploadContextKey contextKey) {
+        StoredFileAndPath result = uploadOne(tempFile, originalFilename, contentType, size, uploadedBy, contextKey);
+        log.debug("File activated: id={}, contextKey={}, safetyClass={}", result.entity().getId(), contextKey, result.entity().getSafetyClass());
         return StoredFileMappers.toMeta(result.entity());
     }
 
     @Override
     @Transactional
-    public List<StoredFileMeta> uploadBatch(List<StoredFileInput> inputs, UUID uploadedBy) {
+    public List<StoredFileMeta> uploadBatch(List<StoredFileInput> inputs, UUID uploadedBy, UploadContextKey contextKey) {
         if (inputs == null || inputs.isEmpty()) {
             throw Errors.badRequest("At least one file is required");
         }
@@ -68,7 +77,7 @@ class StoredFileServiceImpl implements StoredFileApi {
         try {
             for (StoredFileInput input : inputs) {
                 StoredFileAndPath result = uploadOne(
-                    input.tempPath(), input.originalFilename(), input.contentType(), input.size(), uploadedBy);
+                    input.tempPath(), input.originalFilename(), input.contentType(), input.size(), uploadedBy, contextKey);
                 uploaded.add(result);
             }
             return uploaded.stream().map(s -> StoredFileMappers.toMeta(s.entity())).toList();
@@ -92,10 +101,12 @@ class StoredFileServiceImpl implements StoredFileApi {
         }
     }
 
-    private StoredFileAndPath uploadOne(Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy) {
+    private StoredFileAndPath uploadOne(Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy, UploadContextKey contextKey) {
         uploadSecurityPort.ensureUploadAllowed(
             UploadContext.of(uploadedBy, contentType, size, originalFilename), tempFile);
         fileValidation.validateUpload(size, contentType, originalFilename);
+        FileSafetyClass safetyClass = classificationPolicy.classify(contextKey);
+
         String sanitizedName = sanitizeFilename(originalFilename);
         UUID id = UUID.randomUUID();
         YearMonth now = YearMonth.now();
@@ -124,6 +135,9 @@ class StoredFileServiceImpl implements StoredFileApi {
                 .originalName(originalFilename)
                 .uploadedAt(LocalDateTime.now())
                 .uploadedBy(uploadedBy)
+                .status(FileStatus.ACTIVE)
+                .safetyClass(safetyClass)
+                .uploadContextKey(contextKey)
                 .build();
             storedFileRepository.save(entity);
             return new StoredFileAndPath(entity, path);
@@ -147,15 +161,15 @@ class StoredFileServiceImpl implements StoredFileApi {
     @Override
     @Transactional(readOnly = true)
     public Optional<StoredFileMeta> getMetadata(UUID id) {
-        return storedFileRepository.findById(id).map(StoredFileMappers::toMeta);
+        return storedFileRepository.findById(id)
+            .filter(e -> e.getStatus() != FileStatus.DELETED)
+            .map(StoredFileMappers::toMeta);
     }
 
     @Override
     @Transactional(readOnly = true)
     public StoredFileMeta getMetadataOrThrow(UUID id) {
-        return storedFileRepository.findById(id)
-            .map(StoredFileMappers::toMeta)
-            .orElseThrow(() -> StoredFileErrors.storedFileNotFound(id));
+        return getMetadata(id).orElseThrow(() -> StoredFileErrors.storedFileNotFound(id));
     }
 
     @Override
@@ -165,14 +179,26 @@ class StoredFileServiceImpl implements StoredFileApi {
             return Map.of();
         }
         return storedFileRepository.findAllById(ids).stream()
+            .filter(e -> e.getStatus() != FileStatus.DELETED)
             .collect(Collectors.toMap(StoredFile::getId, StoredFileMappers::toMeta));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public InputStream getContent(UUID id) {
+    public InputStream getContent(UUID id, DeliveryContext deliveryContext) {
         StoredFile entity = storedFileRepository.findById(id)
             .orElseThrow(() -> StoredFileErrors.storedFileNotFound(id));
+        if (entity.getStatus() == FileStatus.DELETED) {
+            throw StoredFileErrors.storedFileNotFound(id);
+        }
+        if (entity.getStatus() != FileStatus.ACTIVE) {
+            log.warn("Delivery denied: file not ACTIVE, id={}, status={}", id, entity.getStatus());
+            throw StoredFileErrors.fileNotActive();
+        }
+        if (!deliveryPolicyEvaluator.isDeliveryAllowed(entity.getSafetyClass(), deliveryContext)) {
+            log.warn("Delivery denied: safetyClass={}, deliveryContext={}, id={}", entity.getSafetyClass(), deliveryContext, id);
+            throw StoredFileErrors.deliveryNotAllowed();
+        }
         try {
             return storagePort.download(entity.getStoragePath());
         } catch (Exception e) {
@@ -189,9 +215,20 @@ class StoredFileServiceImpl implements StoredFileApi {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<String> getPresignedUrl(UUID id, int expiresSeconds) {
+    public Optional<String> getPresignedUrl(UUID id, int expiresSeconds, DeliveryContext deliveryContext) {
         StoredFile entity = storedFileRepository.findById(id)
             .orElseThrow(() -> StoredFileErrors.storedFileNotFound(id));
+        if (entity.getStatus() == FileStatus.DELETED) {
+            throw StoredFileErrors.storedFileNotFound(id);
+        }
+        if (entity.getStatus() != FileStatus.ACTIVE) {
+            log.warn("Presigned URL denied: file not ACTIVE, id={}, status={}", id, entity.getStatus());
+            throw StoredFileErrors.fileNotActive();
+        }
+        if (!deliveryPolicyEvaluator.isDeliveryAllowed(entity.getSafetyClass(), deliveryContext)) {
+            log.warn("Presigned URL denied: safetyClass={}, deliveryContext={}, id={}", entity.getSafetyClass(), deliveryContext, id);
+            throw StoredFileErrors.deliveryNotAllowed();
+        }
         Optional<String> url = storagePort.generatePreviewUrl(entity.getStoragePath(), expiresSeconds);
         if (url.isEmpty()) {
             throw StoredFileErrors.fileNotFoundInStorage();
@@ -204,18 +241,23 @@ class StoredFileServiceImpl implements StoredFileApi {
     public void delete(UUID id) {
         StoredFile entity = storedFileRepository.findById(id)
             .orElseThrow(() -> StoredFileErrors.storedFileNotFound(id));
+        if (entity.getStatus() == FileStatus.DELETED) {
+            throw StoredFileErrors.storedFileNotFound(id);
+        }
         for (StoredFileUsagePort port : storedFileUsagePorts) {
             if (port.isStoredFileInUse(id)) {
                 throw StoredFileErrors.fileInUse();
             }
         }
         String path = entity.getStoragePath();
-        storedFileRepository.delete(entity);
+        entity.setStatus(FileStatus.DELETED);
+        storedFileRepository.save(entity);
         try {
             storagePort.delete(path);
         } catch (Exception e) {
-            log.warn("Failed to delete file from storage after DB delete: {}", path, e);
+            log.warn("Failed to delete file from storage after soft-delete: {}", path, e);
         }
+        log.debug("File deleted (terminal): id={}", id);
     }
 
     private static boolean isStorageUnavailable(Exception e) {

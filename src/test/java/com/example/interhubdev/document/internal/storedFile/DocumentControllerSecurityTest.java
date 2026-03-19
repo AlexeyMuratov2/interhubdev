@@ -4,6 +4,7 @@ import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
+import com.example.interhubdev.storedfile.FileStatus;
 import com.example.interhubdev.storedfile.internal.uploadSecurity.UploadSecurityErrors;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserDto;
@@ -80,7 +81,8 @@ class DocumentControllerSecurityTest {
                     "application/pdf",
                     "a.pdf",
                     LocalDateTime.now(),
-                    USER_ID
+                    USER_ID,
+                    FileStatus.ACTIVE
             );
             when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
             when(documentApi.uploadFile(any(), any(), any(), anyLong(), any())).thenReturn(dto);
@@ -257,8 +259,8 @@ class DocumentControllerSecurityTest {
             byte[] pdf2 = "%PDF-1.4 two".getBytes();
             UUID id1 = UUID.randomUUID();
             UUID id2 = UUID.randomUUID();
-            StoredFileDto dto1 = new StoredFileDto(id1, pdf1.length, "application/pdf", "a.pdf", LocalDateTime.now(), USER_ID);
-            StoredFileDto dto2 = new StoredFileDto(id2, pdf2.length, "application/pdf", "b.pdf", LocalDateTime.now(), USER_ID);
+            StoredFileDto dto1 = new StoredFileDto(id1, pdf1.length, "application/pdf", "a.pdf", LocalDateTime.now(), USER_ID, FileStatus.ACTIVE);
+            StoredFileDto dto2 = new StoredFileDto(id2, pdf2.length, "application/pdf", "b.pdf", LocalDateTime.now(), USER_ID, FileStatus.ACTIVE);
             when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
             when(documentApi.uploadFiles(any(), eq(USER_ID))).thenReturn(List.of(dto1, dto2));
 

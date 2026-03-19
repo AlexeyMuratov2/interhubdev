@@ -22,6 +22,18 @@ public final class StoredFileErrors {
     public static final String CODE_STORAGE_UNAVAILABLE = "STORED_FILE_STORAGE_UNAVAILABLE";
     public static final String CODE_UPLOAD_FAILED = "STORED_FILE_UPLOAD_FAILED";
     public static final String CODE_INVALID_FILE = "STORED_FILE_INVALID_FILE";
+    /** File not yet ACTIVE; bind/download forbidden until activation gate passed. */
+    public static final String CODE_FILE_NOT_ACTIVE = "STORED_FILE_NOT_ACTIVE";
+    /** Delivery not allowed for this file's safety class and requested context. */
+    public static final String CODE_DELIVERY_NOT_ALLOWED = "STORED_FILE_DELIVERY_NOT_ALLOWED";
+
+    public static AppException fileNotActive() {
+        return Errors.of(HttpStatus.CONFLICT, CODE_FILE_NOT_ACTIVE, "File is not available for download (activation gate not passed).");
+    }
+
+    public static AppException deliveryNotAllowed() {
+        return Errors.of(HttpStatus.FORBIDDEN, CODE_DELIVERY_NOT_ALLOWED, "Delivery not allowed for this file in the requested context.");
+    }
 
     public static AppException invalidFile(String message) {
         return Errors.of(HttpStatus.BAD_REQUEST, CODE_INVALID_FILE, message);

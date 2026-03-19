@@ -2,6 +2,8 @@ package com.example.interhubdev.storedfile;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -15,7 +17,7 @@ import java.util.UUID;
 
 /**
  * JPA entity for file metadata in object storage (S3/MinIO). No business context.
- * Exposed so document module entities can reference it via @ManyToOne for FK consistency.
+ * Lifecycle: status (activation gate); only ACTIVE allows bind/download. DELETED is terminal.
  */
 @Entity
 @Table(name = "stored_file")
@@ -47,4 +49,17 @@ public class StoredFile {
 
     @Column(name = "uploaded_by")
     private UUID uploadedBy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 32)
+    @Builder.Default
+    private FileStatus status = FileStatus.ACTIVE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "safety_class", length = 64)
+    private FileSafetyClass safetyClass;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "upload_context_key", length = 64)
+    private UploadContextKey uploadContextKey;
 }

@@ -6,9 +6,11 @@ import com.example.interhubdev.document.FileUploadInput;
 import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.document.api.StoredFileDownloadAccessPort;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.storedfile.DeliveryContext;
 import com.example.interhubdev.storedfile.StoredFileApi;
 import com.example.interhubdev.storedfile.StoredFileMeta;
 import com.example.interhubdev.storedfile.StoredFileInput;
+import com.example.interhubdev.storedfile.UploadContextKey;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
@@ -45,7 +47,7 @@ class DocumentServiceImpl implements DocumentApi {
     @Override
     @Transactional
     public StoredFileDto uploadFile(java.nio.file.Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy) {
-        StoredFileMeta meta = storedFileApi.upload(tempFile, originalFilename, contentType, size, uploadedBy);
+        StoredFileMeta meta = storedFileApi.upload(tempFile, originalFilename, contentType, size, uploadedBy, UploadContextKey.GENERAL_USER_FILE);
         return StoredFileMappers.fromMeta(meta);
     }
 
@@ -58,7 +60,7 @@ class DocumentServiceImpl implements DocumentApi {
         List<StoredFileInput> storedInputs = inputs.stream()
             .map(i -> new StoredFileInput(i.tempPath(), i.originalFilename(), i.contentType(), i.size()))
             .collect(Collectors.toList());
-        List<StoredFileMeta> metas = storedFileApi.uploadBatch(storedInputs, uploadedBy);
+        List<StoredFileMeta> metas = storedFileApi.uploadBatch(storedInputs, uploadedBy, UploadContextKey.GENERAL_USER_FILE);
         return metas.stream().map(StoredFileMappers::fromMeta).toList();
     }
 
@@ -83,7 +85,7 @@ class DocumentServiceImpl implements DocumentApi {
     public InputStream downloadByStoredFileId(UUID id, UUID currentUserId) {
         StoredFileMeta meta = storedFileApi.getMetadataOrThrow(id);
         checkAccessPermission(meta, currentUserId);
-        return storedFileApi.getContent(id);
+        return storedFileApi.getContent(id, DeliveryContext.ATTACHMENT_ONLY);
     }
 
     @Override
@@ -94,7 +96,7 @@ class DocumentServiceImpl implements DocumentApi {
             return Optional.empty();
         }
         checkAccessPermission(opt.get(), currentUserId);
-        return storedFileApi.getPresignedUrl(storedFileId, expiresSeconds);
+        return storedFileApi.getPresignedUrl(storedFileId, expiresSeconds, DeliveryContext.ATTACHMENT_ONLY);
     }
 
     @Override
@@ -105,7 +107,7 @@ class DocumentServiceImpl implements DocumentApi {
             return Optional.empty();
         }
         checkAccessPermission(opt.get(), currentUserId);
-        return storedFileApi.getPresignedUrl(storedFileId, expiresSeconds);
+        return storedFileApi.getPresignedUrl(storedFileId, expiresSeconds, DeliveryContext.ATTACHMENT_ONLY);
     }
 
     @Override

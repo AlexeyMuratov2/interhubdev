@@ -1,5 +1,6 @@
 package com.example.interhubdev.storedfile.internal;
 
+import com.example.interhubdev.storedfile.FileStatus;
 import com.example.interhubdev.storedfile.StoredFile;
 import com.example.interhubdev.storedfile.StoredFileMeta;
 
@@ -18,7 +19,9 @@ public final class StoredFileMappers {
             e.getContentType(),
             e.getOriginalName(),
             e.getUploadedAt(),
-            e.getUploadedBy()
+            e.getUploadedBy(),
+            e.getStatus() != null ? e.getStatus() : FileStatus.ACTIVE,
+            e.getSafetyClass()
         );
     }
 }
