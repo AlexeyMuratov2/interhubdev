@@ -20,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -64,6 +66,16 @@ class DocumentServiceImpl implements DocumentApi {
     @Transactional(readOnly = true)
     public Optional<StoredFileDto> getStoredFile(UUID id) {
         return storedFileApi.getMetadata(id).map(StoredFileMappers::fromMeta);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, StoredFileDto> getStoredFiles(Set<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        return storedFileApi.getMetadataBatch(ids).entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> StoredFileMappers.fromMeta(e.getValue())));
     }
 
     @Override

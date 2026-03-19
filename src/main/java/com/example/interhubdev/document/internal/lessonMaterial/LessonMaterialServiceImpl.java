@@ -5,7 +5,6 @@ import com.example.interhubdev.document.LessonMaterialApi;
 import com.example.interhubdev.document.LessonMaterialDto;
 import com.example.interhubdev.document.LessonLookupPort;
 import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
-import com.example.interhubdev.storedfile.StoredFile;
 import com.example.interhubdev.storedfile.StoredFileApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
@@ -21,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -59,10 +59,8 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
             throw LessonMaterialErrors.invalidName("Duplicate file IDs in request");
         }
 
-        List<StoredFile> storedFiles = new ArrayList<>();
         for (UUID fileId : fileIds) {
-            StoredFile file = storedFileApi.getReference(fileId);
-            storedFiles.add(file);
+            storedFileApi.getMetadataOrThrow(fileId);
         }
 
         LessonMaterial material = LessonMaterial.builder()
@@ -77,15 +75,16 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
         try {
             LessonMaterial saved = lessonMaterialRepository.save(material);
             int sortOrder = 0;
-            for (StoredFile file : storedFiles) {
+            for (UUID fileId : fileIds) {
                 LessonMaterialFile lmf = new LessonMaterialFile(
-                    saved.getId(), file.getId(), sortOrder++, null, file
+                    saved.getId(), fileId, sortOrder++, saved
                 );
                 lessonMaterialFileRepository.save(lmf);
             }
-            return LessonMaterialMappers.toDto(
-                lessonMaterialRepository.findByIdWithFiles(saved.getId()).orElseThrow()
-            );
+            LessonMaterial withFiles = lessonMaterialRepository.findByIdWithFiles(saved.getId()).orElseThrow();
+            Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(
+                withFiles.getFiles().stream().map(LessonMaterialFile::getStoredFileId).collect(Collectors.toSet()));
+            return LessonMaterialMappers.toDto(withFiles, filesMap);
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save lesson material (lessonId={}): {}", lessonId, e.getMessage());
             throw LessonMaterialErrors.saveFailed();
@@ -103,7 +102,11 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
         }
 
         List<LessonMaterial> materials = lessonMaterialRepository.findByLessonIdOrderByPublishedAtDescWithFiles(lessonId);
-        return materials.stream().map(LessonMaterialMappers::toDto).toList();
+        Set<UUID> allFileIds = materials.stream()
+            .flatMap(m -> m.getFiles().stream().map(LessonMaterialFile::getStoredFileId))
+            .collect(Collectors.toSet());
+        Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(allFileIds);
+        return materials.stream().map(m -> LessonMaterialMappers.toDto(m, filesMap)).toList();
     }
 
     @Override
@@ -112,7 +115,12 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
         userApi.findById(requesterId)
             .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        return lessonMaterialRepository.findByIdWithFiles(materialId).map(LessonMaterialMappers::toDto);
+        return lessonMaterialRepository.findByIdWithFiles(materialId)
+            .map(m -> {
+                Set<UUID> fileIds = m.getFiles().stream().map(LessonMaterialFile::getStoredFileId).collect(Collectors.toSet());
+                Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(fileIds);
+                return LessonMaterialMappers.toDto(m, filesMap);
+            });
     }
 
     @Override
@@ -163,9 +171,9 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
 
         int nextOrder = lessonMaterialFileRepository.findMaxSortOrderByLessonMaterialId(materialId) + 1;
         for (UUID fileId : toAdd) {
-            StoredFile file = storedFileApi.getReference(fileId);
+            storedFileApi.getMetadataOrThrow(fileId);
             LessonMaterialFile lmf = new LessonMaterialFile(
-                materialId, file.getId(), nextOrder++, null, file
+                materialId, fileId, nextOrder++, material
             );
             lessonMaterialFileRepository.save(lmf);
         }

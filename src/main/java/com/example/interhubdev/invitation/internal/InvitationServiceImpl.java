@@ -464,25 +464,25 @@ class InvitationServiceImpl implements InvitationApi {
         String htmlBody = String.format("""
             <html>
             <body>
-                <h1>Добро пожаловать в InterHubDev!</h1>
-                <p>Здравствуйте, %s!</p>
-                <p>Вы были приглашены в систему InterHubDev.</p>
-                <p>Для активации вашего аккаунта перейдите по ссылке:</p>
-                <p><a href="%s">Активировать аккаунт</a></p>
-                <p>Ссылка действительна в течение 24 часов.</p>
-                <p>Если вы не запрашивали это приглашение, просто проигнорируйте это письмо.</p>
+                <h1>Welcome to InterHubDev!</h1>
+                <p>Hello, %s!</p>
+                <p>You have been invited to InterHubDev.</p>
+                <p>To activate your account, follow this link:</p>
+                <p><a href="%s">Activate account</a></p>
+                <p>This link is valid for 24 hours.</p>
+                <p>If you did not request this invitation, please ignore this email.</p>
                 <br>
-                <p>С уважением,<br>Команда InterHubDev</p>
+                <p>Best regards,<br>The InterHubDev Team</p>
             </body>
             </html>
-            """, 
+            """,
             user.firstName() != null ? user.firstName() : user.email(),
             inviteUrl
         );
 
         return EmailMessage.html(
                 user.email(),
-                "Приглашение в InterHubDev",
+                "Invitation to InterHubDev",
                 htmlBody
         );
     }

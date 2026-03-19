@@ -251,20 +251,20 @@ class AuthServiceImpl implements AuthApi {
 
     private EmailMessage buildPasswordResetEmail(String email, String plainCode, Instant expiresAt) {
         String resetPageUrl = authProperties.getPasswordResetBaseUrl() + "/reset-password";
-        String expiresFormatted = DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy")
+        String expiresFormatted = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' HH:mm", java.util.Locale.ENGLISH)
                 .withZone(ZoneId.systemDefault())
                 .format(expiresAt);
         String htmlBody = String.format("""
             <html>
             <body>
-                <h1>Восстановление пароля — InterHubDev</h1>
-                <p>Вы запросили сброс пароля. Используйте код ниже на странице восстановления:</p>
+                <h1>Password Reset — InterHubDev</h1>
+                <p>You requested a password reset. Use the code below on the reset page:</p>
                 <p><strong>%s</strong></p>
-                <p>Перейдите по ссылке и введите код: <a href="%s">%s</a></p>
-                <p>Код действителен до %s.</p>
-                <p>Если вы не запрашивали сброс пароля, проигнорируйте это письмо.</p>
+                <p>Go to the link and enter the code: <a href="%s">%s</a></p>
+                <p>This code is valid until %s.</p>
+                <p>If you did not request a password reset, please ignore this email.</p>
                 <br>
-                <p>С уважением,<br>Команда InterHubDev</p>
+                <p>Best regards,<br>The InterHubDev Team</p>
             </body>
             </html>
             """,
@@ -273,6 +273,6 @@ class AuthServiceImpl implements AuthApi {
                 resetPageUrl,
                 expiresFormatted
         );
-        return EmailMessage.html(email, "Восстановление пароля — InterHubDev", htmlBody);
+        return EmailMessage.html(email, "Password Reset — InterHubDev", htmlBody);
     }
 }

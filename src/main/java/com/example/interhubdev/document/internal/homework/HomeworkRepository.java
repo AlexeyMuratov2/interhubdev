@@ -32,14 +32,14 @@ public interface HomeworkRepository extends JpaRepository<Homework, UUID> {
     java.util.Optional<Homework> findByIdWithLesson(@Param("homeworkId") UUID homeworkId);
 
     /**
-     * Find homework by ID with lessonHomework and files (with storedFile) loaded.
+     * Find homework by ID with lessonHomework and files loaded.
      */
-    @Query("SELECT DISTINCT h FROM Homework h LEFT JOIN FETCH h.lessonHomework LEFT JOIN FETCH h.files f LEFT JOIN FETCH f.storedFile WHERE h.id = :homeworkId")
+    @Query("SELECT DISTINCT h FROM Homework h LEFT JOIN FETCH h.lessonHomework LEFT JOIN FETCH h.files f WHERE h.id = :homeworkId")
     java.util.Optional<Homework> findByIdWithLessonAndFiles(@Param("homeworkId") UUID homeworkId);
 
     /**
      * Find all homework for a lesson with files loaded.
      */
-    @Query("SELECT DISTINCT h FROM Homework h JOIN FETCH h.lessonHomework lh LEFT JOIN FETCH h.files f LEFT JOIN FETCH f.storedFile WHERE lh.lessonId = :lessonId ORDER BY h.createdAt DESC")
+    @Query("SELECT DISTINCT h FROM Homework h JOIN FETCH h.lessonHomework lh LEFT JOIN FETCH h.files f WHERE lh.lessonId = :lessonId ORDER BY h.createdAt DESC")
     List<Homework> findByLessonIdOrderByCreatedAtDescWithFiles(@Param("lessonId") UUID lessonId);
 }

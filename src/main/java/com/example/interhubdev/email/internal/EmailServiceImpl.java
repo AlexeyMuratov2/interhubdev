@@ -207,7 +207,7 @@ class EmailServiceImpl implements EmailApi {
             message.htmlBody() != null ? "[HTML content]" : null,
             message.templateName(),
             message.templateVars(),
-            tokenOpt.map(t -> ">>> КОД ДОСТУПА (для теста): " + t + "\n            ").orElse("")
+            tokenOpt.map(t -> ">>> ACCESS CODE (for testing): " + t + "\n            ").orElse("")
         );
     }
 

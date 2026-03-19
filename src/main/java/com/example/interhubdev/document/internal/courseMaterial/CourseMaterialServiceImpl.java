@@ -5,7 +5,6 @@ import com.example.interhubdev.document.CourseMaterialDto;
 import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.OfferingLookupPort;
 import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
-import com.example.interhubdev.storedfile.StoredFile;
 import com.example.interhubdev.storedfile.StoredFileApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
@@ -19,8 +18,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link CourseMaterialApi}: create (attach stored file), list, get, delete course materials.
@@ -50,12 +52,12 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
             throw CourseMaterialErrors.offeringNotFound(offeringId);
         }
 
-        // Get stored file reference
-        StoredFile storedFile = storedFileApi.getReference(storedFileId);
+        // Validate stored file exists
+        storedFileApi.getMetadataOrThrow(storedFileId);
 
         // Check if material with same offering+file already exists
         courseMaterialRepository.findByOfferingIdOrderByUploadedAtDesc(offeringId).stream()
-            .filter(m -> m.getStoredFile().getId().equals(storedFileId))
+            .filter(m -> m.getStoredFileId().equals(storedFileId))
             .findFirst()
             .ifPresent(m -> {
                 throw CourseMaterialErrors.materialAlreadyExists(offeringId);
@@ -64,7 +66,7 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
         // Create course material
         CourseMaterial material = CourseMaterial.builder()
             .offeringId(offeringId)
-            .storedFile(storedFile)
+            .storedFileId(storedFileId)
             .title(title)
             .description(description)
             .authorId(authorId)
@@ -72,7 +74,7 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
 
         try {
             CourseMaterial saved = courseMaterialRepository.save(material);
-            return CourseMaterialMappers.toDto(saved);
+            return CourseMaterialMappers.toDto(saved, documentApi.getStoredFiles(java.util.Set.of(saved.getStoredFileId())));
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save course material (offeringId={}, storedFileId={}): {}", offeringId, storedFileId, e.getMessage());
             throw CourseMaterialErrors.saveFailed();
@@ -92,8 +94,10 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
         }
 
         List<CourseMaterial> materials = courseMaterialRepository.findByOfferingIdOrderByUploadedAtDesc(offeringId);
+        Set<UUID> fileIds = materials.stream().map(CourseMaterial::getStoredFileId).collect(Collectors.toSet());
+        Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(fileIds);
         return materials.stream()
-            .map(CourseMaterialMappers::toDto)
+            .map(m -> CourseMaterialMappers.toDto(m, filesMap))
             .toList();
     }
 
@@ -105,7 +109,7 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
             .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         return courseMaterialRepository.findById(materialId)
-            .map(CourseMaterialMappers::toDto);
+            .map(m -> CourseMaterialMappers.toDto(m, documentApi.getStoredFiles(Set.of(m.getStoredFileId()))));
     }
 
     @Override
@@ -117,7 +121,7 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
         // Check permission: author or ADMIN/MODERATOR
         checkDeletePermission(material, requesterId);
 
-        UUID storedFileId = material.getStoredFile().getId();
+        UUID storedFileId = material.getStoredFileId();
 
         // Delete course material (junction table entries are deleted via CASCADE)
         courseMaterialRepository.delete(material);

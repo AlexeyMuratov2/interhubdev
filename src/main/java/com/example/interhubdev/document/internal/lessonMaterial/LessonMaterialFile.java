@@ -14,8 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import com.example.interhubdev.storedfile.StoredFile;
-
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -46,10 +44,6 @@ class LessonMaterialFile {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lesson_material_id", insertable = false, updatable = false)
     private LessonMaterial lessonMaterial;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stored_file_id", insertable = false, updatable = false)
-    private StoredFile storedFile;
 
     /**
      * Composite key for LessonMaterialFile entity.

@@ -25,8 +25,11 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link StoredFileApi}.
@@ -157,6 +160,16 @@ class StoredFileServiceImpl implements StoredFileApi {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<UUID, StoredFileMeta> getMetadataBatch(Set<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        return storedFileRepository.findAllById(ids).stream()
+            .collect(Collectors.toMap(StoredFile::getId, StoredFileMappers::toMeta));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public InputStream getContent(UUID id) {
         StoredFile entity = storedFileRepository.findById(id)
             .orElseThrow(() -> StoredFileErrors.storedFileNotFound(id));
@@ -184,13 +197,6 @@ class StoredFileServiceImpl implements StoredFileApi {
             throw StoredFileErrors.fileNotFoundInStorage();
         }
         return url;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public StoredFile getReference(UUID id) {
-        return storedFileRepository.findById(id)
-            .orElseThrow(() -> StoredFileErrors.storedFileNotFound(id));
     }
 
     @Override

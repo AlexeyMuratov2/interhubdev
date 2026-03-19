@@ -23,12 +23,12 @@ public interface CourseMaterialRepository extends JpaRepository<CourseMaterial, 
     /**
      * Check if any course material uses the given stored file.
      */
-    @Query("SELECT COUNT(c) > 0 FROM CourseMaterial c WHERE c.storedFile.id = :storedFileId")
+    @Query("SELECT COUNT(c) > 0 FROM CourseMaterial c WHERE c.storedFileId = :storedFileId")
     boolean existsByStoredFileId(@Param("storedFileId") UUID storedFileId);
 
     /**
      * Count how many course materials use the given stored file.
      */
-    @Query("SELECT COUNT(c) FROM CourseMaterial c WHERE c.storedFile.id = :storedFileId")
+    @Query("SELECT COUNT(c) FROM CourseMaterial c WHERE c.storedFileId = :storedFileId")
     long countByStoredFileId(@Param("storedFileId") UUID storedFileId);
 }

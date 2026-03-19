@@ -5,7 +5,9 @@ import com.example.interhubdev.error.AppException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -52,6 +54,15 @@ public interface DocumentApi {
      * @return optional DTO if found
      */
     Optional<StoredFileDto> getStoredFile(UUID id);
+
+    /**
+     * Get stored file metadata for multiple ids. Returns only found entries; missing ids are omitted.
+     * Use for batch resolution when mapping entities to DTOs (e.g. course materials, lesson materials, homework).
+     *
+     * @param ids set of stored file ids
+     * @return map id -> DTO for each found file
+     */
+    Map<UUID, StoredFileDto> getStoredFiles(Set<UUID> ids);
 
     /**
      * Download file content by stored file id. Caller is responsible for closing the stream.

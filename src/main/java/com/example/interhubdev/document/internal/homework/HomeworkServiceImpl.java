@@ -1,9 +1,9 @@
 package com.example.interhubdev.document.internal.homework;
 
+import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
 import com.example.interhubdev.document.LessonLookupPort;
-import com.example.interhubdev.storedfile.StoredFile;
 import com.example.interhubdev.storedfile.StoredFileApi;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.user.Role;
@@ -21,8 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link HomeworkApi}: create, list, get, update, delete homework.
@@ -37,6 +40,7 @@ class HomeworkServiceImpl implements HomeworkApi {
     private final HomeworkFileRepository homeworkFileRepository;
     private final LessonHomeworkRepository lessonHomeworkRepository;
     private final StoredFileApi storedFileApi;
+    private final DocumentApi documentApi;
     private final LessonLookupPort lessonLookupPort;
     private final UserApi userApi;
     
@@ -72,8 +76,8 @@ class HomeworkServiceImpl implements HomeworkApi {
 
             for (int i = 0; i < fileIds.size(); i++) {
                 UUID fileId = fileIds.get(i);
-                StoredFile file = storedFileApi.getReference(fileId);
-                HomeworkFile hf = new HomeworkFile(saved.getId(), fileId, i, null, file);
+                storedFileApi.getMetadataOrThrow(fileId);
+                HomeworkFile hf = new HomeworkFile(saved.getId(), fileId, i, saved);
                 homeworkFileRepository.save(hf);
             }
 
@@ -88,8 +92,10 @@ class HomeworkServiceImpl implements HomeworkApi {
 
             saved.setLessonHomework(managedInstance != null ? managedInstance : savedLessonHomework);
 
-            return HomeworkMappers.toDto(
-                homeworkRepository.findByIdWithLessonAndFiles(saved.getId()).orElse(saved));
+            Homework withFiles = homeworkRepository.findByIdWithLessonAndFiles(saved.getId()).orElse(saved);
+            Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(
+                withFiles.getFiles().stream().map(HomeworkFile::getStoredFileId).collect(Collectors.toSet()));
+            return HomeworkMappers.toDto(withFiles, filesMap);
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save homework (lessonId={}): {}", lessonId, e.getMessage());
             throw HomeworkErrors.saveFailed();
@@ -104,7 +110,11 @@ class HomeworkServiceImpl implements HomeworkApi {
             throw HomeworkErrors.lessonNotFound(lessonId);
         }
         List<Homework> list = homeworkRepository.findByLessonIdOrderByCreatedAtDescWithFiles(lessonId);
-        return list.stream().map(HomeworkMappers::toDto).toList();
+        Set<UUID> allFileIds = list.stream()
+            .flatMap(h -> h.getFiles().stream().map(HomeworkFile::getStoredFileId))
+            .collect(Collectors.toSet());
+        Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(allFileIds);
+        return list.stream().map(h -> HomeworkMappers.toDto(h, filesMap)).toList();
     }
 
     @Override
@@ -122,7 +132,11 @@ class HomeworkServiceImpl implements HomeworkApi {
     public Optional<HomeworkDto> get(UUID homeworkId, UUID requesterId) {
         validateRequester(requesterId);
         return homeworkRepository.findByIdWithLessonAndFiles(homeworkId)
-            .map(HomeworkMappers::toDto);
+            .map(h -> {
+                Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(
+                    h.getFiles().stream().map(HomeworkFile::getStoredFileId).collect(Collectors.toSet()));
+                return HomeworkMappers.toDto(h, filesMap);
+            });
     }
 
     @Override
@@ -132,11 +146,15 @@ class HomeworkServiceImpl implements HomeworkApi {
         if (homeworkIds == null || homeworkIds.isEmpty()) {
             return List.of();
         }
-        return homeworkIds.stream()
+        List<Homework> homeworks = homeworkIds.stream()
                 .map(id -> homeworkRepository.findByIdWithLessonAndFiles(id).orElse(null))
                 .filter(java.util.Objects::nonNull)
-                .map(HomeworkMappers::toDto)
                 .toList();
+        Set<UUID> allFileIds = homeworks.stream()
+            .flatMap(h -> h.getFiles().stream().map(HomeworkFile::getStoredFileId))
+            .collect(Collectors.toSet());
+        Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(allFileIds);
+        return homeworks.stream().map(h -> HomeworkMappers.toDto(h, filesMap)).toList();
     }
 
     @Override
@@ -167,11 +185,13 @@ class HomeworkServiceImpl implements HomeworkApi {
             if (storedFileIds.stream().distinct().count() != storedFileIds.size()) {
                 throw HomeworkErrors.validationFailed("Duplicate file IDs in request");
             }
+            for (UUID fileId : storedFileIds) {
+                storedFileApi.getMetadataOrThrow(fileId);
+            }
             homework.getFiles().clear();
             for (int i = 0; i < storedFileIds.size(); i++) {
                 UUID fileId = storedFileIds.get(i);
-                StoredFile file = storedFileApi.getReference(fileId);
-                HomeworkFile hf = new HomeworkFile(homework.getId(), fileId, i, homework, file);
+                HomeworkFile hf = new HomeworkFile(homework.getId(), fileId, i, homework);
                 homework.getFiles().add(hf);
             }
         }
@@ -179,7 +199,9 @@ class HomeworkServiceImpl implements HomeworkApi {
 
         try {
             Homework saved = homeworkRepository.save(homework);
-            return HomeworkMappers.toDto(saved);
+            Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(
+                saved.getFiles().stream().map(HomeworkFile::getStoredFileId).collect(Collectors.toSet()));
+            return HomeworkMappers.toDto(saved, filesMap);
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to update homework {}: {}", homeworkId, e.getMessage());
             throw HomeworkErrors.saveFailed();

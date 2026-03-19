@@ -19,7 +19,7 @@ public interface LessonMaterialRepository extends JpaRepository<LessonMaterial, 
      * @param lessonId lesson UUID
      * @return list of lesson materials with files, ordered by published_at descending
      */
-    @Query("SELECT DISTINCT lm FROM LessonMaterial lm LEFT JOIN FETCH lm.files f LEFT JOIN FETCH f.storedFile WHERE lm.lessonId = :lessonId ORDER BY lm.publishedAt DESC")
+    @Query("SELECT DISTINCT lm FROM LessonMaterial lm LEFT JOIN FETCH lm.files f WHERE lm.lessonId = :lessonId ORDER BY lm.publishedAt DESC")
     List<LessonMaterial> findByLessonIdOrderByPublishedAtDescWithFiles(@Param("lessonId") UUID lessonId);
 
     /**
@@ -28,6 +28,6 @@ public interface LessonMaterialRepository extends JpaRepository<LessonMaterial, 
      * @param materialId lesson material UUID
      * @return optional lesson material with files
      */
-    @Query("SELECT DISTINCT lm FROM LessonMaterial lm LEFT JOIN FETCH lm.files f LEFT JOIN FETCH f.storedFile WHERE lm.id = :materialId")
+    @Query("SELECT DISTINCT lm FROM LessonMaterial lm LEFT JOIN FETCH lm.files f WHERE lm.id = :materialId")
     Optional<LessonMaterial> findByIdWithFiles(@Param("materialId") UUID materialId);
 }

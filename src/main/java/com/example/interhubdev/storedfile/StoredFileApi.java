@@ -5,7 +5,9 @@ import com.example.interhubdev.error.AppException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -51,6 +53,14 @@ public interface StoredFileApi {
     StoredFileMeta getMetadataOrThrow(UUID id);
 
     /**
+     * Get metadata for multiple ids. Returns only found entries; missing ids are omitted.
+     *
+     * @param ids set of stored file ids
+     * @return map id -> metadata for each found file
+     */
+    Map<UUID, StoredFileMeta> getMetadataBatch(Set<UUID> ids);
+
+    /**
      * Get content stream by id. Caller is responsible for closing the stream. No user/permission check.
      *
      * @param id stored file id
@@ -76,13 +86,4 @@ public interface StoredFileApi {
      * @throws AppException NOT_FOUND if not found, CONFLICT if file is in use
      */
     void delete(UUID id);
-
-    /**
-     * Get entity reference for JPA attach (e.g. document module setting @ManyToOne). Does not load content.
-     *
-     * @param id stored file id
-     * @return entity for reference only
-     * @throws AppException NOT_FOUND if not found
-     */
-    StoredFile getReference(UUID id);
 }

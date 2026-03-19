@@ -18,9 +18,9 @@ public interface LessonMaterialFileRepository extends JpaRepository<LessonMateri
      * Find all file links for a lesson material, ordered by sort_order.
      *
      * @param lessonMaterialId lesson material UUID
-     * @return list of lesson material file links with stored file loaded
+     * @return list of lesson material file links
      */
-    @Query("SELECT lmf FROM LessonMaterialFile lmf JOIN FETCH lmf.storedFile WHERE lmf.lessonMaterialId = :lessonMaterialId ORDER BY lmf.sortOrder ASC")
+    @Query("SELECT lmf FROM LessonMaterialFile lmf WHERE lmf.lessonMaterialId = :lessonMaterialId ORDER BY lmf.sortOrder ASC")
     List<LessonMaterialFile> findByLessonMaterialIdOrderBySortOrder(@Param("lessonMaterialId") UUID lessonMaterialId);
 
     /**
@@ -38,7 +38,7 @@ public interface LessonMaterialFileRepository extends JpaRepository<LessonMateri
     /**
      * Find link by material and stored file.
      */
-    @Query("SELECT lmf FROM LessonMaterialFile lmf JOIN FETCH lmf.storedFile WHERE lmf.lessonMaterialId = :materialId AND lmf.storedFileId = :storedFileId")
+    @Query("SELECT lmf FROM LessonMaterialFile lmf WHERE lmf.lessonMaterialId = :materialId AND lmf.storedFileId = :storedFileId")
     Optional<LessonMaterialFile> findByLessonMaterialIdAndStoredFileId(
         @Param("materialId") UUID materialId,
         @Param("storedFileId") UUID storedFileId

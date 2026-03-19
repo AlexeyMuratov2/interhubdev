@@ -1,6 +1,5 @@
 package com.example.interhubdev.document.internal.homework;
 
-import com.example.interhubdev.storedfile.StoredFile;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -45,10 +44,6 @@ class HomeworkFile {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "homework_id", insertable = false, updatable = false)
     private Homework homework;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stored_file_id", insertable = false, updatable = false)
-    private StoredFile storedFile;
 
     /**
      * Composite key for HomeworkFile entity.
