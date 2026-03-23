@@ -53,6 +53,8 @@ class StoredFileServiceImpl implements StoredFileApi {
     private final FileValidation fileValidation;
     private final List<StoredFileUsagePort> storedFileUsagePorts;
 
+    private static final String SAFE_STORAGE_CONTENT_TYPE = "application/octet-stream";
+
     @Value("${app.document.max-files-per-batch:50}")
     private int maxFilesPerBatch;
 
@@ -103,18 +105,16 @@ class StoredFileServiceImpl implements StoredFileApi {
 
     private StoredFileAndPath uploadOne(Path tempFile, String originalFilename, String contentType, long size, UUID uploadedBy, UploadContextKey contextKey) {
         uploadSecurityPort.ensureUploadAllowed(
-            UploadContext.of(uploadedBy, contentType, size, originalFilename), tempFile);
+            UploadContext.of(uploadedBy, contextKey, contentType, size, originalFilename), tempFile);
         fileValidation.validateUpload(size, contentType, originalFilename);
         FileSafetyClass safetyClass = classificationPolicy.classify(contextKey);
 
-        String sanitizedName = sanitizeFilename(originalFilename);
         UUID id = UUID.randomUUID();
-        YearMonth now = YearMonth.now();
-        String path = "files/" + now.getYear() + "/" + now.getMonthValue() + "/" + id + "_" + sanitizedName;
+        String path = buildOpaqueStoragePath(id);
 
         StoragePort.UploadResult uploadResult;
         try (InputStream stream = Files.newInputStream(tempFile)) {
-            uploadResult = storagePort.upload(path, stream, contentType, size);
+            uploadResult = storagePort.upload(path, stream, SAFE_STORAGE_CONTENT_TYPE, size);
         } catch (Exception e) {
             if (e instanceof AppException ex) {
                 throw ex;
@@ -131,7 +131,7 @@ class StoredFileServiceImpl implements StoredFileApi {
                 .id(id)
                 .storagePath(uploadResult.path())
                 .size(uploadResult.size())
-                .contentType(uploadResult.contentType())
+                .contentType(contentType)
                 .originalName(originalFilename)
                 .uploadedAt(LocalDateTime.now())
                 .uploadedBy(uploadedBy)
@@ -229,6 +229,10 @@ class StoredFileServiceImpl implements StoredFileApi {
             log.warn("Presigned URL denied: safetyClass={}, deliveryContext={}, id={}", entity.getSafetyClass(), deliveryContext, id);
             throw StoredFileErrors.deliveryNotAllowed();
         }
+        if (!deliveryPolicyEvaluator.isPresignedDeliveryAllowed(entity.getSafetyClass(), deliveryContext)) {
+            log.warn("Presigned URL denied by capability: safetyClass={}, deliveryContext={}, id={}", entity.getSafetyClass(), deliveryContext, id);
+            throw StoredFileErrors.deliveryNotAllowed();
+        }
         Optional<String> url = storagePort.generatePreviewUrl(entity.getStoragePath(), expiresSeconds);
         if (url.isEmpty()) {
             throw StoredFileErrors.fileNotFoundInStorage();
@@ -281,10 +285,8 @@ class StoredFileServiceImpl implements StoredFileApi {
         return false;
     }
 
-    private static String sanitizeFilename(String name) {
-        if (name == null || name.isBlank()) return "file";
-        String s = name.replace('\\', '_').replace('/', '_').replace("\0", "");
-        if (s.length() > 255) s = s.substring(0, 255);
-        return s.isEmpty() ? "file" : s;
+    private static String buildOpaqueStoragePath(UUID id) {
+        YearMonth now = YearMonth.now();
+        return "files/" + now.getYear() + "/" + now.getMonthValue() + "/" + id;
     }
 }

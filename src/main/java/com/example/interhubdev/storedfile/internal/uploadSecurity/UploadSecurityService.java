@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.unit.DataSize;
 
 import java.nio.file.Path;
 
@@ -23,26 +24,35 @@ class UploadSecurityService implements UploadSecurityPort {
     @Value("${app.document.max-file-size-bytes:52428800}")
     private long maxFileSizeBytes;
 
+    @Value("${spring.servlet.multipart.max-file-size:50MB}")
+    private DataSize multipartMaxFileSize;
+
+    @Value("${clamav.max-scannable-bytes:524288000}")
+    private long antivirusMaxScannableBytes;
+
     @Override
     public void ensureUploadAllowed(UploadContext context, Path contentPath) {
         if (context.size() <= 0) {
             throw UploadSecurityErrors.emptyFile("File size must be positive");
         }
-        if (context.size() > maxFileSizeBytes) {
-            logSecurityEvent(context, "FILE_TOO_LARGE", null);
-            throw UploadSecurityErrors.fileTooLarge(maxFileSizeBytes);
+        long effectiveMaxBytes = effectiveMaxBytes();
+        if (context.size() > effectiveMaxBytes) {
+            logSecurityEvent(context, "CAPACITY_MISMATCH", "effectiveMaxBytes=" + effectiveMaxBytes);
+            throw UploadSecurityErrors.capacityMismatch(context.size(), effectiveMaxBytes);
         }
         maliciousFileChecks.checkFilename(context.originalFilename());
-        allowedFileTypesPolicy.checkAllowed(context.contentType(), context.originalFilename());
+        allowedFileTypesPolicy.checkAllowed(context.contextKey(), context.contentType(), context.originalFilename());
 
         if (contentPath != null) {
-            contentSniffer.detectMimeFromContent(contentPath).ifPresent(detectedMime -> {
-                String declaredMime = normalizeMime(context.contentType());
-                if (!matchesDeclared(detectedMime, declaredMime)) {
-                    logSecurityEvent(context, "CONTENT_TYPE_MISMATCH", "detected=" + detectedMime + ", declared=" + declaredMime);
-                    throw UploadSecurityErrors.contentTypeMismatch("File content does not match declared type");
-                }
-            });
+            if (context.contextKey() != com.example.interhubdev.storedfile.UploadContextKey.GENERAL_USER_FILE) {
+                contentSniffer.detectMimeFromContent(contentPath).ifPresent(detectedMime -> {
+                    String declaredMime = normalizeMime(context.contentType());
+                    if (!matchesDeclared(detectedMime, declaredMime)) {
+                        logSecurityEvent(context, "CONTENT_TYPE_MISMATCH", "detected=" + detectedMime + ", declared=" + declaredMime);
+                        throw UploadSecurityErrors.contentTypeMismatch("File content does not match declared type");
+                    }
+                });
+            }
 
             AntivirusPort.ScanResult result;
             try {
@@ -60,6 +70,10 @@ class UploadSecurityService implements UploadSecurityPort {
                 throw UploadSecurityErrors.avUnavailable("Antivirus service is temporarily unavailable.");
             }
         }
+    }
+
+    private long effectiveMaxBytes() {
+        return Math.min(maxFileSizeBytes, Math.min(multipartMaxFileSize.toBytes(), antivirusMaxScannableBytes));
     }
 
     private static String normalizeMime(String contentType) {

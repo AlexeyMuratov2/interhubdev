@@ -5,6 +5,7 @@ import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
 import com.example.interhubdev.storedfile.FileStatus;
+import com.example.interhubdev.storedfile.internal.StoredFileErrors;
 import com.example.interhubdev.storedfile.internal.uploadSecurity.UploadSecurityErrors;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserDto;
@@ -18,11 +19,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +36,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -330,6 +333,61 @@ class DocumentControllerSecurityTest {
             MockMultipartFile file = new MockMultipartFile("files", "a.pdf", "application/pdf", "content".getBytes());
             mockMvc.perform(MockMvcRequestBuilders.multipart("/api/documents/upload/batch").file(file))
                     .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("Controlled delivery")
+    class ControlledDelivery {
+
+        @Test
+        @DisplayName("download always returns application/octet-stream with attachment headers")
+        void downloadUsesHardenedHeaders() throws Exception {
+            UUID fileId = UUID.randomUUID();
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+            when(documentApi.getStoredFile(fileId)).thenReturn(Optional.of(new StoredFileDto(
+                fileId,
+                7,
+                "application/pdf",
+                "report.pdf",
+                LocalDateTime.now(),
+                USER_ID,
+                FileStatus.ACTIVE
+            )));
+            when(documentApi.downloadByStoredFileId(fileId, USER_ID))
+                .thenReturn(new ByteArrayInputStream("content".getBytes()));
+
+            mockMvc.perform(MockMvcRequestBuilders.get("/api/documents/stored/{id}/download", fileId))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/octet-stream"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Content-Disposition", containsString("attachment;")));
+        }
+
+        @Test
+        @DisplayName("preview url is denied by policy")
+        void previewDeniedByPolicy() throws Exception {
+            UUID fileId = UUID.randomUUID();
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+            when(documentApi.getPreviewUrl(fileId, 3600, USER_ID))
+                .thenThrow(StoredFileErrors.deliveryNotAllowed());
+
+            mockMvc.perform(MockMvcRequestBuilders.get("/api/documents/stored/{id}/preview", fileId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(StoredFileErrors.CODE_DELIVERY_NOT_ALLOWED));
+        }
+
+        @Test
+        @DisplayName("download url is denied by policy")
+        void downloadUrlDeniedByPolicy() throws Exception {
+            UUID fileId = UUID.randomUUID();
+            when(authApi.getCurrentUser(any())).thenReturn(Optional.of(authenticatedUser()));
+            when(documentApi.getDownloadUrl(fileId, 3600, USER_ID))
+                .thenThrow(StoredFileErrors.deliveryNotAllowed());
+
+            mockMvc.perform(MockMvcRequestBuilders.get("/api/documents/stored/{id}/download-url", fileId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(StoredFileErrors.CODE_DELIVERY_NOT_ALLOWED));
         }
     }
 }

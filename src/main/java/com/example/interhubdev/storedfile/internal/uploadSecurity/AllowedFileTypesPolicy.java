@@ -1,5 +1,6 @@
 package com.example.interhubdev.storedfile.internal.uploadSecurity;
 
+import com.example.interhubdev.storedfile.UploadContextKey;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -34,7 +35,10 @@ class AllowedFileTypesPolicy {
         "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     );
 
-    void checkAllowed(String contentType, String originalFilename) {
+    void checkAllowed(UploadContextKey contextKey, String contentType, String originalFilename) {
+        if (contextKey == UploadContextKey.GENERAL_USER_FILE) {
+            return;
+        }
         if (contentType == null || contentType.isBlank()) {
             throw UploadSecurityErrors.forbiddenFileType("Content type is required");
         }

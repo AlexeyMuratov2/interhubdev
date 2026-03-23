@@ -19,6 +19,7 @@ public final class UploadSecurityErrors {
     public static final String CODE_CONTENT_TYPE_MISMATCH = "UPLOAD_CONTENT_TYPE_MISMATCH";
     public static final String CODE_MALWARE_DETECTED = "UPLOAD_MALWARE_DETECTED";
     public static final String CODE_AV_UNAVAILABLE = "UPLOAD_AV_UNAVAILABLE";
+    public static final String CODE_CAPACITY_MISMATCH = "UPLOAD_CAPACITY_MISMATCH";
 
     public static AppException emptyFile(String message) {
         return Errors.of(HttpStatus.BAD_REQUEST, CODE_EMPTY_FILE, message);
@@ -27,6 +28,11 @@ public final class UploadSecurityErrors {
     public static AppException fileTooLarge(long maxBytes) {
         return Errors.of(HttpStatus.PAYLOAD_TOO_LARGE, CODE_FILE_TOO_LARGE,
             "File size exceeds maximum allowed size of " + (maxBytes / (1024 * 1024)) + " MB");
+    }
+
+    public static AppException capacityMismatch(long requestedBytes, long effectiveMaxBytes) {
+        return Errors.of(HttpStatus.PAYLOAD_TOO_LARGE, CODE_CAPACITY_MISMATCH,
+            "File size " + requestedBytes + " exceeds current secure processing capacity of " + effectiveMaxBytes + " bytes.");
     }
 
     public static AppException forbiddenFileType(String message) {

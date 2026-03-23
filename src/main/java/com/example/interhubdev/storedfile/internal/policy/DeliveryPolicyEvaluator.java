@@ -37,4 +37,8 @@ public class DeliveryPolicyEvaluator {
         }
         return allowed;
     }
+
+    public boolean isPresignedDeliveryAllowed(FileSafetyClass safetyClass, DeliveryContext deliveryContext) {
+        return false;
+    }
 }

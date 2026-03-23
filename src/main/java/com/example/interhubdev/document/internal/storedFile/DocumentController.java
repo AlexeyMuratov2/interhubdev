@@ -177,7 +177,7 @@ class DocumentController {
         String safeFilename = FilenameSanitizer.sanitizeForContentDisposition(meta.originalName());
         String encodedFilename = URLEncoder.encode(safeFilename, StandardCharsets.UTF_8).replace("+", "%20");
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType(contentType));
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename);
         headers.add("X-Content-Type-Options", "nosniff");
         return ResponseEntity.ok()

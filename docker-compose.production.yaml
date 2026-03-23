@@ -93,8 +93,11 @@ services:
       CLAMAV_HOST: clamav
       CLAMAV_PORT: "3310"
       CLAMAV_ENABLED: "true"
+      CLAMAV_MAX_SCANNABLE_BYTES: "524288000"
     ports:
       - "8080:8080"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=1g
     depends_on:
       postgres:
         condition: service_healthy
