@@ -1,6 +1,7 @@
 package com.example.interhubdev.document;
 
 import com.example.interhubdev.error.AppException;
+import com.example.interhubdev.fileasset.FileAssetUploadCommand;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,19 +17,19 @@ import java.util.UUID;
 public interface CourseMaterialApi {
 
     /**
-     * Create a course material from an existing stored file.
+     * Create a course material with a single uploaded attachment.
      * Requires permission: TEACHER or ADMIN role.
      *
      * @param offeringId  group subject offering UUID (must exist)
-     * @param storedFileId existing stored file UUID
+     * @param upload      uploaded file
      * @param title       material title
      * @param description optional description
      * @param authorId    user creating the material (must match current user or be ADMIN)
      * @return created course material DTO
-     * @throws AppException NOT_FOUND if stored file or offering not found, FORBIDDEN if permission denied,
+     * @throws AppException NOT_FOUND if offering not found, FORBIDDEN if permission denied,
      *                      BAD_REQUEST on validation failure
      */
-    CourseMaterialDto createMaterial(UUID offeringId, UUID storedFileId, String title, String description, UUID authorId);
+    CourseMaterialDto createMaterial(UUID offeringId, FileAssetUploadCommand upload, String title, String description, UUID authorId);
 
     /**
      * List all course materials for an offering.

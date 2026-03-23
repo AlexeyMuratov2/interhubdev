@@ -10,7 +10,7 @@ import java.util.UUID;
  * @param studentName   display name of student
  * @param homeworkTitle title of the homework
  * @param lessonDate    date of the lesson
- * @param storedFileId  document module stored file ID
+ * @param attachmentId  submission attachment ID
  * @param originalName  original filename (for extension fallback)
  * @param extension     file extension to use in entry name (e.g. "pdf")
  * @param fileIndex     index among files of the same submission (for uniqueness when multiple files per student)
@@ -20,7 +20,7 @@ public record ArchiveEntry(
     String studentName,
     String homeworkTitle,
     java.time.LocalDate lessonDate,
-    UUID storedFileId,
+    UUID attachmentId,
     String originalName,
     String extension,
     int fileIndex

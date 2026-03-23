@@ -13,7 +13,7 @@ import java.util.zip.ZipOutputStream;
 /**
  * Writes a ZIP archive to an output stream. Streams entry content one-by-one to avoid loading
  * the entire archive into memory. Caller provides a function to open an InputStream for each
- * stored file; the writer closes each stream after copying.
+ * attachment; the writer closes each stream after copying.
  */
 @Slf4j
 public final class ZipArchiveWriter {
@@ -26,7 +26,7 @@ public final class ZipArchiveWriter {
     /**
      * Write ZIP to {@code out} with the given archive-level filename, and one entry per
      * {@link ArchiveEntry}. For each entry, {@code openStream} is called with the entry's
-     * storedFileId; the returned InputStream is read and then closed. If openStream throws or
+     * attachmentId; the returned InputStream is read and then closed. If openStream throws or
      * returns null, the entry is skipped and the error is logged (strategy: skip problematic
      * files and continue).
      *
@@ -48,11 +48,11 @@ public final class ZipArchiveWriter {
                 try {
                     is = openStream.apply(entry);
                 } catch (Exception e) {
-                    log.warn("Skip archive entry {}: failed to open storedFileId {} - {}", entryName, entry.storedFileId(), e.getMessage());
+                    log.warn("Skip archive entry {}: failed to open attachmentId {} - {}", entryName, entry.attachmentId(), e.getMessage());
                     continue;
                 }
                 if (is == null) {
-                    log.warn("Skip archive entry {}: no stream for storedFileId {}", entryName, entry.storedFileId());
+                    log.warn("Skip archive entry {}: no stream for attachmentId {}", entryName, entry.attachmentId());
                     continue;
                 }
                 ZipEntry ze = new ZipEntry(entryName);
@@ -61,7 +61,7 @@ public final class ZipArchiveWriter {
                 try {
                     copy(is, zos);
                 } catch (Exception e) {
-                    log.warn("Skip archive entry {}: failed to read storedFileId {} - {}", entryName, entry.storedFileId(), e.getMessage());
+                    log.warn("Skip archive entry {}: failed to read attachmentId {} - {}", entryName, entry.attachmentId(), e.getMessage());
                 } finally {
                     is.close();
                 }

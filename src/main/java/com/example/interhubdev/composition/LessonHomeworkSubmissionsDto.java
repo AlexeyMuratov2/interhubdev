@@ -1,7 +1,6 @@
 package com.example.interhubdev.composition;
 
 import com.example.interhubdev.document.HomeworkDto;
-import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.grades.GradeEntryDto;
 import com.example.interhubdev.group.StudentGroupDto;
 import com.example.interhubdev.schedule.LessonDto;
@@ -75,7 +74,7 @@ public record LessonHomeworkSubmissionsDto(
              * File metadata for this submission's attached files (order preserved).
              * Empty if no submission or no files.
              */
-            List<StoredFileDto> files
+            List<com.example.interhubdev.submission.SubmissionAttachmentDto> files
     ) {
     }
 }

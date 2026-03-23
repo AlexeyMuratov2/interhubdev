@@ -15,6 +15,6 @@ public record CourseMaterialDto(
     String description,
     UUID authorId,
     LocalDateTime uploadedAt,
-    StoredFileDto file
+    DocumentAttachmentDto attachment
 ) {
 }

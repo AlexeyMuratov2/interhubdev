@@ -67,7 +67,8 @@ class FileAssetServiceImplTest {
             outboxPublisher,
             processingEngine,
             storagePort,
-            new FileAssetCapacityGate(10L * 1024 * 1024 * 1024, 10L * 1024 * 1024 * 1024)
+            new FileAssetCapacityGate(10L * 1024 * 1024 * 1024, 10L * 1024 * 1024 * 1024),
+            List.of()
         );
     }
 
@@ -166,7 +167,8 @@ class FileAssetServiceImplTest {
                 outboxPublisher,
                 processingEngine,
                 storagePort,
-                new FileAssetCapacityGate(4_096, 2_048)
+                new FileAssetCapacityGate(4_096, 2_048),
+                List.of()
             );
 
             assertThatThrownBy(() -> limitedService.register(

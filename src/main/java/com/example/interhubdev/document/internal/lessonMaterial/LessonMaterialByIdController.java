@@ -4,15 +4,19 @@ import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.document.LessonMaterialApi;
 import com.example.interhubdev.document.LessonMaterialDto;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.fileasset.FilePolicyKey;
+import com.example.interhubdev.web.MultipartUploadSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -60,35 +64,37 @@ class LessonMaterialByIdController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{materialId}/files")
+    @PostMapping(value = "/{materialId}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Add files to lesson material", description = "Add stored files to an existing lesson material. Requires material author or ADMIN/MODERATOR role.")
     public ResponseEntity<Void> addFiles(
             @PathVariable UUID lessonId,
             @PathVariable UUID materialId,
-            @Valid @RequestBody AddLessonMaterialFilesRequest body,
+            @RequestPart("files") List<MultipartFile> files,
             HttpServletRequest request
     ) {
         UUID requesterId = authApi.getCurrentUser(request)
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        lessonMaterialApi.addFiles(materialId, body.storedFileIds(), requesterId);
-        return ResponseEntity.noContent().build();
+        try (var bundle = MultipartUploadSupport.prepareMany(files, requesterId, FilePolicyKey.CONTROLLED_ATTACHMENT)) {
+            lessonMaterialApi.addFiles(materialId, bundle.uploads(), requesterId);
+            return ResponseEntity.noContent().build();
+        }
     }
 
-    @DeleteMapping("/{materialId}/files/{storedFileId}")
+    @DeleteMapping("/{materialId}/attachments/{attachmentId}")
     @Operation(summary = "Remove file from lesson material", description = "Remove a file from a lesson material. File is deleted from storage if not used elsewhere. Requires material author or ADMIN/MODERATOR role.")
     public ResponseEntity<Void> removeFile(
             @PathVariable UUID lessonId,
             @PathVariable UUID materialId,
-            @PathVariable UUID storedFileId,
+            @PathVariable UUID attachmentId,
             HttpServletRequest request
     ) {
         UUID requesterId = authApi.getCurrentUser(request)
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        lessonMaterialApi.removeFile(materialId, storedFileId, requesterId);
+        lessonMaterialApi.removeFile(materialId, attachmentId, requesterId);
         return ResponseEntity.noContent().build();
     }
 }

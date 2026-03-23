@@ -7,6 +7,8 @@ import java.io.InputStream;
  */
 interface FileAssetStoragePort {
 
+    void uploadToTemp(String objectKey, InputStream inputStream, long sizeBytes, HardenedObjectMetadata metadata);
+
     boolean exists(String objectKey);
 
     InputStream openStream(String objectKey);

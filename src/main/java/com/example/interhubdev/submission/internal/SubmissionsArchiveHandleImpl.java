@@ -1,6 +1,6 @@
 package com.example.interhubdev.submission.internal;
 
-import com.example.interhubdev.document.DocumentApi;
+import com.example.interhubdev.submission.SubmissionAttachmentApi;
 import com.example.interhubdev.submission.SubmissionsArchiveHandle;
 import com.example.interhubdev.submission.internal.archive.ArchiveData;
 import com.example.interhubdev.submission.internal.archive.ZipArchiveWriter;
@@ -18,13 +18,13 @@ class SubmissionsArchiveHandleImpl implements SubmissionsArchiveHandle {
     private final String filename;
     private final ArchiveData data;
     private final UUID requesterId;
-    private final DocumentApi documentApi;
+    private final SubmissionAttachmentApi submissionAttachmentApi;
 
-    SubmissionsArchiveHandleImpl(String filename, ArchiveData data, UUID requesterId, DocumentApi documentApi) {
+    SubmissionsArchiveHandleImpl(String filename, ArchiveData data, UUID requesterId, SubmissionAttachmentApi submissionAttachmentApi) {
         this.filename = filename;
         this.data = data;
         this.requesterId = requesterId;
-        this.documentApi = documentApi;
+        this.submissionAttachmentApi = submissionAttachmentApi;
     }
 
     @Override
@@ -35,6 +35,6 @@ class SubmissionsArchiveHandleImpl implements SubmissionsArchiveHandle {
     @Override
     public void writeTo(OutputStream out) throws IOException {
         ZipArchiveWriter.write(out, data.info(), data.entries(), entry ->
-            documentApi.downloadByStoredFileId(entry.storedFileId(), requesterId));
+            submissionAttachmentApi.download(entry.attachmentId(), requesterId).stream());
     }
 }

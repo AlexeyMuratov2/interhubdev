@@ -4,15 +4,20 @@ import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.fileasset.FilePolicyKey;
+import com.example.interhubdev.web.MultipartUploadSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -44,28 +49,32 @@ class HomeworkByIdController {
         return ResponseEntity.ok(dto);
     }
 
-    @PutMapping("/{homeworkId}")
+    @PutMapping(value = "/{homeworkId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Update homework", description = "Update homework. Use clearFiles=true to remove all file links (files are not deleted). Requires TEACHER or ADMIN role.")
     public ResponseEntity<HomeworkDto> update(
             @PathVariable UUID homeworkId,
-            @Valid @RequestBody UpdateHomeworkRequest body,
+            @Valid @RequestPart("payload") UpdateHomeworkRequest body,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
             HttpServletRequest request
     ) {
         UUID requesterId = authApi.getCurrentUser(request)
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        boolean clearFiles = Boolean.TRUE.equals(body.clearFiles());
-        HomeworkDto dto = homeworkApi.update(
-                homeworkId,
-                body.title(),
-                body.description(),
-                body.points(),
-                clearFiles,
-                body.storedFileIds(),
-                requesterId
-        );
-        return ResponseEntity.ok(dto);
+        try (var bundle = MultipartUploadSupport.prepareMany(files, requesterId, FilePolicyKey.CONTROLLED_ATTACHMENT)) {
+            boolean clearFiles = Boolean.TRUE.equals(body.clearAttachments());
+            HomeworkDto dto = homeworkApi.update(
+                    homeworkId,
+                    body.title(),
+                    body.description(),
+                    body.points(),
+                    clearFiles,
+                    body.retainAttachmentIds(),
+                    bundle.uploads(),
+                    requesterId
+            );
+            return ResponseEntity.ok(dto);
+        }
     }
 
     @DeleteMapping("/{homeworkId}")

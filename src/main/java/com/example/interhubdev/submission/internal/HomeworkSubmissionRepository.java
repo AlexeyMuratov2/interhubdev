@@ -13,16 +13,16 @@ import java.util.UUID;
  */
 interface HomeworkSubmissionRepository extends JpaRepository<HomeworkSubmission, UUID> {
 
-    @Query("SELECT DISTINCT s FROM HomeworkSubmission s LEFT JOIN FETCH s.files WHERE s.homeworkId = :homeworkId ORDER BY s.submittedAt DESC")
+    @Query("SELECT s FROM HomeworkSubmission s WHERE s.homeworkId = :homeworkId ORDER BY s.submittedAt DESC")
     List<HomeworkSubmission> findByHomeworkIdOrderBySubmittedAtDesc(@Param("homeworkId") UUID homeworkId);
 
-    @Query("SELECT s FROM HomeworkSubmission s LEFT JOIN FETCH s.files WHERE s.id = :id")
+    @Query("SELECT s FROM HomeworkSubmission s WHERE s.id = :id")
     java.util.Optional<HomeworkSubmission> findByIdWithFiles(@Param("id") UUID id);
 
     /**
      * Find submissions by IDs with files loaded. Single batch query; no N+1.
      */
-    @Query("SELECT DISTINCT s FROM HomeworkSubmission s LEFT JOIN FETCH s.files WHERE s.id IN :ids")
+    @Query("SELECT s FROM HomeworkSubmission s WHERE s.id IN :ids")
     List<HomeworkSubmission> findByIdInWithFiles(@Param("ids") Collection<UUID> ids);
 
     /**
@@ -36,7 +36,7 @@ interface HomeworkSubmissionRepository extends JpaRepository<HomeworkSubmission,
      * @param homeworkIds homework UUIDs (must not be null; empty returns empty list)
      * @return list of submissions (order not guaranteed)
      */
-    @Query("SELECT s FROM HomeworkSubmission s LEFT JOIN FETCH s.files WHERE s.homeworkId IN :homeworkIds")
+    @Query("SELECT s FROM HomeworkSubmission s WHERE s.homeworkId IN :homeworkIds")
     List<HomeworkSubmission> findByHomeworkIdIn(@Param("homeworkIds") Collection<UUID> homeworkIds);
 
     /**

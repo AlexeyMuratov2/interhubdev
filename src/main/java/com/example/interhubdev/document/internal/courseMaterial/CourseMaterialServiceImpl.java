@@ -2,11 +2,11 @@ package com.example.interhubdev.document.internal.courseMaterial;
 
 import com.example.interhubdev.document.CourseMaterialApi;
 import com.example.interhubdev.document.CourseMaterialDto;
-import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.OfferingLookupPort;
-import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
-import com.example.interhubdev.storedfile.StoredFileApi;
+import com.example.interhubdev.document.internal.attachment.DocumentAttachmentOwnerType;
+import com.example.interhubdev.document.internal.attachment.DocumentAttachmentService;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.fileasset.FileAssetUploadCommand;
 import com.example.interhubdev.user.Role;
 import jakarta.persistence.PersistenceException;
 import com.example.interhubdev.user.UserApi;
@@ -18,14 +18,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
- * Implementation of {@link CourseMaterialApi}: create (attach stored file), list, get, delete course materials.
+ * Implementation of {@link CourseMaterialApi}: create, list, get, delete course materials.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,44 +30,21 @@ import java.util.stream.Collectors;
 class CourseMaterialServiceImpl implements CourseMaterialApi {
 
     private final CourseMaterialRepository courseMaterialRepository;
-    private final StoredFileApi storedFileApi;
-    private final DocumentApi documentApi;
+    private final DocumentAttachmentService documentAttachmentService;
     private final UserApi userApi;
     private final OfferingLookupPort offeringLookupPort;
 
     @Override
     @Transactional
-    public CourseMaterialDto createMaterial(UUID offeringId, UUID storedFileId, String title, String description, UUID authorId) {
-        // Validate title
+    public CourseMaterialDto createMaterial(UUID offeringId, FileAssetUploadCommand upload, String title, String description, UUID authorId) {
         validateTitle(title);
-
-        // Check permission: TEACHER or ADMIN
         checkCreatePermission(authorId);
-
-        // Validate offering exists
         if (!offeringLookupPort.existsById(offeringId)) {
             throw CourseMaterialErrors.offeringNotFound(offeringId);
         }
 
-        // Validate stored file exists and is ACTIVE (activation gate: bind only after checks passed)
-        com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(storedFileId)
-            .orElseThrow(() -> DocumentErrors.storedFileNotFound(storedFileId));
-        if (!fileDto.isActive()) {
-            throw DocumentErrors.fileNotActiveForBind();
-        }
-
-        // Check if material with same offering+file already exists
-        courseMaterialRepository.findByOfferingIdOrderByUploadedAtDesc(offeringId).stream()
-            .filter(m -> m.getStoredFileId().equals(storedFileId))
-            .findFirst()
-            .ifPresent(m -> {
-                throw CourseMaterialErrors.materialAlreadyExists(offeringId);
-            });
-
-        // Create course material
         CourseMaterial material = CourseMaterial.builder()
             .offeringId(offeringId)
-            .storedFileId(storedFileId)
             .title(title)
             .description(description)
             .authorId(authorId)
@@ -78,9 +52,14 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
 
         try {
             CourseMaterial saved = courseMaterialRepository.save(material);
-            return CourseMaterialMappers.toDto(saved, documentApi.getStoredFiles(java.util.Set.of(saved.getStoredFileId())));
+            var attachments = documentAttachmentService.createAttachments(
+                DocumentAttachmentOwnerType.COURSE_MATERIAL,
+                saved.getId(),
+                List.of(upload)
+            );
+            return CourseMaterialMappers.toDto(saved, attachments.isEmpty() ? null : attachments.get(0));
         } catch (PersistenceException | DataIntegrityViolationException e) {
-            log.warn("Failed to save course material (offeringId={}, storedFileId={}): {}", offeringId, storedFileId, e.getMessage());
+            log.warn("Failed to save course material (offeringId={}): {}", offeringId, e.getMessage());
             throw CourseMaterialErrors.saveFailed();
         }
     }
@@ -88,32 +67,39 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
     @Override
     @Transactional(readOnly = true)
     public List<CourseMaterialDto> listByOffering(UUID offeringId, UUID requesterId) {
-        // Check authentication (requesterId must be valid user)
         userApi.findById(requesterId)
             .orElseThrow(() -> Errors.unauthorized("Authentication required"));
-
-        // Validate offering exists
         if (!offeringLookupPort.existsById(offeringId)) {
             throw CourseMaterialErrors.offeringNotFound(offeringId);
         }
 
         List<CourseMaterial> materials = courseMaterialRepository.findByOfferingIdOrderByUploadedAtDesc(offeringId);
-        Set<UUID> fileIds = materials.stream().map(CourseMaterial::getStoredFileId).collect(Collectors.toSet());
-        Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(fileIds);
+        var attachmentsByOwner = documentAttachmentService.findByOwners(
+            DocumentAttachmentOwnerType.COURSE_MATERIAL,
+            materials.stream().map(CourseMaterial::getId).toList()
+        );
         return materials.stream()
-            .map(m -> CourseMaterialMappers.toDto(m, filesMap))
+            .map(material -> CourseMaterialMappers.toDto(
+                material,
+                attachmentsByOwner.getOrDefault(material.getId(), List.of()).stream().findFirst().orElse(null)
+            ))
             .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<CourseMaterialDto> get(UUID materialId, UUID requesterId) {
-        // Check authentication (requesterId must be valid user)
         userApi.findById(requesterId)
             .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         return courseMaterialRepository.findById(materialId)
-            .map(m -> CourseMaterialMappers.toDto(m, documentApi.getStoredFiles(Set.of(m.getStoredFileId()))));
+            .map(material -> CourseMaterialMappers.toDto(
+                material,
+                documentAttachmentService.findByOwner(DocumentAttachmentOwnerType.COURSE_MATERIAL, material.getId())
+                    .stream()
+                    .findFirst()
+                    .orElse(null)
+            ));
     }
 
     @Override
@@ -121,26 +107,9 @@ class CourseMaterialServiceImpl implements CourseMaterialApi {
     public void delete(UUID materialId, UUID requesterId) {
         CourseMaterial material = courseMaterialRepository.findById(materialId)
             .orElseThrow(() -> CourseMaterialErrors.materialNotFound(materialId));
-
-        // Check permission: author or ADMIN/MODERATOR
         checkDeletePermission(material, requesterId);
-
-        UUID storedFileId = material.getStoredFileId();
-
-        // Delete course material (junction table entries are deleted via CASCADE)
+        documentAttachmentService.removeAll(DocumentAttachmentOwnerType.COURSE_MATERIAL, materialId);
         courseMaterialRepository.delete(material);
-
-        // Check if stored file is still used by other materials
-        long usageCount = courseMaterialRepository.countByStoredFileId(storedFileId);
-        if (usageCount == 0) {
-            // No other materials use this file, safe to delete
-            try {
-                documentApi.deleteStoredFile(storedFileId, requesterId);
-            } catch (Exception e) {
-                log.warn("Failed to delete stored file after material deletion: {}", storedFileId, e);
-                // Don't throw - material is already deleted, file cleanup can happen later
-            }
-        }
     }
 
     /**

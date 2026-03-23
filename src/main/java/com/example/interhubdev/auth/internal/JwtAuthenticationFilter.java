@@ -80,6 +80,7 @@ class JwtAuthenticationFilter extends OncePerRequestFilter implements Ordered {
                path.startsWith("/api/auth/forgot-password") ||
                path.startsWith("/api/auth/reset-password") ||
                path.startsWith("/api-docs") ||
+               path.startsWith("/v3/api-docs") ||
                path.startsWith("/swagger-ui") ||
                path.startsWith("/actuator/health") ||
                path.startsWith("/actuator/info");

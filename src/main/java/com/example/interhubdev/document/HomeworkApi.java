@@ -1,6 +1,7 @@
 package com.example.interhubdev.document;
 
 import com.example.interhubdev.error.AppException;
+import com.example.interhubdev.fileasset.FileAssetUploadCommand;
 
 import java.util.Collection;
 import java.util.List;
@@ -22,14 +23,14 @@ public interface HomeworkApi {
      * @param title         title (required)
      * @param description   optional description
      * @param points        optional max points
-     * @param storedFileIds optional list of stored file UUIDs (must exist if provided); order preserved
+     * @param uploads       optional initial uploads; order preserved
      * @param requesterId   current user (for permission check)
      * @return created homework DTO
-     * @throws AppException BAD_REQUEST on validation, NOT_FOUND if lesson or any file not found,
+     * @throws AppException BAD_REQUEST on validation, NOT_FOUND if lesson not found,
      *                      FORBIDDEN if permission denied
      */
     HomeworkDto create(UUID lessonId, String title, String description, Integer points,
-                       List<UUID> storedFileIds, UUID requesterId);
+                       List<FileAssetUploadCommand> uploads, UUID requesterId);
 
     /**
      * List homeworks for a lesson.
@@ -79,15 +80,15 @@ public interface HomeworkApi {
      * @param title         optional new title (null = no change)
      * @param description   optional new description (null = no change)
      * @param points        optional new points (null = no change)
-     * @param clearFiles    if true, clear all file links (files in storage are not deleted)
-     * @param storedFileIds optional new list of file ids (used only if clearFiles is false; full replacement, order preserved)
+     * @param clearFiles    if true, clear all existing attachments before adding new uploads
+     * @param retainAttachmentIds attachment ids to keep when clearFiles is false
+     * @param uploads       new uploads to append
      * @param requesterId   current user (for permission check)
      * @return updated homework DTO
-     * @throws AppException NOT_FOUND if homework or any file not found, FORBIDDEN if permission denied,
-     *                      BAD_REQUEST on validation
+     * @throws AppException NOT_FOUND if homework not found, FORBIDDEN if permission denied, BAD_REQUEST on validation
      */
     HomeworkDto update(UUID homeworkId, String title, String description, Integer points,
-                       boolean clearFiles, List<UUID> storedFileIds, UUID requesterId);
+                       boolean clearFiles, List<UUID> retainAttachmentIds, List<FileAssetUploadCommand> uploads, UUID requesterId);
 
     /**
      * Delete homework. Does not delete the attached file (if any).

@@ -104,8 +104,16 @@ class SecurityConfig {
                 // Public endpoints - invitation acceptance (user activation)
                 .requestMatchers("/api/invitations/validate", "/api/invitations/accept").permitAll()
                 
-                // Public endpoints - documentation
-                .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                // Public endpoints - documentation (incl. default OpenAPI path used by tools / tutorials)
+                .requestMatchers(
+                        "/api-docs/**",
+                        "/v3/api-docs",
+                        "/v3/api-docs/**",
+                        "/swagger-ui",
+                        "/swagger-ui/",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html"
+                ).permitAll()
                 
                 // Public endpoints - health checks
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()

@@ -4,6 +4,8 @@ import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.document.LessonMaterialApi;
 import com.example.interhubdev.document.LessonMaterialDto;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.fileasset.FilePolicyKey;
+import com.example.interhubdev.web.MultipartUploadSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,8 +13,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -45,25 +49,28 @@ class LessonMaterialController {
         return ResponseEntity.ok(list);
     }
 
-    @PostMapping("/{lessonId}/materials")
+    @PostMapping(value = "/{lessonId}/materials", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create lesson material", description = "Create a material for a lesson. Optionally attach stored file IDs (upload first via POST /api/documents/upload). Requires TEACHER or ADMIN role.")
     public ResponseEntity<LessonMaterialDto> create(
             @PathVariable UUID lessonId,
-            @Valid @RequestBody CreateLessonMaterialRequest body,
+            @Valid @RequestPart("payload") CreateLessonMaterialRequest body,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
             HttpServletRequest request
     ) {
         UUID requesterId = authApi.getCurrentUser(request)
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        LessonMaterialDto dto = lessonMaterialApi.create(
-                lessonId,
-                body.name(),
-                body.description(),
-                requesterId,
-                body.publishedAt(),
-                body.storedFileIds()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+        try (var bundle = MultipartUploadSupport.prepareMany(files, requesterId, FilePolicyKey.CONTROLLED_ATTACHMENT)) {
+            LessonMaterialDto dto = lessonMaterialApi.create(
+                    lessonId,
+                    body.name(),
+                    body.description(),
+                    requesterId,
+                    body.publishedAt(),
+                    bundle.uploads()
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+        }
     }
 }

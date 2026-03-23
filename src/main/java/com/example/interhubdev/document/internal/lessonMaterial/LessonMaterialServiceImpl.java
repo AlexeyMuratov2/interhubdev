@@ -1,12 +1,12 @@
 package com.example.interhubdev.document.internal.lessonMaterial;
 
-import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.LessonMaterialApi;
 import com.example.interhubdev.document.LessonMaterialDto;
 import com.example.interhubdev.document.LessonLookupPort;
-import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
-import com.example.interhubdev.storedfile.StoredFileApi;
+import com.example.interhubdev.document.internal.attachment.DocumentAttachmentOwnerType;
+import com.example.interhubdev.document.internal.attachment.DocumentAttachmentService;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.fileasset.FileAssetUploadCommand;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
@@ -18,13 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link LessonMaterialApi}: create, list, get, delete lesson materials; add/remove files.
@@ -37,34 +33,19 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
     private static final int MAX_NAME_LENGTH = 500;
 
     private final LessonMaterialRepository lessonMaterialRepository;
-    private final LessonMaterialFileRepository lessonMaterialFileRepository;
-    private final StoredFileApi storedFileApi;
-    private final DocumentApi documentApi;
+    private final DocumentAttachmentService documentAttachmentService;
     private final LessonLookupPort lessonLookupPort;
     private final UserApi userApi;
 
     @Override
     @Transactional
     public LessonMaterialDto create(UUID lessonId, String name, String description, UUID authorId,
-                                    LocalDateTime publishedAt, List<UUID> storedFileIds) {
+                                    LocalDateTime publishedAt, List<FileAssetUploadCommand> uploads) {
         validateName(name);
         checkCreatePermission(authorId);
 
         if (!lessonLookupPort.existsById(lessonId)) {
             throw LessonMaterialErrors.lessonNotFound(lessonId);
-        }
-
-        List<UUID> fileIds = storedFileIds != null ? storedFileIds : List.of();
-        if (fileIds.stream().distinct().count() != fileIds.size()) {
-            throw LessonMaterialErrors.invalidName("Duplicate file IDs in request");
-        }
-
-        for (UUID fileId : fileIds) {
-            com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(fileId)
-                .orElseThrow(() -> DocumentErrors.storedFileNotFound(fileId));
-            if (!fileDto.isActive()) {
-                throw DocumentErrors.fileNotActiveForBind();
-            }
         }
 
         LessonMaterial material = LessonMaterial.builder()
@@ -73,22 +54,15 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
             .description(description != null ? description.trim() : null)
             .authorId(authorId)
             .publishedAt(publishedAt != null ? publishedAt : LocalDateTime.now())
-            .files(new ArrayList<>())
             .build();
 
         try {
             LessonMaterial saved = lessonMaterialRepository.save(material);
-            int sortOrder = 0;
-            for (UUID fileId : fileIds) {
-                LessonMaterialFile lmf = new LessonMaterialFile(
-                    saved.getId(), fileId, sortOrder++, saved
-                );
-                lessonMaterialFileRepository.save(lmf);
-            }
             LessonMaterial withFiles = lessonMaterialRepository.findByIdWithFiles(saved.getId()).orElseThrow();
-            Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(
-                withFiles.getFiles().stream().map(LessonMaterialFile::getStoredFileId).collect(Collectors.toSet()));
-            return LessonMaterialMappers.toDto(withFiles, filesMap);
+            return LessonMaterialMappers.toDto(
+                withFiles,
+                documentAttachmentService.createAttachments(DocumentAttachmentOwnerType.LESSON_MATERIAL, saved.getId(), uploads)
+            );
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save lesson material (lessonId={}): {}", lessonId, e.getMessage());
             throw LessonMaterialErrors.saveFailed();
@@ -106,11 +80,13 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
         }
 
         List<LessonMaterial> materials = lessonMaterialRepository.findByLessonIdOrderByPublishedAtDescWithFiles(lessonId);
-        Set<UUID> allFileIds = materials.stream()
-            .flatMap(m -> m.getFiles().stream().map(LessonMaterialFile::getStoredFileId))
-            .collect(Collectors.toSet());
-        Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(allFileIds);
-        return materials.stream().map(m -> LessonMaterialMappers.toDto(m, filesMap)).toList();
+        var attachmentsByOwner = documentAttachmentService.findByOwners(
+            DocumentAttachmentOwnerType.LESSON_MATERIAL,
+            materials.stream().map(LessonMaterial::getId).toList()
+        );
+        return materials.stream()
+            .map(material -> LessonMaterialMappers.toDto(material, attachmentsByOwner.getOrDefault(material.getId(), List.of())))
+            .toList();
     }
 
     @Override
@@ -120,11 +96,10 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
             .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
         return lessonMaterialRepository.findByIdWithFiles(materialId)
-            .map(m -> {
-                Set<UUID> fileIds = m.getFiles().stream().map(LessonMaterialFile::getStoredFileId).collect(Collectors.toSet());
-                Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(fileIds);
-                return LessonMaterialMappers.toDto(m, filesMap);
-            });
+            .map(material -> LessonMaterialMappers.toDto(
+                material,
+                documentAttachmentService.findByOwner(DocumentAttachmentOwnerType.LESSON_MATERIAL, material.getId())
+            ));
     }
 
     @Override
@@ -134,26 +109,14 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
             .orElseThrow(() -> LessonMaterialErrors.materialNotFound(materialId));
 
         checkModifyPermission(material, requesterId);
-
-        List<UUID> storedFileIds = material.getFiles().stream()
-            .map(LessonMaterialFile::getStoredFileId)
-            .toList();
-
+        documentAttachmentService.removeAll(DocumentAttachmentOwnerType.LESSON_MATERIAL, materialId);
         lessonMaterialRepository.delete(material);
-
-        for (UUID storedFileId : storedFileIds) {
-            try {
-                documentApi.deleteStoredFile(storedFileId, requesterId);
-            } catch (Exception e) {
-                log.warn("Failed to delete stored file after lesson material deletion: {}", storedFileId, e);
-            }
-        }
     }
 
     @Override
     @Transactional
-    public void addFiles(UUID materialId, List<UUID> storedFileIds, UUID requesterId) {
-        if (storedFileIds == null || storedFileIds.isEmpty()) {
+    public void addFiles(UUID materialId, List<FileAssetUploadCommand> uploads, UUID requesterId) {
+        if (uploads == null || uploads.isEmpty()) {
             return;
         }
 
@@ -161,50 +124,17 @@ class LessonMaterialServiceImpl implements LessonMaterialApi {
             .orElseThrow(() -> LessonMaterialErrors.materialNotFound(materialId));
 
         checkModifyPermission(material, requesterId);
-
-        Set<UUID> existingFileIds = material.getFiles().stream()
-            .map(LessonMaterialFile::getStoredFileId)
-            .collect(Collectors.toSet());
-
-        List<UUID> toAdd = storedFileIds.stream().distinct().toList();
-        for (UUID fileId : toAdd) {
-            if (existingFileIds.contains(fileId)) {
-                throw LessonMaterialErrors.fileAlreadyInMaterial(fileId);
-            }
-        }
-
-        int nextOrder = lessonMaterialFileRepository.findMaxSortOrderByLessonMaterialId(materialId) + 1;
-        for (UUID fileId : toAdd) {
-            com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(fileId)
-                .orElseThrow(() -> DocumentErrors.storedFileNotFound(fileId));
-            if (!fileDto.isActive()) {
-                throw DocumentErrors.fileNotActiveForBind();
-            }
-            LessonMaterialFile lmf = new LessonMaterialFile(
-                materialId, fileId, nextOrder++, material
-            );
-            lessonMaterialFileRepository.save(lmf);
-        }
+        documentAttachmentService.createAttachments(DocumentAttachmentOwnerType.LESSON_MATERIAL, materialId, uploads);
     }
 
     @Override
     @Transactional
-    public void removeFile(UUID materialId, UUID storedFileId, UUID requesterId) {
+    public void removeFile(UUID materialId, UUID attachmentId, UUID requesterId) {
         LessonMaterial material = lessonMaterialRepository.findById(materialId)
             .orElseThrow(() -> LessonMaterialErrors.materialNotFound(materialId));
 
         checkModifyPermission(material, requesterId);
-
-        LessonMaterialFile link = lessonMaterialFileRepository.findByLessonMaterialIdAndStoredFileId(materialId, storedFileId)
-            .orElseThrow(() -> LessonMaterialErrors.fileLinkNotFound(materialId, storedFileId));
-
-        lessonMaterialFileRepository.delete(link);
-
-        try {
-            documentApi.deleteStoredFile(storedFileId, requesterId);
-        } catch (Exception e) {
-            log.warn("Failed to delete stored file after removing from lesson material: {}", storedFileId, e);
-        }
+        documentAttachmentService.removeAttachment(DocumentAttachmentOwnerType.LESSON_MATERIAL, materialId, attachmentId);
     }
 
     private void validateName(String name) {

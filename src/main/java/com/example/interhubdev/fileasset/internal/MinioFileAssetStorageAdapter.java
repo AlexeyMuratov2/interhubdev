@@ -29,6 +29,24 @@ class MinioFileAssetStorageAdapter implements FileAssetStoragePort {
     private String bucketName;
 
     @Override
+    public void uploadToTemp(String objectKey, InputStream inputStream, long sizeBytes, HardenedObjectMetadata metadata) {
+        try {
+            ensureBucketExists();
+            minioClient.putObject(
+                PutObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(objectKey)
+                    .stream(inputStream, sizeBytes, -1)
+                    .contentType(metadata.contentType())
+                    .headers(Map.of("Content-Disposition", metadata.contentDisposition()))
+                    .build()
+            );
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not upload fileasset object to temporary storage", e);
+        }
+    }
+
+    @Override
     public boolean exists(String objectKey) {
         if (objectKey == null || objectKey.isBlank()) {
             return false;

@@ -13,21 +13,9 @@ import java.util.UUID;
  */
 public interface LessonMaterialRepository extends JpaRepository<LessonMaterial, UUID> {
 
-    /**
-     * Find all lesson materials for a lesson with files eagerly loaded, ordered by published_at descending.
-     *
-     * @param lessonId lesson UUID
-     * @return list of lesson materials with files, ordered by published_at descending
-     */
-    @Query("SELECT DISTINCT lm FROM LessonMaterial lm LEFT JOIN FETCH lm.files f WHERE lm.lessonId = :lessonId ORDER BY lm.publishedAt DESC")
+    @Query("SELECT lm FROM LessonMaterial lm WHERE lm.lessonId = :lessonId ORDER BY lm.publishedAt DESC")
     List<LessonMaterial> findByLessonIdOrderByPublishedAtDescWithFiles(@Param("lessonId") UUID lessonId);
 
-    /**
-     * Find lesson material by id with files eagerly loaded (for get single).
-     *
-     * @param materialId lesson material UUID
-     * @return optional lesson material with files
-     */
-    @Query("SELECT DISTINCT lm FROM LessonMaterial lm LEFT JOIN FETCH lm.files f WHERE lm.id = :materialId")
+    @Query("SELECT lm FROM LessonMaterial lm WHERE lm.id = :materialId")
     Optional<LessonMaterial> findByIdWithFiles(@Param("materialId") UUID materialId);
 }

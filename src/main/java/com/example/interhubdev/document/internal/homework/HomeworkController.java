@@ -4,6 +4,8 @@ import com.example.interhubdev.auth.AuthApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.fileasset.FilePolicyKey;
+import com.example.interhubdev.web.MultipartUploadSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,8 +13,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -45,25 +49,28 @@ class HomeworkController {
         return ResponseEntity.ok(list);
     }
 
-    @PostMapping("/{lessonId}/homework")
+    @PostMapping(value = "/{lessonId}/homework", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create homework", description = "Create homework for a lesson. Requires TEACHER or ADMIN role.")
     public ResponseEntity<HomeworkDto> create(
             @PathVariable UUID lessonId,
-            @Valid @RequestBody CreateHomeworkRequest body,
+            @Valid @RequestPart("payload") CreateHomeworkRequest body,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
             HttpServletRequest request
     ) {
         UUID requesterId = authApi.getCurrentUser(request)
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        HomeworkDto dto = homeworkApi.create(
-                lessonId,
-                body.title(),
-                body.description(),
-                body.points(),
-                body.storedFileIds(),
-                requesterId
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+        try (var bundle = MultipartUploadSupport.prepareMany(files, requesterId, FilePolicyKey.CONTROLLED_ATTACHMENT)) {
+            HomeworkDto dto = homeworkApi.create(
+                    lessonId,
+                    body.title(),
+                    body.description(),
+                    body.points(),
+                    bundle.uploads(),
+                    requesterId
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+        }
     }
 }

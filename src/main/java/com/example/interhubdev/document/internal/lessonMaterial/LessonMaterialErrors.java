@@ -25,12 +25,12 @@ public final class LessonMaterialErrors {
     public static final String CODE_PERMISSION_DENIED = "LESSON_MATERIAL_PERMISSION_DENIED";
     /** Used when material name is empty or invalid. */
     public static final String CODE_INVALID_NAME = "LESSON_MATERIAL_INVALID_NAME";
-    /** Used when a stored file is not found. */
-    public static final String CODE_STORED_FILE_NOT_FOUND = "LESSON_MATERIAL_STORED_FILE_NOT_FOUND";
-    /** Used when file is already attached to the material. */
-    public static final String CODE_FILE_ALREADY_IN_MATERIAL = "LESSON_MATERIAL_FILE_ALREADY_IN_MATERIAL";
-    /** Used when file link not found on removeFile. */
-    public static final String CODE_FILE_LINK_NOT_FOUND = "LESSON_MATERIAL_FILE_LINK_NOT_FOUND";
+    /** Used when an attachment is not found. */
+    public static final String CODE_ATTACHMENT_NOT_FOUND = "LESSON_MATERIAL_ATTACHMENT_NOT_FOUND";
+    /** Used when attachment is already linked to the material. */
+    public static final String CODE_ATTACHMENT_ALREADY_IN_MATERIAL = "LESSON_MATERIAL_ATTACHMENT_ALREADY_IN_MATERIAL";
+    /** Used when attachment link not found on removeFile. */
+    public static final String CODE_ATTACHMENT_LINK_NOT_FOUND = "LESSON_MATERIAL_ATTACHMENT_LINK_NOT_FOUND";
     /** Used when DB save fails. */
     public static final String CODE_SAVE_FAILED = "LESSON_MATERIAL_SAVE_FAILED";
 
@@ -54,18 +54,18 @@ public final class LessonMaterialErrors {
         return Errors.of(HttpStatus.BAD_REQUEST, CODE_INVALID_NAME, message);
     }
 
-    public static AppException storedFileNotFound(UUID id) {
-        return Errors.of(HttpStatus.NOT_FOUND, CODE_STORED_FILE_NOT_FOUND, "Stored file not found: " + id);
+    public static AppException attachmentNotFound(UUID id) {
+        return Errors.of(HttpStatus.NOT_FOUND, CODE_ATTACHMENT_NOT_FOUND, "Attachment not found: " + id);
     }
 
-    public static AppException fileAlreadyInMaterial(UUID storedFileId) {
-        return Errors.of(HttpStatus.BAD_REQUEST, CODE_FILE_ALREADY_IN_MATERIAL,
-            "File already attached to this material: " + storedFileId);
+    public static AppException attachmentAlreadyInMaterial(UUID attachmentId) {
+        return Errors.of(HttpStatus.BAD_REQUEST, CODE_ATTACHMENT_ALREADY_IN_MATERIAL,
+            "Attachment already linked to this material: " + attachmentId);
     }
 
-    public static AppException fileLinkNotFound(UUID materialId, UUID storedFileId) {
-        return Errors.of(HttpStatus.NOT_FOUND, CODE_FILE_LINK_NOT_FOUND,
-            "File is not attached to this material: " + materialId + ", file: " + storedFileId);
+    public static AppException attachmentLinkNotFound(UUID materialId, UUID attachmentId) {
+        return Errors.of(HttpStatus.NOT_FOUND, CODE_ATTACHMENT_LINK_NOT_FOUND,
+            "Attachment is not linked to this material: " + materialId + ", attachment: " + attachmentId);
     }
 
     public static AppException saveFailed() {

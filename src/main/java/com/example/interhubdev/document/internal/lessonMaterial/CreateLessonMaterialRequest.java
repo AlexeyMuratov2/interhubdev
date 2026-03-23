@@ -5,8 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 /**
  * Request body for creating a lesson material (lesson is in path).
@@ -20,14 +18,6 @@ public record CreateLessonMaterialRequest(
     String description,
 
     @NotNull(message = "publishedAt is required")
-    LocalDateTime publishedAt,
-
-    List<UUID> storedFileIds
+    LocalDateTime publishedAt
 ) {
-    /**
-     * Returns stored file IDs; empty list if null.
-     */
-    public List<UUID> storedFileIds() {
-        return storedFileIds != null ? storedFileIds : List.of();
-    }
 }

@@ -16,6 +16,6 @@ public record LessonMaterialDto(
     String description,
     UUID authorId,
     LocalDateTime publishedAt,
-    List<StoredFileDto> files
+    List<DocumentAttachmentDto> attachments
 ) {
 }

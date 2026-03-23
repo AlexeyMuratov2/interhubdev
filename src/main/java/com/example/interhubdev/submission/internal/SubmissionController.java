@@ -1,11 +1,12 @@
 package com.example.interhubdev.submission.internal;
 
 import com.example.interhubdev.auth.AuthApi;
-import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.fileasset.FilePolicyKey;
 import com.example.interhubdev.submission.HomeworkSubmissionDto;
 import com.example.interhubdev.submission.SubmissionApi;
 import com.example.interhubdev.submission.SubmissionsArchiveHandle;
+import com.example.interhubdev.web.MultipartUploadSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,8 +14,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -32,7 +35,6 @@ import java.util.UUID;
 class SubmissionController {
 
     private final SubmissionApi submissionApi;
-    private final DocumentApi documentApi;
     private final AuthApi authApi;
 
     @GetMapping("/{homeworkId}/submissions")
@@ -49,30 +51,27 @@ class SubmissionController {
         return ResponseEntity.ok(list);
     }
 
-    @PostMapping("/{homeworkId}/submissions")
+    @PostMapping(value = "/{homeworkId}/submissions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Submit solution", description = "Create a submission for a homework. Files are optional. Requires STUDENT role.")
     public ResponseEntity<HomeworkSubmissionDto> create(
             @PathVariable UUID homeworkId,
-            @Valid @RequestBody CreateSubmissionRequest body,
+            @Valid @RequestPart("payload") CreateSubmissionRequest body,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
             HttpServletRequest request
     ) {
         UUID requesterId = authApi.getCurrentUser(request)
                 .map(u -> u.id())
                 .orElseThrow(() -> Errors.unauthorized("Authentication required"));
 
-        List<UUID> fileIds = body.storedFileIds() != null ? body.storedFileIds() : List.of();
-        for (UUID fileId : fileIds) {
-            if (documentApi.getStoredFile(fileId).isEmpty()) {
-                throw SubmissionErrors.fileNotFound(fileId);
-            }
+        try (var bundle = MultipartUploadSupport.prepareMany(files, requesterId, FilePolicyKey.CONTROLLED_ATTACHMENT)) {
+            HomeworkSubmissionDto dto = submissionApi.create(
+                    homeworkId,
+                    body.description(),
+                    bundle.uploads(),
+                    requesterId
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
         }
-        HomeworkSubmissionDto dto = submissionApi.create(
-                homeworkId,
-                body.description(),
-                fileIds,
-                requesterId
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
     @GetMapping(value = "/{homeworkId}/submissions/archive", produces = "application/zip")

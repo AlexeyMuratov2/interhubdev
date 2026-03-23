@@ -1,6 +1,11 @@
 package com.example.interhubdev.submission.internal;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -8,13 +13,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 /**
  * JPA entity for a student's homework submission.
- * Files are optional (stored in HomeworkSubmissionFile).
  */
 @Entity
 @Table(name = "homework_submission")
@@ -42,8 +44,4 @@ class HomeworkSubmission {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @OneToMany(mappedBy = "submission", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("sortOrder ASC")
-    @Builder.Default
-    private List<HomeworkSubmissionFile> files = new ArrayList<>();
 }

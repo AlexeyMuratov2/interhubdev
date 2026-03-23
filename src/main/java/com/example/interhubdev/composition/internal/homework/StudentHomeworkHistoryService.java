@@ -4,10 +4,8 @@ import com.example.interhubdev.composition.StudentHomeworkHistoryDto;
 import com.example.interhubdev.composition.StudentHomeworkHistoryItemDto;
 import com.example.interhubdev.composition.StudentHomeworkHistoryQueryApi;
 import com.example.interhubdev.composition.internal.shared.SubjectNameResolver;
-import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
-import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.error.Errors;
 import com.example.interhubdev.grades.GradesApi;
 import com.example.interhubdev.offering.OfferingApi;
@@ -40,7 +38,6 @@ class StudentHomeworkHistoryService implements StudentHomeworkHistoryQueryApi {
     private final HomeworkApi homeworkApi;
     private final SubmissionApi submissionApi;
     private final GradesApi gradesApi;
-    private final DocumentApi documentApi;
     private final StudentApi studentApi;
     private final SubjectNameResolver subjectNameResolver;
 
@@ -88,11 +85,9 @@ class StudentHomeworkHistoryService implements StudentHomeworkHistoryQueryApi {
         Map<UUID, com.example.interhubdev.grades.GradeEntryDto> gradeBySubmissionId =
                 gradesApi.getGradeEntriesByHomeworkSubmissionIds(submissionIds, requesterId, studentId);
 
-        Map<UUID, StoredFileDto> filesById = resolveSubmissionFiles(submissionByHomeworkId.values());
-
         List<StudentHomeworkHistoryItemDto> items = homeworks.stream()
                 .sorted(comparatorByLessonAndHomework(lessonById))
-                .map(hw -> toItem(hw, lessonById, submissionByHomeworkId, gradeBySubmissionId, filesById))
+                .map(hw -> toItem(hw, lessonById, submissionByHomeworkId, gradeBySubmissionId))
                 .toList();
 
         return new StudentHomeworkHistoryDto(student, offeringId, subjectName, items);
@@ -112,8 +107,7 @@ class StudentHomeworkHistoryService implements StudentHomeworkHistoryQueryApi {
             HomeworkDto homework,
             Map<UUID, LessonDto> lessonById,
             Map<UUID, HomeworkSubmissionDto> submissionByHomeworkId,
-            Map<UUID, com.example.interhubdev.grades.GradeEntryDto> gradeBySubmissionId,
-            Map<UUID, StoredFileDto> filesById) {
+            Map<UUID, com.example.interhubdev.grades.GradeEntryDto> gradeBySubmissionId) {
         LessonDto lesson = lessonById.get(homework.lessonId());
         if (lesson == null) {
             throw new IllegalStateException("Lesson not found for homework " + homework.id());
@@ -122,11 +116,8 @@ class StudentHomeworkHistoryService implements StudentHomeworkHistoryQueryApi {
         Optional<HomeworkSubmissionDto> submissionOpt = Optional.ofNullable(submission);
         Optional<com.example.interhubdev.grades.GradeEntryDto> gradeOpt = submissionOpt
                 .flatMap(s -> Optional.ofNullable(gradeBySubmissionId.get(s.id())));
-        List<StoredFileDto> submissionFiles = submissionOpt
-                .map(s -> s.storedFileIds().stream()
-                        .map(filesById::get)
-                        .filter(Objects::nonNull)
-                        .toList())
+        List<com.example.interhubdev.submission.SubmissionAttachmentDto> submissionFiles = submissionOpt
+                .map(HomeworkSubmissionDto::attachments)
                 .orElse(List.of());
         return new StudentHomeworkHistoryItemDto(
                 homework,
@@ -134,17 +125,5 @@ class StudentHomeworkHistoryService implements StudentHomeworkHistoryQueryApi {
                 submissionOpt,
                 gradeOpt,
                 submissionFiles);
-    }
-
-    private Map<UUID, StoredFileDto> resolveSubmissionFiles(Collection<HomeworkSubmissionDto> submissions) {
-        Map<UUID, StoredFileDto> filesById = new LinkedHashMap<>();
-        for (HomeworkSubmissionDto s : submissions) {
-            for (UUID fileId : s.storedFileIds()) {
-                if (!filesById.containsKey(fileId)) {
-                    documentApi.getStoredFile(fileId).ifPresent(f -> filesById.put(fileId, f));
-                }
-            }
-        }
-        return filesById;
     }
 }

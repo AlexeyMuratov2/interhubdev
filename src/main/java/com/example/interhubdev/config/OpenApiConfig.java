@@ -9,17 +9,30 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * OpenAPI/Swagger configuration.
  * 
  * <p>Provides API documentation with JWT authentication support.</p>
  * 
- * <p>Swagger UI available at: /swagger-ui.html</p>
- * <p>OpenAPI JSON available at: /api-docs</p>
+ * <p>Swagger UI: {@code /swagger-ui.html} (or {@code /swagger-ui} → redirect).</p>
+ * <p>OpenAPI JSON: {@code /api-docs} (see {@code springdoc.api-docs.path}).</p>
  */
 @Configuration
-public class OpenApiConfig {
+public class OpenApiConfig implements WebMvcConfigurer {
+
+    /**
+     * Many guides link to {@code /swagger-ui} without {@code .html}; springdoc only serves
+     * {@code /swagger-ui.html} and static assets under {@code /swagger-ui/...}, so bare
+     * {@code /swagger-ui} would 404 without this redirect.
+     */
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addRedirectViewController("/swagger-ui", "/swagger-ui.html");
+        registry.addRedirectViewController("/swagger-ui/", "/swagger-ui.html");
+    }
 
     @Bean
     public OpenAPI openAPI() {

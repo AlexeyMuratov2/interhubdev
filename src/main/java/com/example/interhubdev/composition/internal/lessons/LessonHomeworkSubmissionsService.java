@@ -1,10 +1,8 @@
 package com.example.interhubdev.composition.internal.lessons;
 
 import com.example.interhubdev.composition.LessonHomeworkSubmissionsDto;
-import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
-import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.grades.GradeEntryDto;
 import com.example.interhubdev.grades.GradesApi;
 import com.example.interhubdev.group.GroupApi;
@@ -42,7 +40,6 @@ class LessonHomeworkSubmissionsService {
     private final HomeworkApi homeworkApi;
     private final SubmissionApi submissionApi;
     private final GradesApi gradesApi;
-    private final DocumentApi documentApi;
 
     LessonHomeworkSubmissionsDto execute(UUID lessonId, UUID requesterId) {
         if (requesterId == null) {
@@ -76,17 +73,6 @@ class LessonHomeworkSubmissionsService {
 
         Map<UUID, GradeEntryDto> gradeEntryBySubmissionId = gradesApi.getGradeEntriesByHomeworkSubmissionIds(allSubmissionIds, requesterId, null);
 
-        Map<UUID, StoredFileDto> filesById = new LinkedHashMap<>();
-        for (var e : submissionByUserAndHomework.values()) {
-            for (HomeworkSubmissionDto s : e.values()) {
-                for (UUID fileId : s.storedFileIds()) {
-                    if (!filesById.containsKey(fileId)) {
-                        documentApi.getStoredFile(fileId).ifPresent(f -> filesById.put(fileId, f));
-                    }
-                }
-            }
-        }
-
         List<LessonHomeworkSubmissionsDto.StudentHomeworkRowDto> studentRows = roster.stream()
                 .map(student -> {
                     List<LessonHomeworkSubmissionsDto.StudentHomeworkItemDto> items = homeworks.stream()
@@ -100,12 +86,8 @@ class LessonHomeworkSubmissionsService {
                                 }
                                 GradeEntryDto gradeEntry = gradeEntryBySubmissionId.get(sub.id());
                                 BigDecimal points = gradeEntry != null ? gradeEntry.points() : null;
-                                List<StoredFileDto> files = sub.storedFileIds().stream()
-                                        .map(filesById::get)
-                                        .filter(Objects::nonNull)
-                                        .toList();
                                 return new LessonHomeworkSubmissionsDto.StudentHomeworkItemDto(
-                                        hw.id(), sub, points, gradeEntry, files);
+                                        hw.id(), sub, points, gradeEntry, sub.attachments());
                             })
                             .toList();
                     return new LessonHomeworkSubmissionsDto.StudentHomeworkRowDto(student, items);

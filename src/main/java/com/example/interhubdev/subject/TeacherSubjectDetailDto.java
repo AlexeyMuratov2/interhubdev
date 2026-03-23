@@ -104,18 +104,17 @@ public record TeacherSubjectDetailDto(
         UUID authorId,
         String authorName,
         LocalDateTime uploadedAt,
-        StoredFileInfoDto file
+        AttachmentInfoDto attachment
     ) {}
     
     /**
-     * Stored file information.
+     * Document attachment information.
      */
-    public record StoredFileInfoDto(
+    public record AttachmentInfoDto(
         UUID id,
-        String originalName,
-        String contentType,
-        long size,
-        LocalDateTime uploadedAt,
-        UUID uploadedBy
+        String fileName,
+        String declaredContentType,
+        long sizeBytes,
+        String status
     ) {}
 }

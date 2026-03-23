@@ -1,6 +1,7 @@
 package com.example.interhubdev.submission;
 
 import com.example.interhubdev.error.AppException;
+import com.example.interhubdev.fileasset.FileAssetUploadCommand;
 
 import java.util.Collection;
 import java.util.List;
@@ -22,13 +23,13 @@ public interface SubmissionApi {
      *
      * @param homeworkId    homework (assignment) UUID; must exist
      * @param description  optional text description
-     * @param storedFileIds optional list of already-uploaded stored file IDs (each must exist)
+     * @param uploads optional list of uploaded files
      * @param requesterId   current user (must have STUDENT role; becomes author)
      * @return created submission DTO
-     * @throws AppException NOT_FOUND if homework or any file not found, FORBIDDEN if not student,
+     * @throws AppException NOT_FOUND if homework not found, FORBIDDEN if not student,
      *                      BAD_REQUEST on validation (e.g. description too long)
      */
-    HomeworkSubmissionDto create(UUID homeworkId, String description, List<UUID> storedFileIds, UUID requesterId);
+    HomeworkSubmissionDto create(UUID homeworkId, String description, List<FileAssetUploadCommand> uploads, UUID requesterId);
 
     /**
      * List all submissions for a homework. Only teachers and admins can list.
@@ -81,26 +82,6 @@ public interface SubmissionApi {
      * @throws AppException NOT_FOUND if submission not found, FORBIDDEN if not the author
      */
     void delete(UUID submissionId, UUID requesterId);
-
-    /**
-     * Check if the given stored file is referenced by any submission.
-     * Used by document module (via adapter) to prevent deleting files in use.
-     *
-     * @param storedFileId stored file UUID
-     * @return true if at least one submission references this file
-     */
-    boolean isStoredFileInUse(UUID storedFileId);
-
-    /**
-     * Check whether the user can download this stored file as a teacher (e.g. when building
-     * submissions archive). Used by document module via {@link com.example.interhubdev.document.api.StoredFileDownloadAccessPort}.
-     * Returns true if the file is attached to a submission whose homework's lesson is taught by the user.
-     *
-     * @param storedFileId stored file UUID
-     * @param userId       user ID (must be teacher of the lesson for that homework, or admin/moderator is not checked here)
-     * @return true if the user is allowed to download this file in teacher context
-     */
-    boolean canTeacherDownloadSubmissionFile(UUID storedFileId, UUID userId);
 
     /**
      * Count distinct homework IDs for which the given author has at least one submission.

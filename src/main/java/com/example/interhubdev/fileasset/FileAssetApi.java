@@ -13,6 +13,8 @@ import java.util.UUID;
  */
 public interface FileAssetApi {
 
+    FileAssetView ingest(FileAssetUploadCommand command);
+
     FileAssetView register(
         FilePolicyKey policyKey,
         String originalName,
@@ -32,4 +34,6 @@ public interface FileAssetApi {
     Map<UUID, FileAssetView> getMany(Set<UUID> fileAssetIds);
 
     FileAssetView markDeleted(UUID fileAssetId);
+
+    FileAssetDownloadHandle openDownload(UUID fileAssetId);
 }

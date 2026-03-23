@@ -2,7 +2,7 @@ package com.example.interhubdev.subject.internal;
 
 import com.example.interhubdev.department.DepartmentDto;
 import com.example.interhubdev.document.CourseMaterialDto;
-import com.example.interhubdev.document.StoredFileDto;
+import com.example.interhubdev.document.DocumentAttachmentDto;
 import com.example.interhubdev.group.StudentGroupDto;
 import com.example.interhubdev.program.CurriculumSubjectAssessmentDto;
 import com.example.interhubdev.program.CurriculumSubjectDto;
@@ -142,18 +142,17 @@ final class TeacherSubjectMappers {
             material.authorId(),
             author != null ? getUserDisplayName(author) : null,
             material.uploadedAt(),
-            toStoredFileInfoDto(material.file())
+            toAttachmentInfoDto(material.attachment())
         );
     }
 
-    static TeacherSubjectDetailDto.StoredFileInfoDto toStoredFileInfoDto(StoredFileDto file) {
-        return new TeacherSubjectDetailDto.StoredFileInfoDto(
+    static TeacherSubjectDetailDto.AttachmentInfoDto toAttachmentInfoDto(DocumentAttachmentDto file) {
+        return new TeacherSubjectDetailDto.AttachmentInfoDto(
             file.id(),
-            file.originalName(),
-            file.contentType(),
-            file.size(),
-            file.uploadedAt(),
-            file.uploadedBy()
+            file.fileName(),
+            file.declaredContentType(),
+            file.sizeBytes(),
+            file.status().name()
         );
     }
 

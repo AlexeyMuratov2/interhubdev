@@ -20,15 +20,4 @@ public interface CourseMaterialRepository extends JpaRepository<CourseMaterial, 
      */
     List<CourseMaterial> findByOfferingIdOrderByUploadedAtDesc(UUID offeringId);
 
-    /**
-     * Check if any course material uses the given stored file.
-     */
-    @Query("SELECT COUNT(c) > 0 FROM CourseMaterial c WHERE c.storedFileId = :storedFileId")
-    boolean existsByStoredFileId(@Param("storedFileId") UUID storedFileId);
-
-    /**
-     * Count how many course materials use the given stored file.
-     */
-    @Query("SELECT COUNT(c) FROM CourseMaterial c WHERE c.storedFileId = :storedFileId")
-    long countByStoredFileId(@Param("storedFileId") UUID storedFileId);
 }

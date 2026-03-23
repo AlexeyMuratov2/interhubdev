@@ -2,7 +2,10 @@ package com.example.interhubdev.fileasset.internal;
 
 import com.example.interhubdev.error.AppException;
 import com.example.interhubdev.fileasset.FileAssetApi;
+import com.example.interhubdev.fileasset.FileAssetDownloadHandle;
 import com.example.interhubdev.fileasset.FileAssetStatus;
+import com.example.interhubdev.fileasset.FileAssetUploadCommand;
+import com.example.interhubdev.fileasset.FileAssetUsagePort;
 import com.example.interhubdev.fileasset.FileAssetView;
 import com.example.interhubdev.fileasset.FilePolicyKey;
 import com.example.interhubdev.fileasset.FileUploadReceipt;
@@ -17,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -45,6 +50,42 @@ class FileAssetServiceImpl implements FileAssetApi {
     private final FileAssetProcessingEngine processingEngine;
     private final FileAssetStoragePort storagePort;
     private final FileAssetCapacityGate capacityGate;
+    private final java.util.List<FileAssetUsagePort> usagePorts;
+
+    @Override
+    @Transactional
+    public FileAssetView ingest(FileAssetUploadCommand command) {
+        validateUploadCommand(command);
+
+        FileAssetView registered = register(
+            command.policyKey(),
+            command.originalName(),
+            command.declaredContentType(),
+            command.sizeBytes(),
+            command.uploadedBy()
+        );
+
+        String tempObjectKey = buildTempObjectKey(registered.id());
+        FileAssetStoragePort.HardenedObjectMetadata tempMetadata = new FileAssetStoragePort.HardenedObjectMetadata(
+            "application/octet-stream",
+            "attachment"
+        );
+
+        try (InputStream inputStream = Files.newInputStream(command.tempFile())) {
+            storagePort.uploadToTemp(tempObjectKey, inputStream, command.sizeBytes(), tempMetadata);
+            FileAssetView uploaded = markUploaded(
+                registered.id(),
+                new FileUploadReceipt("ingest:" + registered.id(), null, null)
+            );
+            return requestProcessing(uploaded.id());
+        } catch (RuntimeException runtimeException) {
+            safeDelete(registered.id());
+            throw runtimeException;
+        } catch (Exception exception) {
+            safeDelete(registered.id());
+            throw FileAssetErrors.scanFailed();
+        }
+    }
 
     @Override
     @Transactional
@@ -187,6 +228,11 @@ class FileAssetServiceImpl implements FileAssetApi {
         if (entity.getStatus().isTerminal()) {
             throw FileAssetErrors.invalidTransition(fileAssetId, entity.getStatus(), "mark deleted");
         }
+        for (FileAssetUsagePort usagePort : usagePorts) {
+            if (usagePort.isFileAssetInUse(fileAssetId)) {
+                throw FileAssetErrors.fileAssetInUse(fileAssetId);
+            }
+        }
 
         entity.setStatus(FileAssetStatus.DELETED);
         entity.setDeletedAt(LocalDateTime.now());
@@ -194,6 +240,29 @@ class FileAssetServiceImpl implements FileAssetApi {
         cleanupPhysical(entity);
 
         return FileAssetMapper.toView(fileAssetRepository.save(entity));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FileAssetDownloadHandle openDownload(UUID fileAssetId) {
+        FileAsset entity = fileAssetRepository.findById(fileAssetId)
+            .orElseThrow(() -> FileAssetErrors.fileAssetNotFound(fileAssetId));
+        if (entity.getStatus() != FileAssetStatus.ACTIVE) {
+            throw FileAssetErrors.fileNotActive(fileAssetId);
+        }
+        if (entity.getDeliveryProfile() != null
+            && entity.getDeliveryProfile() != com.example.interhubdev.fileasset.FileDeliveryProfile.BACKEND_ATTACHMENT_STREAM_ONLY
+            && entity.getDeliveryProfile() != com.example.interhubdev.fileasset.FileDeliveryProfile.CONTROLLED_ATTACHMENT_ONLY) {
+            throw FileAssetErrors.deliveryNotAllowed(fileAssetId);
+        }
+        if (entity.getFinalObjectKey() == null || entity.getFinalObjectKey().isBlank()) {
+            throw FileAssetErrors.fileNotActive(fileAssetId);
+        }
+        return new FileAssetDownloadHandle(
+            entity.getOriginalName(),
+            entity.getSizeBytes(),
+            storagePort.openStream(entity.getFinalObjectKey())
+        );
     }
 
     @Transactional
@@ -308,6 +377,20 @@ class FileAssetServiceImpl implements FileAssetApi {
 
     private static String buildTempObjectKey(UUID fileAssetId) {
         return "fileassets/quarantine/" + fileAssetId;
+    }
+
+    private void safeDelete(UUID fileAssetId) {
+        try {
+            markDeleted(fileAssetId);
+        } catch (Exception ignored) {
+            log.debug("Best-effort cleanup failed for fileAssetId={}", fileAssetId, ignored);
+        }
+    }
+
+    private static void validateUploadCommand(FileAssetUploadCommand command) {
+        if (command == null || command.tempFile() == null || command.policyKey() == null || command.uploadedBy() == null) {
+            throw FileAssetErrors.invalidRegistration("upload command is incomplete");
+        }
     }
 
     private void cleanupPhysical(FileAsset entity) {

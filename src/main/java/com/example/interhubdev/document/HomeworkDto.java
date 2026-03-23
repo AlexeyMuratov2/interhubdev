@@ -13,7 +13,7 @@ public record HomeworkDto(
     String title,
     String description,
     Integer points,
-    List<StoredFileDto> files,
+    List<DocumentAttachmentDto> attachments,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {

@@ -33,4 +33,26 @@ public record FileAssetView(
     LocalDateTime failedAt,
     LocalDateTime deletedAt
 ) {
+
+    public FileAssetStage stage() {
+        return switch (status) {
+            case REGISTERED, UPLOADED -> FileAssetStage.RECEIVED;
+            case PROCESSING -> FileAssetStage.SCANNING;
+            case ACTIVE -> FileAssetStage.READY;
+            case FAILED, DELETED, EXPIRED -> FileAssetStage.FAILED;
+        };
+    }
+
+    public int progressPercent() {
+        return switch (status) {
+            case REGISTERED -> 10;
+            case UPLOADED -> 25;
+            case PROCESSING -> 60;
+            case ACTIVE, FAILED, DELETED, EXPIRED -> 100;
+        };
+    }
+
+    public boolean downloadAvailable() {
+        return status == FileAssetStatus.ACTIVE;
+    }
 }

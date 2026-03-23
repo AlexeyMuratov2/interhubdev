@@ -16,8 +16,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * JPA entity for course material (business entity linking group_subject_offering to stored file).
- * CourseMaterial is separate from StoredFile to keep file storage generic.
+ * JPA entity for course material.
  * Materials belong to a specific offering (group + curriculum_subject + teacher), allowing each teacher
  * to have their own materials for the same subject.
  */
@@ -36,9 +35,6 @@ class CourseMaterial {
 
     @Column(name = "offering_id", nullable = false)
     private UUID offeringId;
-
-    @Column(name = "stored_file_id", nullable = false)
-    private UUID storedFileId;
 
     @Column(name = "title", nullable = false, length = 500)
     private String title;

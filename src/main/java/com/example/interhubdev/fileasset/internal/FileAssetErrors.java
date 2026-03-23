@@ -27,6 +27,9 @@ public final class FileAssetErrors {
     public static final String CODE_ANTIVIRUS_TIMEOUT = "FILE_ASSET_ANTIVIRUS_TIMEOUT";
     public static final String CODE_SCANNER_CAPACITY_EXCEEDED = "FILE_ASSET_SCANNER_CAPACITY_EXCEEDED";
     public static final String CODE_SCAN_FAILED = "FILE_ASSET_SCAN_FAILED";
+    public static final String CODE_FILE_ASSET_NOT_ACTIVE = "FILE_ASSET_NOT_ACTIVE";
+    public static final String CODE_FILE_ASSET_DELIVERY_NOT_ALLOWED = "FILE_ASSET_DELIVERY_NOT_ALLOWED";
+    public static final String CODE_FILE_ASSET_IN_USE = "FILE_ASSET_IN_USE";
 
     private FileAssetErrors() {
     }
@@ -100,5 +103,20 @@ public final class FileAssetErrors {
     public static AppException scanFailed() {
         return Errors.of(HttpStatus.SERVICE_UNAVAILABLE, CODE_SCAN_FAILED,
             "File scan failed; the file cannot be activated.");
+    }
+
+    public static AppException fileNotActive(UUID id) {
+        return Errors.of(HttpStatus.CONFLICT, CODE_FILE_ASSET_NOT_ACTIVE,
+            "File asset is not active and cannot be downloaded: " + id);
+    }
+
+    public static AppException deliveryNotAllowed(UUID id) {
+        return Errors.of(HttpStatus.FORBIDDEN, CODE_FILE_ASSET_DELIVERY_NOT_ALLOWED,
+            "Delivery is not allowed by policy for file asset " + id);
+    }
+
+    public static AppException fileAssetInUse(UUID id) {
+        return Errors.of(HttpStatus.CONFLICT, CODE_FILE_ASSET_IN_USE,
+            "File asset is still bound by a business module: " + id);
     }
 }

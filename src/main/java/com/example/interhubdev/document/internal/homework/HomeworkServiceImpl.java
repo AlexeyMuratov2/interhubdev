@@ -1,12 +1,12 @@
 package com.example.interhubdev.document.internal.homework;
 
-import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
 import com.example.interhubdev.document.LessonLookupPort;
-import com.example.interhubdev.document.internal.storedFile.DocumentErrors;
-import com.example.interhubdev.storedfile.StoredFileApi;
+import com.example.interhubdev.document.internal.attachment.DocumentAttachmentOwnerType;
+import com.example.interhubdev.document.internal.attachment.DocumentAttachmentService;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.fileasset.FileAssetUploadCommand;
 import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserApi;
 import com.example.interhubdev.user.UserDto;
@@ -22,15 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link HomeworkApi}: create, list, get, update, delete homework.
- * When file links are cleared we only remove the links; we do not delete the stored files.
  */
 @Service
 @RequiredArgsConstructor
@@ -38,10 +34,8 @@ import java.util.stream.Collectors;
 class HomeworkServiceImpl implements HomeworkApi {
 
     private final HomeworkRepository homeworkRepository;
-    private final HomeworkFileRepository homeworkFileRepository;
     private final LessonHomeworkRepository lessonHomeworkRepository;
-    private final StoredFileApi storedFileApi;
-    private final DocumentApi documentApi;
+    private final DocumentAttachmentService documentAttachmentService;
     private final LessonLookupPort lessonLookupPort;
     private final UserApi userApi;
     
@@ -51,7 +45,7 @@ class HomeworkServiceImpl implements HomeworkApi {
     @Override
     @Transactional
     public HomeworkDto create(UUID lessonId, String title, String description, Integer points,
-                              List<UUID> storedFileIds, UUID requesterId) {
+                              List<FileAssetUploadCommand> uploads, UUID requesterId) {
         validateRequester(requesterId);
         checkManagePermission(requesterId);
 
@@ -61,11 +55,6 @@ class HomeworkServiceImpl implements HomeworkApi {
         validateTitle(title);
         validatePoints(points);
 
-        List<UUID> fileIds = storedFileIds != null ? storedFileIds : List.of();
-        if (fileIds.stream().distinct().count() != fileIds.size()) {
-            throw HomeworkErrors.validationFailed("Duplicate file IDs in request");
-        }
-
         Homework homework = Homework.builder()
             .title(title)
             .description(description)
@@ -74,18 +63,6 @@ class HomeworkServiceImpl implements HomeworkApi {
 
         try {
             Homework saved = homeworkRepository.save(homework);
-
-            for (int i = 0; i < fileIds.size(); i++) {
-                UUID fileId = fileIds.get(i);
-                com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(fileId)
-                    .orElseThrow(() -> DocumentErrors.storedFileNotFound(fileId));
-                if (!fileDto.isActive()) {
-                    throw DocumentErrors.fileNotActiveForBind();
-                }
-                HomeworkFile hf = new HomeworkFile(saved.getId(), fileId, i, saved);
-                homeworkFileRepository.save(hf);
-            }
-
             LessonHomework.LessonHomeworkId compositeId = new LessonHomework.LessonHomeworkId(lessonId, saved.getId());
             LessonHomework lessonHomework = new LessonHomework(lessonId, saved.getId(), saved);
 
@@ -98,9 +75,10 @@ class HomeworkServiceImpl implements HomeworkApi {
             saved.setLessonHomework(managedInstance != null ? managedInstance : savedLessonHomework);
 
             Homework withFiles = homeworkRepository.findByIdWithLessonAndFiles(saved.getId()).orElse(saved);
-            Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(
-                withFiles.getFiles().stream().map(HomeworkFile::getStoredFileId).collect(Collectors.toSet()));
-            return HomeworkMappers.toDto(withFiles, filesMap);
+            return HomeworkMappers.toDto(
+                withFiles,
+                documentAttachmentService.createAttachments(DocumentAttachmentOwnerType.HOMEWORK, saved.getId(), uploads)
+            );
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save homework (lessonId={}): {}", lessonId, e.getMessage());
             throw HomeworkErrors.saveFailed();
@@ -115,11 +93,13 @@ class HomeworkServiceImpl implements HomeworkApi {
             throw HomeworkErrors.lessonNotFound(lessonId);
         }
         List<Homework> list = homeworkRepository.findByLessonIdOrderByCreatedAtDescWithFiles(lessonId);
-        Set<UUID> allFileIds = list.stream()
-            .flatMap(h -> h.getFiles().stream().map(HomeworkFile::getStoredFileId))
-            .collect(Collectors.toSet());
-        Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(allFileIds);
-        return list.stream().map(h -> HomeworkMappers.toDto(h, filesMap)).toList();
+        var attachmentsByOwner = documentAttachmentService.findByOwners(
+            DocumentAttachmentOwnerType.HOMEWORK,
+            list.stream().map(Homework::getId).toList()
+        );
+        return list.stream()
+            .map(homework -> HomeworkMappers.toDto(homework, attachmentsByOwner.getOrDefault(homework.getId(), List.of())))
+            .toList();
     }
 
     @Override
@@ -137,11 +117,10 @@ class HomeworkServiceImpl implements HomeworkApi {
     public Optional<HomeworkDto> get(UUID homeworkId, UUID requesterId) {
         validateRequester(requesterId);
         return homeworkRepository.findByIdWithLessonAndFiles(homeworkId)
-            .map(h -> {
-                Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(
-                    h.getFiles().stream().map(HomeworkFile::getStoredFileId).collect(Collectors.toSet()));
-                return HomeworkMappers.toDto(h, filesMap);
-            });
+            .map(h -> HomeworkMappers.toDto(
+                h,
+                documentAttachmentService.findByOwner(DocumentAttachmentOwnerType.HOMEWORK, h.getId())
+            ));
     }
 
     @Override
@@ -155,17 +134,19 @@ class HomeworkServiceImpl implements HomeworkApi {
                 .map(id -> homeworkRepository.findByIdWithLessonAndFiles(id).orElse(null))
                 .filter(java.util.Objects::nonNull)
                 .toList();
-        Set<UUID> allFileIds = homeworks.stream()
-            .flatMap(h -> h.getFiles().stream().map(HomeworkFile::getStoredFileId))
-            .collect(Collectors.toSet());
-        Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(allFileIds);
-        return homeworks.stream().map(h -> HomeworkMappers.toDto(h, filesMap)).toList();
+        var attachmentsByOwner = documentAttachmentService.findByOwners(
+            DocumentAttachmentOwnerType.HOMEWORK,
+            homeworks.stream().map(Homework::getId).toList()
+        );
+        return homeworks.stream()
+            .map(homework -> HomeworkMappers.toDto(homework, attachmentsByOwner.getOrDefault(homework.getId(), List.of())))
+            .toList();
     }
 
     @Override
     @Transactional
     public HomeworkDto update(UUID homeworkId, String title, String description, Integer points,
-                              boolean clearFiles, List<UUID> storedFileIds, UUID requesterId) {
+                              boolean clearFiles, List<UUID> retainAttachmentIds, List<FileAssetUploadCommand> uploads, UUID requesterId) {
         validateRequester(requesterId);
         checkManagePermission(requesterId);
 
@@ -183,34 +164,18 @@ class HomeworkServiceImpl implements HomeworkApi {
             validatePoints(points);
             homework.setPoints(points);
         }
-
-        if (clearFiles) {
-            homework.getFiles().clear();
-        } else if (storedFileIds != null) {
-            if (storedFileIds.stream().distinct().count() != storedFileIds.size()) {
-                throw HomeworkErrors.validationFailed("Duplicate file IDs in request");
-            }
-            for (UUID fileId : storedFileIds) {
-                com.example.interhubdev.document.StoredFileDto fileDto = documentApi.getStoredFile(fileId)
-                    .orElseThrow(() -> DocumentErrors.storedFileNotFound(fileId));
-                if (!fileDto.isActive()) {
-                    throw DocumentErrors.fileNotActiveForBind();
-                }
-            }
-            homework.getFiles().clear();
-            for (int i = 0; i < storedFileIds.size(); i++) {
-                UUID fileId = storedFileIds.get(i);
-                HomeworkFile hf = new HomeworkFile(homework.getId(), fileId, i, homework);
-                homework.getFiles().add(hf);
-            }
-        }
         homework.setUpdatedAt(LocalDateTime.now());
 
         try {
             Homework saved = homeworkRepository.save(homework);
-            Map<UUID, com.example.interhubdev.document.StoredFileDto> filesMap = documentApi.getStoredFiles(
-                saved.getFiles().stream().map(HomeworkFile::getStoredFileId).collect(Collectors.toSet()));
-            return HomeworkMappers.toDto(saved, filesMap);
+            List<com.example.interhubdev.document.DocumentAttachmentDto> attachments = documentAttachmentService.replaceAttachments(
+                DocumentAttachmentOwnerType.HOMEWORK,
+                homeworkId,
+                retainAttachmentIds,
+                clearFiles,
+                uploads
+            );
+            return HomeworkMappers.toDto(saved, attachments);
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to update homework {}: {}", homeworkId, e.getMessage());
             throw HomeworkErrors.saveFailed();
@@ -225,9 +190,8 @@ class HomeworkServiceImpl implements HomeworkApi {
 
         Homework homework = homeworkRepository.findById(homeworkId)
             .orElseThrow(() -> HomeworkErrors.homeworkNotFound(homeworkId));
+        documentAttachmentService.removeAll(DocumentAttachmentOwnerType.HOMEWORK, homeworkId);
         homeworkRepository.delete(homework);
-        // Junction table entry is deleted via CASCADE in database
-        // We do not delete the stored file when homework is deleted
     }
 
     private void validateRequester(UUID requesterId) {

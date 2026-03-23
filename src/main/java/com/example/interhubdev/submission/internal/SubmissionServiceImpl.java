@@ -1,10 +1,9 @@
 package com.example.interhubdev.submission.internal;
 
-import com.example.interhubdev.document.DocumentApi;
 import com.example.interhubdev.document.HomeworkApi;
 import com.example.interhubdev.document.HomeworkDto;
-import com.example.interhubdev.document.StoredFileDto;
 import com.example.interhubdev.error.Errors;
+import com.example.interhubdev.fileasset.FileAssetUploadCommand;
 import com.example.interhubdev.offering.OfferingApi;
 import com.example.interhubdev.program.ProgramApi;
 import com.example.interhubdev.schedule.ScheduleApi;
@@ -12,10 +11,10 @@ import com.example.interhubdev.subject.SubjectApi;
 import com.example.interhubdev.subject.SubjectDto;
 import com.example.interhubdev.submission.HomeworkSubmissionDto;
 import com.example.interhubdev.submission.SubmissionApi;
+import com.example.interhubdev.submission.SubmissionsArchiveHandle;
 import com.example.interhubdev.submission.internal.archive.ArchiveData;
 import com.example.interhubdev.submission.internal.archive.ArchiveEntry;
 import com.example.interhubdev.submission.internal.archive.ArchiveInfo;
-import com.example.interhubdev.submission.SubmissionsArchiveHandle;
 import com.example.interhubdev.submission.internal.archive.ArchiveNamingService;
 import com.example.interhubdev.submission.internal.integration.HomeworkSubmissionSubmittedEventPayload;
 import com.example.interhubdev.teacher.TeacherApi;
@@ -54,7 +53,6 @@ class SubmissionServiceImpl implements SubmissionApi {
     private static final int MAX_DESCRIPTION_LENGTH = 5000;
 
     private final HomeworkSubmissionRepository submissionRepository;
-    private final HomeworkSubmissionFileRepository submissionFileRepository;
     private final HomeworkApi homeworkApi;
     private final UserApi userApi;
     private final ScheduleApi scheduleApi;
@@ -62,12 +60,12 @@ class SubmissionServiceImpl implements SubmissionApi {
     private final TeacherApi teacherApi;
     private final ProgramApi programApi;
     private final SubjectApi subjectApi;
-    private final DocumentApi documentApi;
+    private final SubmissionAttachmentService submissionAttachmentService;
     private final OutboxIntegrationEventPublisher outboxPublisher;
 
     @Override
     @Transactional
-    public HomeworkSubmissionDto create(UUID homeworkId, String description, List<UUID> storedFileIds, UUID requesterId) {
+    public HomeworkSubmissionDto create(UUID homeworkId, String description, List<FileAssetUploadCommand> uploads, UUID requesterId) {
         validateRequester(requesterId);
         checkStudentRole(requesterId);
 
@@ -77,16 +75,10 @@ class SubmissionServiceImpl implements SubmissionApi {
             throw SubmissionErrors.validationFailed("Description must not exceed " + MAX_DESCRIPTION_LENGTH + " characters");
         }
 
-        List<UUID> fileIds = storedFileIds != null ? storedFileIds : List.of();
-        List<UUID> distinctFileIds = fileIds.stream().distinct().toList();
-        if (distinctFileIds.size() != fileIds.size()) {
-            throw SubmissionErrors.validationFailed("Duplicate file IDs are not allowed");
-        }
-        // File existence is validated by the controller (document API) to avoid circular dependency.
-
         // One submission per student per homework: replace any existing submission by this author.
         List<HomeworkSubmission> existing = submissionRepository.findByHomeworkIdAndAuthorId(homeworkId, requesterId);
         for (HomeworkSubmission old : existing) {
+            submissionAttachmentService.removeAll(old.getId());
             submissionRepository.delete(old);
         }
 
@@ -98,15 +90,7 @@ class SubmissionServiceImpl implements SubmissionApi {
 
         try {
             HomeworkSubmission saved = submissionRepository.save(submission);
-            for (int i = 0; i < distinctFileIds.size(); i++) {
-                HomeworkSubmissionFile f = new HomeworkSubmissionFile();
-                f.setSubmissionId(saved.getId());
-                f.setStoredFileId(distinctFileIds.get(i));
-                f.setSortOrder(i);
-                submissionFileRepository.save(f);
-            }
-            HomeworkSubmission withFiles = submissionRepository.findByIdWithFiles(saved.getId())
-                .orElse(saved);
+            var attachments = submissionAttachmentService.createAttachments(saved.getId(), uploads);
 
             HomeworkSubmissionSubmittedEventPayload eventPayload = new HomeworkSubmissionSubmittedEventPayload(
                     saved.getId(),
@@ -121,7 +105,7 @@ class SubmissionServiceImpl implements SubmissionApi {
                     .occurredAt(eventPayload.submittedAt())
                     .build());
 
-            return toDto(withFiles);
+            return SubmissionMappers.toDto(saved, attachments);
         } catch (PersistenceException | DataIntegrityViolationException e) {
             log.warn("Failed to save submission (homeworkId={}): {}", homeworkId, e.getMessage());
             throw SubmissionErrors.saveFailed();
@@ -138,7 +122,10 @@ class SubmissionServiceImpl implements SubmissionApi {
             throw SubmissionErrors.homeworkNotFound(homeworkId);
         }
         List<HomeworkSubmission> list = submissionRepository.findByHomeworkIdOrderBySubmittedAtDesc(homeworkId);
-        return list.stream().map(this::toDto).toList();
+        var attachmentsBySubmission = submissionAttachmentService.findBySubmissionIds(list.stream().map(HomeworkSubmission::getId).toList());
+        return list.stream()
+            .map(submission -> SubmissionMappers.toDto(submission, attachmentsBySubmission.getOrDefault(submission.getId(), List.of())))
+            .toList();
     }
 
     @Override
@@ -152,7 +139,10 @@ class SubmissionServiceImpl implements SubmissionApi {
         if (!isTeacherOrAdmin(requesterId)) {
             list = list.stream().filter(s -> s.getAuthorId().equals(requesterId)).toList();
         }
-        return list.stream().map(this::toDto).toList();
+        var attachmentsBySubmission = submissionAttachmentService.findBySubmissionIds(list.stream().map(HomeworkSubmission::getId).toList());
+        return list.stream()
+            .map(submission -> SubmissionMappers.toDto(submission, attachmentsBySubmission.getOrDefault(submission.getId(), List.of())))
+            .toList();
     }
 
     @Override
@@ -162,7 +152,10 @@ class SubmissionServiceImpl implements SubmissionApi {
         checkTeacherOrAdmin(requesterId);
 
         return submissionRepository.findByIdWithFiles(submissionId)
-            .map(this::toDto);
+            .map(submission -> SubmissionMappers.toDto(
+                submission,
+                submissionAttachmentService.findBySubmission(submission.getId())
+            ));
     }
 
     @Override
@@ -176,7 +169,10 @@ class SubmissionServiceImpl implements SubmissionApi {
         if (!isTeacherOrAdmin(requesterId)) {
             list = list.stream().filter(s -> s.getAuthorId().equals(requesterId)).toList();
         }
-        return list.stream().map(this::toDto).toList();
+        var attachmentsBySubmission = submissionAttachmentService.findBySubmissionIds(list.stream().map(HomeworkSubmission::getId).toList());
+        return list.stream()
+            .map(submission -> SubmissionMappers.toDto(submission, attachmentsBySubmission.getOrDefault(submission.getId(), List.of())))
+            .toList();
     }
 
     @Override
@@ -189,52 +185,8 @@ class SubmissionServiceImpl implements SubmissionApi {
         if (!submission.getAuthorId().equals(requesterId)) {
             throw SubmissionErrors.permissionDenied();
         }
+        submissionAttachmentService.removeAll(submissionId);
         submissionRepository.delete(submission);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isStoredFileInUse(UUID storedFileId) {
-        return submissionFileRepository.existsByStoredFileId(storedFileId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean canTeacherDownloadSubmissionFile(UUID storedFileId, UUID userId) {
-        List<HomeworkSubmissionFile> files = submissionFileRepository.findByStoredFileId(storedFileId);
-        if (files.isEmpty()) {
-            return false;
-        }
-        HomeworkSubmissionFile first = files.get(0);
-        Optional<HomeworkSubmission> submissionOpt = submissionRepository.findByIdWithFiles(first.getSubmissionId());
-        if (submissionOpt.isEmpty()) {
-            return false;
-        }
-        UUID homeworkId = submissionOpt.get().getHomeworkId();
-        Optional<HomeworkDto> homeworkOpt = homeworkApi.get(homeworkId, userId);
-        if (homeworkOpt.isEmpty()) {
-            return false;
-        }
-        UUID lessonId = homeworkOpt.get().lessonId();
-        var lessonOpt = scheduleApi.findLessonById(lessonId);
-        if (lessonOpt.isEmpty()) {
-            return false;
-        }
-        var offeringOpt = offeringApi.findOfferingById(lessonOpt.get().offeringId());
-        if (offeringOpt.isEmpty()) {
-            return false;
-        }
-        var teacherOpt = teacherApi.findByUserId(userId);
-        if (teacherOpt.isEmpty()) {
-            return false;
-        }
-        UUID teacherId = teacherOpt.get().id();
-        var offering = offeringOpt.get();
-        if (offering.teacherId() != null && offering.teacherId().equals(teacherId)) {
-            return true;
-        }
-        return offeringApi.findTeachersByOfferingId(offering.id()).stream()
-            .anyMatch(t -> t.teacherId().equals(teacherId));
     }
 
     @Override
@@ -256,7 +208,7 @@ class SubmissionServiceImpl implements SubmissionApi {
         ensureCanDownloadArchiveByHomework(homeworkId, requesterId);
         ArchiveData data = loadArchiveData(homeworkId, requesterId);
         String filename = ArchiveNamingService.buildArchiveFilename(data.info());
-        return new SubmissionsArchiveHandleImpl(filename, data, requesterId, documentApi);
+        return new SubmissionsArchiveHandleImpl(filename, data, requesterId, submissionAttachmentService);
     }
 
     /**
@@ -323,6 +275,9 @@ class SubmissionServiceImpl implements SubmissionApi {
         ArchiveInfo info = new ArchiveInfo(subjectName, homework.title(), lessonDate);
 
         List<HomeworkSubmission> submissions = submissionRepository.findByHomeworkIdOrderBySubmittedAtDesc(homeworkId);
+        var attachmentsBySubmission = submissionAttachmentService.findBySubmissionIds(
+            submissions.stream().map(HomeworkSubmission::getId).toList()
+        );
         Set<UUID> authorIds = submissions.stream().map(HomeworkSubmission::getAuthorId).collect(Collectors.toSet());
         List<UserDto> users = userApi.findByIds(authorIds);
         var userMap = users.stream().collect(Collectors.toMap(UserDto::id, u -> u.getFullName()));
@@ -330,22 +285,17 @@ class SubmissionServiceImpl implements SubmissionApi {
         List<ArchiveEntry> entries = new ArrayList<>();
         for (HomeworkSubmission s : submissions) {
             String studentName = userMap.getOrDefault(s.getAuthorId(), s.getAuthorId().toString());
-            List<HomeworkSubmissionFile> files = s.getFiles() != null ? s.getFiles() : List.of();
+            List<com.example.interhubdev.submission.SubmissionAttachmentDto> files = attachmentsBySubmission.getOrDefault(s.getId(), List.of());
             int fileIndex = 0;
-            for (HomeworkSubmissionFile f : files) {
-                String originalName = null;
-                String extension = "";
-                Optional<StoredFileDto> meta = documentApi.getStoredFile(f.getStoredFileId());
-                if (meta.isPresent()) {
-                    originalName = meta.get().originalName();
-                    extension = extensionFromFilename(originalName);
-                }
+            for (com.example.interhubdev.submission.SubmissionAttachmentDto f : files) {
+                String originalName = f.fileName();
+                String extension = extensionFromFilename(originalName);
                 entries.add(new ArchiveEntry(
                     s.getAuthorId(),
                     studentName,
                     homework.title(),
                     lessonDate,
-                    f.getStoredFileId(),
+                    f.id(),
                     originalName != null ? originalName : "",
                     extension,
                     fileIndex++
@@ -367,13 +317,6 @@ class SubmissionServiceImpl implements SubmissionApi {
         if (filename == null || filename.isBlank()) return "";
         int i = filename.lastIndexOf('.');
         return i > 0 && i < filename.length() - 1 ? filename.substring(i + 1) : "";
-    }
-
-    private HomeworkSubmissionDto toDto(HomeworkSubmission s) {
-        List<UUID> ids = s.getFiles() != null
-            ? s.getFiles().stream().map(HomeworkSubmissionFile::getStoredFileId).collect(Collectors.toList())
-            : List.of();
-        return SubmissionMappers.toDto(s, ids);
     }
 
     private void validateRequester(UUID requesterId) {

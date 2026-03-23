@@ -1,6 +1,7 @@
 package com.example.interhubdev.document;
 
 import com.example.interhubdev.error.AppException;
+import com.example.interhubdev.fileasset.FileAssetUploadCommand;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,13 +24,12 @@ public interface LessonMaterialApi {
      * @param description   optional description
      * @param authorId      user creating the material
      * @param publishedAt   time of publication
-     * @param storedFileIds initial list of stored file UUIDs (order preserved as sort_order); may be empty
+     * @param uploads       initial uploads (order preserved as sort_order); may be empty
      * @return created lesson material DTO
-     * @throws AppException NOT_FOUND if lesson or any stored file not found, FORBIDDEN if permission denied,
-     *                      BAD_REQUEST on validation failure (e.g. duplicate file in list)
+     * @throws AppException NOT_FOUND if lesson not found, FORBIDDEN if permission denied, BAD_REQUEST on validation failure
      */
     LessonMaterialDto create(UUID lessonId, String name, String description, UUID authorId,
-                             LocalDateTime publishedAt, List<UUID> storedFileIds);
+                             LocalDateTime publishedAt, List<FileAssetUploadCommand> uploads);
 
     /**
      * List all lesson materials for a lesson, ordered by published_at descending.
@@ -65,25 +65,24 @@ public interface LessonMaterialApi {
     void delete(UUID materialId, UUID requesterId);
 
     /**
-     * Add files to an existing lesson material. New files are appended with increasing sort_order.
+     * Add files to an existing lesson material. New uploads are appended with increasing sort_order.
      * Requires permission: material author or ADMIN/MODERATOR/SUPER_ADMIN.
      *
      * @param materialId     lesson material UUID
-     * @param storedFileIds  list of stored file UUIDs to add (order preserved)
+     * @param uploads        uploads to add (order preserved)
      * @param requesterId    current authenticated user id (for permission check)
-     * @throws AppException NOT_FOUND if material or any stored file not found, FORBIDDEN if permission denied,
-     *                      BAD_REQUEST if file already in material
+     * @throws AppException NOT_FOUND if material not found, FORBIDDEN if permission denied
      */
-    void addFiles(UUID materialId, List<UUID> storedFileIds, UUID requesterId);
+    void addFiles(UUID materialId, List<FileAssetUploadCommand> uploads, UUID requesterId);
 
     /**
-     * Remove a file from a lesson material. If the stored file is not used elsewhere, it is deleted from storage.
+     * Remove an attachment from a lesson material.
      * Requires permission: material author or ADMIN/MODERATOR/SUPER_ADMIN.
      *
      * @param materialId    lesson material UUID
-     * @param storedFileId  stored file UUID to remove
+     * @param attachmentId  attachment UUID to remove
      * @param requesterId   current authenticated user id (for permission check)
      * @throws AppException NOT_FOUND if material or file link not found, FORBIDDEN if permission denied
      */
-    void removeFile(UUID materialId, UUID storedFileId, UUID requesterId);
+    void removeFile(UUID materialId, UUID attachmentId, UUID requesterId);
 }
