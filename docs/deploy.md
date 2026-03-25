@@ -1,102 +1,86 @@
-# Деплой приложения (Docker + tar)
+# Деплой приложения (тестовый)
 
-Тестовый деплой: сборка образа локально, экспорт в tar, загрузка на сервер и запуск полного стека (приложение + PostgreSQL, MinIO, Redis, ClamAV).
+Один актуальный Compose-файл для стека на VPS: **`docker-compose.test-deploy.yml`**.
 
-## Требования
+- **GitHub Actions** (ветка `test_deploy`): репозиторий копируется на сервер, на месте выполняется  
+  `docker compose -f docker-compose.test-deploy.yml up -d --build`. Подробности — в [DEPLOYMENT.md](../DEPLOYMENT.md).
+- **Локальная разработка без контейнера приложения**: только зависимости — **`compose.yaml`** (`docker compose up`).
+- Отдельной «продакшен»-версии compose в репозитории нет (по запросу добавим позже).
 
-- Локально: Docker, Maven (опционально, для сборки внутри образа)
-- На сервере: Docker и Docker Compose
+---
 
-## 1. Локальная сборка и экспорт образа
+## Ручной сценарий: Docker + tar (без CI)
 
-В корне проекта:
+### Требования
+
+- Локально: Docker
+- На сервере: Docker и Docker Compose plugin
+
+### 1. Сборка и экспорт образа
+
+Тег образа должен совпадать с `image` в `docker-compose.test-deploy.yml` (по умолчанию `interhubdev-backend:latest`).
 
 ```bash
-# Собрать образ (сборка JAR выполняется внутри Docker)
-docker build -t interhubdev:latest .
-
-# Сохранить образ в tar-файл
-docker save interhubdev:latest -o interhubdev.tar
+docker build -t interhubdev-backend:latest .
+docker save interhubdev-backend:latest -o interhubdev-backend.tar
 ```
 
-Загрузить на сервер:
+### 2. Файлы на сервере
 
-- `interhubdev.tar`
-- `docker-compose.production.yaml`
-- `.env` (скопировать из `.env.example` и заполнить секреты)
-- каталог `clamav/` с файлом `clamd.conf`
+- `interhubdev-backend.tar`
+- `docker-compose.test-deploy.yml`
+- `.env` (из `.env.example`, секреты заполнить)
+- каталог `clamav/` с `clamd.conf`
 
-Например, через `scp`:
+Пример:
 
 ```bash
-scp interhubdev.tar user@server:/opt/interhubdev/
-scp docker-compose.production.yaml user@server:/opt/interhubdev/
+scp interhubdev-backend.tar user@server:/opt/interhubdev/
+scp docker-compose.test-deploy.yml user@server:/opt/interhubdev/
 scp .env user@server:/opt/interhubdev/
 scp -r clamav user@server:/opt/interhubdev/
 ```
 
-## 2. Подготовка на сервере
-
-На сервере в каталоге деплоя (например `/opt/interhubdev/`) должны лежать:
-
-- `interhubdev.tar`
-- `docker-compose.production.yaml`
-- `.env`
-- `clamav/clamd.conf`
-
-Проверьте, что в `.env` заданы:
-
-- `DB_PASSWORD` — пароль БД (совпадает с `POSTGRES_PASSWORD` в compose)
-- `JWT_SECRET` — не менее 32 символов
-- `ADMIN_PASSWORD` — пароль супер-админа (не менее 8 символов)
-- При необходимости: `MAIL_*`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `APP_BASE_URL`
-
-## 3. Запуск на сервере
+### 3. Запуск
 
 ```bash
-cd /opt/interhubdev   # или ваш каталог
+cd /opt/interhubdev
 
-# Загрузить образ из tar
-docker load -i interhubdev.tar
+docker load -i interhubdev-backend.tar
 
-# Запустить стек (postgres, minio, redis, clamav, app)
-docker compose -f docker-compose.production.yaml up -d
+docker compose -f docker-compose.test-deploy.yml up -d
 ```
 
-Проверка здоровья приложения:
+Сборка на сервере не нужна, если образ уже загружен и тег `interhubdev-backend:latest` совпадает.
+
+### 4. Проверка
+
+Бэкенд по умолчанию слушает **только loopback** (например `127.0.0.1:18080`), см. `BACKEND_HOST_PORT` в `.env`.
 
 ```bash
-curl http://localhost:8080/actuator/health
+curl http://127.0.0.1:18080/actuator/health
 ```
 
-Ожидается ответ с `"status":"UP"`.
+Ожидается `"status":"UP"`.
 
-## 4. Остановка и обновление
-
-Остановка:
+### 5. Остановка и обновление
 
 ```bash
-docker compose -f docker-compose.production.yaml down
+docker compose -f docker-compose.test-deploy.yml down
 ```
 
-Обновление приложения (после загрузки нового `interhubdev.tar` и перезагрузки образа):
+После нового tar:
 
 ```bash
-docker load -i interhubdev.tar
-docker compose -f docker-compose.production.yaml up -d --force-recreate app
+docker load -i interhubdev-backend.tar
+docker compose -f docker-compose.test-deploy.yml up -d --force-recreate backend
 ```
 
-Данные PostgreSQL, MinIO, Redis и ClamAV хранятся в томах Docker и сохраняются между перезапусками.
+### 6. Порты (текущий test-deploy)
 
-## 5. Порты
+| Назначение        | Как проброшен |
+|-------------------|----------------|
+| Spring Boot       | `127.0.0.1:BACKEND_HOST_PORT` → 8080 в контейнере (по умолчанию 18080) |
+| PostgreSQL, MinIO, Redis, ClamAV | только сеть Docker, наружу не публикуются |
 
-| Сервис   | Порт  |
-|----------|-------|
-| App      | 8080  |
-| PostgreSQL | 5432 |
-| MinIO API | 9000 |
-| MinIO Console | 9001 |
-| Redis    | 6379  |
-| ClamAV   | 3310  |
-
-Убедитесь, что порты свободны или настроен reverse proxy (nginx и т.п.) перед приложением.
+Наружу приложение обычно выводит **Caddy** на хосте (отдельная настройка).
