@@ -50,21 +50,20 @@ services:
   redis:
     image: ${REDIS_IMAGE:-redis:7.4-alpine}
     restart: unless-stopped
-    # REDISCLI_AUTH lets redis-cli authenticate without passing -a through a shell (safe for special chars in password).
-    environment:
-      REDISCLI_AUTH: "${REDIS_PASSWORD}"
     command: >
       redis-server
       --appendonly yes
       --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
+    # Password is injected by Compose as one argv token (no shell), so special characters are safe.
+    # REDISCLI_AUTH in env is not reliable in all Docker versions for healthcheck subprocesses.
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 5s
+      retries: 15
+      start_period: 15s
     networks:
       - app_net
 
