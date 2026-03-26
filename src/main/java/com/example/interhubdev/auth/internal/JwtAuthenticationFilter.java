@@ -17,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -45,9 +46,12 @@ class JwtAuthenticationFilter extends OncePerRequestFilter implements Ordered {
             return;
         }
 
-        // Try to get access token from cookie
-        cookieHelper.getAccessToken(request)
-                .flatMap(jwtService::validateAccessToken)
+        // Access token: HttpOnly cookie first, then Authorization: Bearer (Mini App / API clients)
+        Optional<String> accessToken = cookieHelper.getAccessToken(request);
+        if (accessToken.isEmpty()) {
+            accessToken = AuthRequestTokens.bearerAccessToken(request);
+        }
+        accessToken.flatMap(jwtService::validateAccessToken)
                 .ifPresent(claims -> {
                     List<SimpleGrantedAuthority> authorities = claims.roles().stream()
                             .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))

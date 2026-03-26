@@ -1,0 +1,42 @@
+{
+    email alexey.e.muratov@gmail.com
+}
+
+# Existing project (left unchanged)
+api.dev.newzer.ru {
+    encode gzip
+
+    reverse_proxy http://127.0.0.1:8080 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote}
+    }
+}
+
+# New InterHub project (set your real domain instead of app.dev.newzer.ru)
+app.dev.newzer.ru {
+    encode gzip
+
+    # route { } — линейный порядок: сначала API, потом SPA (catch-all handle).
+    # Матчеры handle /api/* смотрят на путь входящего запроса (клиентский URI).
+    #
+    # handle /api/* + reverse_proxy — префикс /api сохраняется на upstream
+    # (нужно, если Spring реально мапит /api/...).
+    # handle_path /api/* — срезает /api перед прокси
+    # (нужно, если контроллеры у корня /..., а Caddy только отделяет префикс на edge).
+    route {
+        handle /api/* {
+            reverse_proxy http://127.0.0.1:18080 {
+                header_up Host {host}
+                header_up X-Forwarded-Proto {scheme}
+                header_up X-Forwarded-For {remote}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+        handle {
+            root * /opt/interhub/frontend-dist
+            try_files {path} /index.html
+            file_server
+        }
+    }
+}

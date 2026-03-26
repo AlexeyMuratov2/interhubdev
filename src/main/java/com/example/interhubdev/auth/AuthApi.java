@@ -17,32 +17,45 @@ public interface AuthApi {
      * Authenticate user and create session.
      * Sets access and refresh tokens as HttpOnly cookies.
      *
-     * @param email    user email
-     * @param password plain text password
-     * @param request  HTTP request (for IP, user agent)
-     * @param response HTTP response (for setting cookies)
+     * @param email                     user email
+     * @param password                  plain text password
+     * @param request                   HTTP request (for IP, user agent)
+     * @param response                  HTTP response (for setting cookies)
+     * @param includeTokenFieldsInJson when true, also put access/refresh tokens in the JSON body (Bearer clients)
      * @return auth result with user info
      * @throws AuthenticationException if credentials are invalid or user cannot login
      */
-    AuthResult login(String email, String password, HttpServletRequest request, HttpServletResponse response);
+    AuthResult login(
+            String email,
+            String password,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            boolean includeTokenFieldsInJson);
 
     /**
-     * Refresh access token using refresh token from cookie.
+     * Refresh access token using refresh token from cookie or request body.
      *
-     * @param request  HTTP request (contains refresh token cookie)
-     * @param response HTTP response (for setting new cookies)
+     * @param request                   HTTP request (refresh cookie or body token)
+     * @param response                  HTTP response (for setting new cookies)
+     * @param refreshTokenFromBody      optional raw refresh token when cookies are unavailable (must not be blank)
+     * @param includeTokenFieldsInJson when true, also put new tokens in the JSON body
      * @return auth result with user info
      * @throws AuthenticationException if refresh token is invalid or expired
      */
-    AuthResult refresh(HttpServletRequest request, HttpServletResponse response);
+    AuthResult refresh(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String refreshTokenFromBody,
+            boolean includeTokenFieldsInJson);
 
     /**
      * Logout user - revoke current refresh token.
      *
-     * @param request  HTTP request (contains refresh token cookie)
-     * @param response HTTP response (for clearing cookies)
+     * @param request              HTTP request (refresh cookie or body token)
+     * @param response             HTTP response (for clearing cookies)
+     * @param refreshTokenFromBody optional raw refresh token when cookies are unavailable
      */
-    void logout(HttpServletRequest request, HttpServletResponse response);
+    void logout(HttpServletRequest request, HttpServletResponse response, String refreshTokenFromBody);
 
     /**
      * Logout from all devices - revoke all user's refresh tokens.
@@ -61,7 +74,7 @@ public interface AuthApi {
 
     /**
      * Get current authenticated user from request.
-     * Validates access token from cookie.
+     * Validates access token from cookie or {@code Authorization: Bearer}.
      *
      * @param request HTTP request
      * @return user info if authenticated, empty otherwise
