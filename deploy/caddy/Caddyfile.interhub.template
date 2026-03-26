@@ -1,0 +1,21 @@
+__PRIMARY_DOMAIN__ {
+    encode gzip
+
+    # route — порядок; handle /api/* — матч по пути; handle + file_server — SPA fallback.
+    # Сохранить /api на бэкенде: handle /api/*. Срезать /api: handle_path /api/* { reverse_proxy ... }
+    route {
+        handle /api/* {
+            reverse_proxy http://127.0.0.1:__BACKEND_HOST_PORT__ {
+                header_up Host {host}
+                header_up X-Forwarded-Proto {scheme}
+                header_up X-Forwarded-For {remote}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+        handle {
+            root * __FRONTEND_ROOT__
+            try_files {path} /index.html
+            file_server
+        }
+    }
+}

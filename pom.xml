@@ -35,10 +35,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+		<!-- Core spring-dotenv does not auto-register with Spring Boot; springboot4-dotenv loads .env for local dev. -->
 		<dependency>
 			<groupId>me.paulschwarz</groupId>
-			<artifactId>spring-dotenv</artifactId>
-			<version>4.0.0</version>
+			<artifactId>springboot4-dotenv</artifactId>
+			<version>5.1.0</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>

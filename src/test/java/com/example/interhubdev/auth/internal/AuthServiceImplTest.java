@@ -88,7 +88,7 @@ class AuthServiceImplTest {
             when(cookieHelper.getUserAgent(request)).thenReturn("Mozilla/5.0");
             when(cookieHelper.getClientIp(request)).thenReturn("127.0.0.1");
 
-            AuthResult result = authService.login(EMAIL, PASSWORD, request, response);
+            AuthResult result = authService.login(EMAIL, PASSWORD, request, response, false);
 
             assertThat(result.userId()).isEqualTo(USER_ID);
             assertThat(result.email()).isEqualTo(EMAIL);
@@ -103,13 +103,35 @@ class AuthServiceImplTest {
         }
 
         @Test
+        @DisplayName("includes access and refresh in AuthResult when includeTokenFieldsInJson true")
+        void successWithTokensInJson() {
+            when(loginRateLimitService.tryAcquire(anyString())).thenReturn(true);
+            UserDto user = activeUser();
+            when(userApi.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+            when(userApi.verifyPassword(EMAIL, PASSWORD)).thenReturn(true);
+            when(jwtService.generateAccessToken(user)).thenReturn(ACCESS_TOKEN);
+            when(jwtService.generateRefreshToken()).thenReturn(REFRESH_TOKEN);
+            when(jwtService.hashToken(REFRESH_TOKEN)).thenReturn(TOKEN_HASH);
+            when(jwtService.getRefreshTokenExpiry()).thenReturn(LocalDateTime.now().plusDays(7));
+            when(jwtService.getAccessTokenMaxAge()).thenReturn(900);
+            when(jwtService.getRefreshTokenMaxAge()).thenReturn(604800);
+            when(cookieHelper.getUserAgent(request)).thenReturn("Mozilla/5.0");
+            when(cookieHelper.getClientIp(request)).thenReturn("127.0.0.1");
+
+            AuthResult result = authService.login(EMAIL, PASSWORD, request, response, true);
+
+            assertThat(result.accessToken()).isEqualTo(ACCESS_TOKEN);
+            assertThat(result.refreshToken()).isEqualTo(REFRESH_TOKEN);
+        }
+
+        @Test
         @DisplayName("throws INVALID_CREDENTIALS when user not found")
         void userNotFound() {
             when(loginRateLimitService.tryAcquire(anyString())).thenReturn(true);
             when(cookieHelper.getClientIp(request)).thenReturn("127.0.0.1");
             when(userApi.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response))
+            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response, false))
                     .isInstanceOf(AuthenticationException.class)
                     .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
                             .isEqualTo(AuthErrorCode.INVALID_CREDENTIALS));
@@ -130,7 +152,7 @@ class AuthServiceImplTest {
             );
             when(userApi.findByEmail(EMAIL)).thenReturn(Optional.of(user));
 
-            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response))
+            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response, false))
                     .isInstanceOf(AuthenticationException.class)
                     .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
                             .isEqualTo(AuthErrorCode.USER_NOT_ACTIVE));
@@ -150,7 +172,7 @@ class AuthServiceImplTest {
             );
             when(userApi.findByEmail(EMAIL)).thenReturn(Optional.of(user));
 
-            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response))
+            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response, false))
                     .isInstanceOf(AuthenticationException.class)
                     .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
                             .isEqualTo(AuthErrorCode.USER_DISABLED));
@@ -167,7 +189,7 @@ class AuthServiceImplTest {
             when(userApi.findByEmail(EMAIL)).thenReturn(Optional.of(user));
             when(userApi.verifyPassword(EMAIL, PASSWORD)).thenReturn(false);
 
-            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response))
+            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response, false))
                     .isInstanceOf(AuthenticationException.class)
                     .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
                             .isEqualTo(AuthErrorCode.INVALID_CREDENTIALS));
@@ -181,7 +203,7 @@ class AuthServiceImplTest {
             when(cookieHelper.getClientIp(request)).thenReturn("192.168.1.1");
             when(loginRateLimitService.tryAcquire("192.168.1.1")).thenReturn(false);
 
-            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response))
+            assertThatThrownBy(() -> authService.login(EMAIL, PASSWORD, request, response, false))
                     .isInstanceOf(AuthenticationException.class)
                     .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
                             .isEqualTo(AuthErrorCode.TOO_MANY_REQUESTS));
@@ -217,7 +239,7 @@ class AuthServiceImplTest {
             when(cookieHelper.getUserAgent(request)).thenReturn("Mozilla/5.0");
             when(cookieHelper.getClientIp(request)).thenReturn("127.0.0.1");
 
-            AuthResult result = authService.refresh(request, response);
+            AuthResult result = authService.refresh(request, response, null, false);
 
             assertThat(result.userId()).isEqualTo(USER_ID);
             assertThat(result.email()).isEqualTo(EMAIL);
@@ -230,7 +252,7 @@ class AuthServiceImplTest {
         void noRefreshToken() {
             when(cookieHelper.getRefreshToken(request)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.refresh(request, response))
+            assertThatThrownBy(() -> authService.refresh(request, response, null, false))
                     .isInstanceOf(AuthenticationException.class)
                     .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
                             .isEqualTo(AuthErrorCode.TOKEN_INVALID));
@@ -243,7 +265,7 @@ class AuthServiceImplTest {
             when(jwtService.hashToken(REFRESH_TOKEN)).thenReturn(TOKEN_HASH);
             when(refreshTokenRepository.findByTokenHash(TOKEN_HASH)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.refresh(request, response))
+            assertThatThrownBy(() -> authService.refresh(request, response, null, false))
                     .isInstanceOf(AuthenticationException.class)
                     .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
                             .isEqualTo(AuthErrorCode.TOKEN_INVALID));
@@ -262,7 +284,7 @@ class AuthServiceImplTest {
             when(jwtService.hashToken(REFRESH_TOKEN)).thenReturn(TOKEN_HASH);
             when(refreshTokenRepository.findByTokenHash(TOKEN_HASH)).thenReturn(Optional.of(tokenEntity));
 
-            assertThatThrownBy(() -> authService.refresh(request, response))
+            assertThatThrownBy(() -> authService.refresh(request, response, null, false))
                     .isInstanceOf(AuthenticationException.class)
                     .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
                             .isEqualTo(AuthErrorCode.TOKEN_EXPIRED));
@@ -284,7 +306,7 @@ class AuthServiceImplTest {
             when(refreshTokenRepository.findByTokenHash(TOKEN_HASH)).thenReturn(Optional.of(tokenEntity));
             when(userApi.findById(USER_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.refresh(request, response))
+            assertThatThrownBy(() -> authService.refresh(request, response, null, false))
                     .isInstanceOf(AuthenticationException.class)
                     .satisfies(ex -> assertThat(((AuthenticationException) ex).getErrorCode())
                             .isEqualTo(AuthErrorCode.USER_NOT_FOUND));
@@ -307,7 +329,7 @@ class AuthServiceImplTest {
             when(jwtService.hashToken(REFRESH_TOKEN)).thenReturn(TOKEN_HASH);
             when(refreshTokenRepository.findByTokenHash(TOKEN_HASH)).thenReturn(Optional.of(tokenEntity));
 
-            authService.logout(request, response);
+            authService.logout(request, response, null);
 
             verify(refreshTokenRepository).save(argThat(RefreshToken::isRevoked));
             verify(cookieHelper).clearAuthCookies(response);
@@ -318,7 +340,7 @@ class AuthServiceImplTest {
         void withoutToken() {
             when(cookieHelper.getRefreshToken(request)).thenReturn(Optional.empty());
 
-            authService.logout(request, response);
+            authService.logout(request, response, null);
 
             verify(refreshTokenRepository, never()).save(any());
             verify(cookieHelper).clearAuthCookies(response);
@@ -361,9 +383,23 @@ class AuthServiceImplTest {
         @DisplayName("returns empty when no access token")
         void noToken() {
             when(cookieHelper.getAccessToken(request)).thenReturn(Optional.empty());
+            when(request.getHeader("Authorization")).thenReturn(null);
 
             assertThat(authService.getCurrentUser(request)).isEmpty();
             verify(jwtService, never()).validateAccessToken(anyString());
+        }
+
+        @Test
+        @DisplayName("returns user when valid Bearer token and no cookie")
+        void validBearerToken() {
+            UserDto user = activeUser();
+            JwtService.TokenClaims claims = new JwtService.TokenClaims(USER_ID, EMAIL, List.of(Role.STUDENT), "John Doe");
+            when(cookieHelper.getAccessToken(request)).thenReturn(Optional.empty());
+            when(request.getHeader("Authorization")).thenReturn("Bearer " + ACCESS_TOKEN);
+            when(jwtService.validateAccessToken(ACCESS_TOKEN)).thenReturn(Optional.of(claims));
+            when(userApi.findById(USER_ID)).thenReturn(Optional.of(user));
+
+            assertThat(authService.getCurrentUser(request)).contains(user);
         }
 
         @Test

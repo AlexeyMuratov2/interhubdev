@@ -54,6 +54,9 @@ public class OpenApiConfig implements WebMvcConfigurer {
                         .type(SecurityScheme.Type.HTTP)
                         .scheme("bearer")
                         .bearerFormat("JWT")
-                        .description("Введите JWT токен без префикса 'Bearer '")));
+                        .description(
+                                "JWT доступа: либо HttpOnly cookie (веб), либо заголовок Authorization: Bearer <token>. "
+                                        + "При логине с заголовком X-Auth-Tokens: json токены также приходят в теле ответа. "
+                                        + "В Swagger укажите только значение токена (без слова Bearer).")));
     }
 }
