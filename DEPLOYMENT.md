@@ -99,3 +99,11 @@ This avoids conflicts:
 
 Frontend workflow from `interhubfront` uploads `dist` to Caddy static root.
 Recommended path: `/opt/interhub/frontend-dist`.
+
+## 7. Поддомен Mini App (`miniapp.interhub.online`)
+
+- **DNS:** A-запись `miniapp.interhub.online` → IP VPS.
+- **Фронт:** в репозитории `interhubfront` ветка `test_deploy_miniapp`, workflow `deploy-frontend-miniapp.yml`, секрет `FRONTEND_MINIAPP_DIST_PATH` (например `/opt/interhub/miniapp-dist`).
+- **Caddy:** шаблон `deploy/caddy/Caddyfile.miniapp.template` — отдельный блок сайта, `try_files` → `/index-mobile.html`.
+- **Переменная сборки:** `VITE_MINIAPP_API_BASE_URL` (или общий `VITE_API_BASE_URL`) должна указывать на тот origin, с которого браузер будет звать API (часто `https://miniapp.interhub.online` при прокси `/api` на этом же vhost).
+- **CORS:** добавьте `https://miniapp.interhub.online` в `JWT_CORS_ALLOWED_ORIGINS` на сервере.

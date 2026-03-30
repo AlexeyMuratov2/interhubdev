@@ -1,0 +1,28 @@
+# Поддомен только для Telegram Mini App (отдельный root от основного SPA).
+# Подставьте: __BACKEND_HOST_PORT__, __MINIAPP_FRONTEND_ROOT__
+#
+# DNS: A-запись miniapp.interhub.online → IP VPS (как у основного сайта или отдельный IP).
+#
+# URL в BotFather: https://miniapp.interhub.online/index-mobile.html
+#
+# Fallback SPA: index-mobile.html (маршруты клиента на базе /).
+
+miniapp.interhub.online {
+    encode gzip
+
+    route {
+        handle /api/* {
+            reverse_proxy http://127.0.0.1:__BACKEND_HOST_PORT__ {
+                header_up Host {host}
+                header_up X-Forwarded-Proto {scheme}
+                header_up X-Forwarded-For {remote}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+        handle {
+            root * __MINIAPP_FRONTEND_ROOT__
+            try_files {path} /index-mobile.html
+            file_server
+        }
+    }
+}
