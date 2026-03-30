@@ -1,0 +1,92 @@
+# Эталон для VPS → /etc/caddy/Caddyfile (или import).
+#
+# GitHub Actions (секреты репозитория frontend):
+#   FRONTEND_DIST_PATH — должен совпадать с root основного SPA (ниже: /opt/interhub/frontend-dist/dist)
+#   FRONTEND_MINIAPP_DIST_PATH — только miniapp (ниже: /opt/interhub/frontend-dist-miniapp)
+# Блок { email ... } — для ACME (Let's Encrypt) в Caddy; в GitHub Secrets НЕ кладётся.
+#
+# Backend: 127.0.0.1:18080 (BACKEND_HOST_PORT в docker-compose.test-deploy.yml).
+
+{
+    email alexey.e.muratov@gmail.com
+}
+
+# Existing project (left unchanged)
+api.dev.newzer.ru {
+    encode gzip
+
+    reverse_proxy http://127.0.0.1:8080 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote}
+    }
+}
+
+# InterHub API (dedicated API domain — no SPA, pure reverse proxy to backend)
+api.interhub.online {
+    encode gzip
+
+    reverse_proxy http://127.0.0.1:18080 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Host {host}
+    }
+}
+
+# InterHub main SPA + API
+interhub.online {
+    encode gzip
+
+    # route { } — линейный порядок: сначала API, потом SPA (catch-all handle).
+    # Матчеры handle /api/* смотрят на путь входящего запроса (клиентский URI).
+    #
+    # handle /api/* + reverse_proxy — префикс /api сохраняется на upstream
+    # (нужно, если Spring реально мапит /api/...).
+    # handle_path /api/* — срезает /api перед прокси
+    # (нужно, если контроллеры у корня /..., а Caddy только отделяет префикс на edge).
+    route {
+        handle /api/* {
+            reverse_proxy http://127.0.0.1:18080 {
+                header_up Host {host}
+                header_up X-Forwarded-Proto {scheme}
+                header_up X-Forwarded-For {remote}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+        handle {
+            root * /opt/interhub/frontend-dist/dist
+            # GET / иначе даёт 404: каталог root «существует», try_files не доходит до index.html
+            @root path /
+            rewrite @root /index.html
+            try_files {path} /index.html
+            file_server
+        }
+    }
+}
+
+# Second SPA (miniapp): own hostname + own static root so uploads never overwrite main InterHub frontend.
+# On VPS: mkdir -p /opt/interhub/frontend-dist-miniapp && chown as needed.
+# Frontend CI: secret FRONTEND_MINIAPP_DIST_PATH (scp target) = /opt/interhub/frontend-dist-miniapp
+# Optional: point reverse_proxy to another loopback port if this miniapp uses a separate backend.
+miniapp.interhub.online {
+    encode gzip
+
+    route {
+        handle /api/* {
+            reverse_proxy http://127.0.0.1:18080 {
+                header_up Host {host}
+                header_up X-Forwarded-Proto {scheme}
+                header_up X-Forwarded-For {remote}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+        handle {
+            root * /opt/interhub/frontend-dist-miniapp
+            @root path /
+            rewrite @root /index-mobile.html
+            try_files {path} /index-mobile.html
+            file_server
+        }
+    }
+}
