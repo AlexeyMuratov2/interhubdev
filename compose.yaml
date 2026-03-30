@@ -1,3 +1,7 @@
+# Local development: PostgreSQL, MinIO, Redis, ClamAV only.
+# Run the Spring app from the IDE or `mvn spring-boot:run` against these services.
+# For VPS test deploy (app in Docker + Caddy), use docker-compose.test-deploy.yml.
+
 services:
   postgres:
     image: postgres:17-alpine

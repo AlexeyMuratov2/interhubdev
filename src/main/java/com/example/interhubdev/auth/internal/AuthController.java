@@ -33,10 +33,19 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Authentication", description = "Login, logout, and token management")
 class AuthController {
 
+    /** When set to {@code json}, login/refresh responses also include accessToken and refreshToken in the body. */
+    private static final String HEADER_AUTH_TOKENS = "X-Auth-Tokens";
+
     private final AuthApi authApi;
 
+    private static boolean wantsTokenJson(HttpServletRequest request) {
+        String h = request.getHeader(HEADER_AUTH_TOKENS);
+        return h != null && "json".equalsIgnoreCase(h.trim());
+    }
+
     @PostMapping("/login")
-    @Operation(summary = "Login", description = "Authenticate user and set JWT cookies")
+    @Operation(summary = "Login", description = "Authenticate user and set JWT cookies. "
+            + "Optional header " + HEADER_AUTH_TOKENS + ": json — also return tokens in JSON for Bearer clients.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login successful"),
             @ApiResponse(responseCode = "401", description = "Invalid credentials or account not active")
@@ -50,33 +59,38 @@ class AuthController {
                 request.email(),
                 request.password(),
                 httpRequest,
-                httpResponse
+                httpResponse,
+                wantsTokenJson(httpRequest)
         );
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/refresh")
-    @Operation(summary = "Refresh tokens", description = "Get new access token using refresh token cookie")
+    @Operation(summary = "Refresh tokens", description = "Get new access token using refresh cookie or JSON body {refreshToken}")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Tokens refreshed"),
             @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token")
     })
     public ResponseEntity<AuthResult> refresh(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response,
+            @RequestBody(required = false) RefreshTokenBody body) {
 
-        AuthResult result = authApi.refresh(request, response);
+        String fromBody = body != null ? body.refreshToken() : null;
+        AuthResult result = authApi.refresh(request, response, fromBody, wantsTokenJson(request));
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Logout", description = "Revoke refresh token and clear cookies")
+    @Operation(summary = "Logout", description = "Revoke refresh token and clear cookies; optional body {refreshToken} if no cookie")
     @ApiResponse(responseCode = "204", description = "Logged out successfully")
     public ResponseEntity<Void> logout(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response,
+            @RequestBody(required = false) RefreshTokenBody body) {
 
-        authApi.logout(request, response);
+        String fromBody = body != null ? body.refreshToken() : null;
+        authApi.logout(request, response, fromBody);
         return ResponseEntity.noContent().build();
     }
 

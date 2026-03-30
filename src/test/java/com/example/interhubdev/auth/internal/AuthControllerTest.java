@@ -59,7 +59,7 @@ class AuthControllerTest {
         @DisplayName("returns 200 and AuthResult when login successful")
         void success() throws Exception {
             AuthResult result = AuthResult.success(USER_ID, EMAIL, List.of(Role.STUDENT), "John Doe");
-            when(authApi.login(eq(EMAIL), eq("password123"), any(), any())).thenReturn(result);
+            when(authApi.login(eq(EMAIL), eq("password123"), any(), any(), eq(false))).thenReturn(result);
 
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -71,13 +71,13 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.fullName").value("John Doe"))
                     .andExpect(jsonPath("$.message").value("Login successful"));
 
-            verify(authApi).login(eq(EMAIL), eq("password123"), any(), any());
+            verify(authApi).login(eq(EMAIL), eq("password123"), any(), any(), eq(false));
         }
 
         @Test
         @DisplayName("returns 401 when invalid credentials")
         void invalidCredentials() throws Exception {
-            when(authApi.login(anyString(), anyString(), any(), any()))
+            when(authApi.login(anyString(), anyString(), any(), any(), anyBoolean()))
                     .thenThrow(new AuthenticationException(AuthErrorCode.INVALID_CREDENTIALS, "Invalid email or password"));
 
             mockMvc.perform(post("/api/auth/login")
@@ -91,7 +91,7 @@ class AuthControllerTest {
         @Test
         @DisplayName("returns 403 when user not active")
         void userNotActive() throws Exception {
-            when(authApi.login(anyString(), anyString(), any(), any()))
+            when(authApi.login(anyString(), anyString(), any(), any(), anyBoolean()))
                     .thenThrow(new AuthenticationException(AuthErrorCode.USER_NOT_ACTIVE, "Account not activated."));
 
             mockMvc.perform(post("/api/auth/login")
@@ -109,7 +109,22 @@ class AuthControllerTest {
                             .content(objectMapper.writeValueAsString(new LoginRequest("", "password123"))))
                     .andExpect(status().isBadRequest());
 
-            verify(authApi, org.mockito.Mockito.never()).login(anyString(), anyString(), any(), any());
+            verify(authApi, org.mockito.Mockito.never()).login(anyString(), anyString(), any(), any(), anyBoolean());
+        }
+
+        @Test
+        @DisplayName("passes includeTokens true when X-Auth-Tokens: json")
+        void tokenJsonHeader() throws Exception {
+            AuthResult result = AuthResult.success(USER_ID, EMAIL, List.of(Role.STUDENT), "John Doe");
+            when(authApi.login(eq(EMAIL), eq("password123"), any(), any(), eq(true))).thenReturn(result);
+
+            mockMvc.perform(post("/api/auth/login")
+                            .header("X-Auth-Tokens", "json")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new LoginRequest(EMAIL, "password123"))))
+                    .andExpect(status().isOk());
+
+            verify(authApi).login(eq(EMAIL), eq("password123"), any(), any(), eq(true));
         }
     }
 
@@ -121,7 +136,7 @@ class AuthControllerTest {
         @DisplayName("returns 200 and AuthResult when refresh successful")
         void success() throws Exception {
             AuthResult result = AuthResult.success(USER_ID, EMAIL, List.of(Role.STUDENT), "John Doe");
-            when(authApi.refresh(any(), any())).thenReturn(result);
+            when(authApi.refresh(any(), any(), isNull(), eq(false))).thenReturn(result);
 
             mockMvc.perform(post("/api/auth/refresh"))
                     .andExpect(status().isOk())
@@ -129,13 +144,13 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.email").value(EMAIL))
                     .andExpect(jsonPath("$.roles[0]").value("STUDENT"));
 
-            verify(authApi).refresh(any(), any());
+            verify(authApi).refresh(any(), any(), isNull(), eq(false));
         }
 
         @Test
         @DisplayName("returns 401 when refresh token invalid")
         void invalidToken() throws Exception {
-            when(authApi.refresh(any(), any()))
+            when(authApi.refresh(any(), any(), any(), anyBoolean()))
                     .thenThrow(new AuthenticationException(AuthErrorCode.TOKEN_INVALID, "Invalid refresh token"));
 
             mockMvc.perform(post("/api/auth/refresh"))
@@ -154,7 +169,7 @@ class AuthControllerTest {
             mockMvc.perform(post("/api/auth/logout"))
                     .andExpect(status().isNoContent());
 
-            verify(authApi).logout(any(), any());
+            verify(authApi).logout(any(), any(), isNull());
         }
     }
 

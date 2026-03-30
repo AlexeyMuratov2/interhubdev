@@ -1,0 +1,110 @@
+name: Deploy Backend (test_deploy)
+
+on:
+  push:
+    branches:
+      - test_deploy
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy backend project to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          source: "."
+          target: "${{ secrets.DEPLOY_PATH }}/backend"
+          overwrite: true
+
+      - name: Deploy backend stack
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          APP_BASE_URL: ${{ vars.APP_BASE_URL }}
+          JWT_PASSWORD_RESET_BASE_URL: ${{ vars.JWT_PASSWORD_RESET_BASE_URL }}
+          BACKEND_HOST_PORT: ${{ vars.BACKEND_HOST_PORT }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_USER: ${{ vars.DB_USER }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          ADMIN_FIRST_NAME: ${{ vars.ADMIN_FIRST_NAME }}
+          ADMIN_LAST_NAME: ${{ vars.ADMIN_LAST_NAME }}
+          MAIL_HOST: ${{ vars.MAIL_HOST }}
+          MAIL_PORT: ${{ vars.MAIL_PORT }}
+          MAIL_USERNAME: ${{ vars.MAIL_USERNAME }}
+          MAIL_FROM: ${{ vars.MAIL_FROM }}
+          MAIL_FROM_NAME: ${{ vars.MAIL_FROM_NAME }}
+          MAIL_ENABLED: ${{ vars.MAIL_ENABLED }}
+          MAIL_LOG_ONLY: ${{ vars.MAIL_LOG_ONLY }}
+          JWT_CORS_ALLOWED_ORIGINS: ${{ vars.JWT_CORS_ALLOWED_ORIGINS }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          envs: APP_BASE_URL,JWT_PASSWORD_RESET_BASE_URL,BACKEND_HOST_PORT,DB_NAME,DB_USER,ADMIN_EMAIL,ADMIN_FIRST_NAME,ADMIN_LAST_NAME,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_FROM,MAIL_FROM_NAME,MAIL_ENABLED,MAIL_LOG_ONLY,JWT_CORS_ALLOWED_ORIGINS,DB_PASSWORD,JWT_SECRET,ADMIN_PASSWORD,MAIL_PASSWORD,REDIS_PASSWORD,MINIO_SECRET_KEY,MINIO_ACCESS_KEY
+          script: |
+            set -euo pipefail
+
+            DEPLOY_ROOT="${{ secrets.DEPLOY_PATH }}"
+            BACKEND_DIR="${DEPLOY_ROOT}/backend"
+            mkdir -p "${BACKEND_DIR}"
+
+            cd "${BACKEND_DIR}"
+
+            cat > .env <<EOF
+            APP_BASE_URL=${APP_BASE_URL}
+            JWT_PASSWORD_RESET_BASE_URL=${JWT_PASSWORD_RESET_BASE_URL}
+            SPRING_PROFILES_ACTIVE=prod
+            JWT_TRUST_PROXY=true
+            JWT_CORS_ALLOWED_ORIGINS=${JWT_CORS_ALLOWED_ORIGINS}
+            BACKEND_HOST_PORT=${BACKEND_HOST_PORT:-18080}
+            DB_HOST=postgres
+            DB_PORT=5432
+            DB_NAME=${DB_NAME}
+            DB_USER=${DB_USER}
+            DB_PASSWORD=${DB_PASSWORD}
+            REDIS_HOST=redis
+            REDIS_PORT=6379
+            REDIS_PASSWORD=${REDIS_PASSWORD}
+            REDIS_SSL_ENABLED=false
+            JWT_SECRET=${JWT_SECRET}
+            ADMIN_EMAIL=${ADMIN_EMAIL}
+            ADMIN_PASSWORD=${ADMIN_PASSWORD}
+            ADMIN_FIRST_NAME=${ADMIN_FIRST_NAME}
+            ADMIN_LAST_NAME=${ADMIN_LAST_NAME}
+            MAIL_HOST=${MAIL_HOST}
+            MAIL_PORT=${MAIL_PORT}
+            MAIL_USERNAME=${MAIL_USERNAME}
+            MAIL_PASSWORD=${MAIL_PASSWORD}
+            MAIL_FROM=${MAIL_FROM}
+            MAIL_FROM_NAME=${MAIL_FROM_NAME}
+            MAIL_ENABLED=${MAIL_ENABLED}
+            MAIL_LOG_ONLY=${MAIL_LOG_ONLY}
+            MAIL_USE_STARTTLS=true
+            MAIL_USE_SSL=false
+            MINIO_ENDPOINT=http://minio:9000
+            MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+            MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+            MINIO_BUCKET_NAME=documents
+            MINIO_REGION=us-east-1
+            CLAMAV_ENABLED=true
+            CLAMAV_HOST=clamav
+            CLAMAV_PORT=3310
+            EOF
+
+            docker compose -f docker-compose.test-deploy.yml up -d --build
+            docker compose -f docker-compose.test-deploy.yml ps

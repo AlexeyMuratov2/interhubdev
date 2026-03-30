@@ -11,6 +11,7 @@ import com.example.interhubdev.otp.OtpApi;
 import com.example.interhubdev.otp.OtpCreatedResult;
 import com.example.interhubdev.otp.OtpOptions;
 import com.example.interhubdev.user.UserApi;
+import com.example.interhubdev.user.Role;
 import com.example.interhubdev.user.UserDto;
 import com.example.interhubdev.user.UserStatus;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,7 +51,12 @@ class AuthServiceImpl implements AuthApi {
 
     @Override
     @Transactional
-    public AuthResult login(String email, String password, HttpServletRequest request, HttpServletResponse response) {
+    public AuthResult login(
+            String email,
+            String password,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            boolean includeTokenFieldsInJson) {
         log.debug("Login attempt");
 
         String clientIp = cookieHelper.getClientIp(request);
@@ -108,15 +114,26 @@ class AuthServiceImpl implements AuthApi {
         cookieHelper.setRefreshTokenCookie(response, refreshToken, jwtService.getRefreshTokenMaxAge());
 
         log.info("User logged in successfully");
-        return AuthResult.success(user.id(), user.email(),
-                user.roles() != null ? List.copyOf(user.roles()) : List.of(),
-                user.getFullName());
+        List<Role> roles = user.roles() != null ? List.copyOf(user.roles()) : List.of();
+        if (includeTokenFieldsInJson) {
+            return AuthResult.success(
+                    user.id(), user.email(), roles, user.getFullName(),
+                    "Login successful", accessToken, refreshToken);
+        }
+        return AuthResult.success(user.id(), user.email(), roles, user.getFullName());
     }
 
     @Override
     @Transactional
-    public AuthResult refresh(HttpServletRequest request, HttpServletResponse response) {
-        String refreshToken = cookieHelper.getRefreshToken(request)
+    public AuthResult refresh(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String refreshTokenFromBody,
+            boolean includeTokenFieldsInJson) {
+        String refreshToken = Optional.ofNullable(refreshTokenFromBody)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .or(() -> cookieHelper.getRefreshToken(request))
                 .orElseThrow(() -> new AuthenticationException(AuthErrorCode.TOKEN_INVALID, "Refresh token not found"));
 
         String tokenHash = jwtService.hashToken(refreshToken);
@@ -172,24 +189,31 @@ class AuthServiceImpl implements AuthApi {
         cookieHelper.setRefreshTokenCookie(response, newRefreshToken, jwtService.getRefreshTokenMaxAge());
 
         log.debug("Tokens refreshed successfully");
-        return AuthResult.success(user.id(), user.email(),
-                user.roles() != null ? List.copyOf(user.roles()) : List.of(),
-                user.getFullName());
+        List<Role> roles = user.roles() != null ? List.copyOf(user.roles()) : List.of();
+        if (includeTokenFieldsInJson) {
+            return AuthResult.success(
+                    user.id(), user.email(), roles, user.getFullName(),
+                    "Login successful", newAccessToken, newRefreshToken);
+        }
+        return AuthResult.success(user.id(), user.email(), roles, user.getFullName());
     }
 
     @Override
     @Transactional
-    public void logout(HttpServletRequest request, HttpServletResponse response) {
-        cookieHelper.getRefreshToken(request)
-                .ifPresent(token -> {
-                    String tokenHash = jwtService.hashToken(token);
-                    refreshTokenRepository.findByTokenHash(tokenHash)
-                            .ifPresent(tokenEntity -> {
-                                tokenEntity.revoke();
-                                refreshTokenRepository.save(tokenEntity);
-                                log.debug("Refresh token revoked for user {}", tokenEntity.getUserId());
-                            });
-                });
+    public void logout(HttpServletRequest request, HttpServletResponse response, String refreshTokenFromBody) {
+        Optional<String> refresh = Optional.ofNullable(refreshTokenFromBody)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .or(() -> cookieHelper.getRefreshToken(request));
+        refresh.ifPresent(token -> {
+            String tokenHash = jwtService.hashToken(token);
+            refreshTokenRepository.findByTokenHash(tokenHash)
+                    .ifPresent(tokenEntity -> {
+                        tokenEntity.revoke();
+                        refreshTokenRepository.save(tokenEntity);
+                        log.debug("Refresh token revoked for user {}", tokenEntity.getUserId());
+                    });
+        });
 
         cookieHelper.clearAuthCookies(response);
         log.debug("User logged out");
@@ -212,8 +236,11 @@ class AuthServiceImpl implements AuthApi {
 
     @Override
     public Optional<UserDto> getCurrentUser(HttpServletRequest request) {
-        return cookieHelper.getAccessToken(request)
-                .flatMap(jwtService::validateAccessToken)
+        Optional<String> access = cookieHelper.getAccessToken(request);
+        if (access.isEmpty()) {
+            access = AuthRequestTokens.bearerAccessToken(request);
+        }
+        return access.flatMap(jwtService::validateAccessToken)
                 .flatMap(claims -> userApi.findById(claims.userId()));
     }
 
