@@ -13,8 +13,20 @@ api.dev.newzer.ru {
     }
 }
 
-# New InterHub project (set your real domain instead of app.dev.newzer.ru)
-app.dev.newzer.ru {
+# InterHub API (dedicated API domain — no SPA, pure reverse proxy to backend)
+api.interhub.online {
+    encode gzip
+
+    reverse_proxy http://127.0.0.1:18080 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Host {host}
+    }
+}
+
+# InterHub main SPA + API
+interhub.online {
     encode gzip
 
     # route { } — линейный порядок: сначала API, потом SPA (catch-all handle).
@@ -34,7 +46,31 @@ app.dev.newzer.ru {
             }
         }
         handle {
-            root * /opt/interhub/frontend-dist
+            root * /opt/interhub/frontend-dist/dist
+            try_files {path} /index.html
+            file_server
+        }
+    }
+}
+
+# Second SPA (miniapp): own hostname + own static root so uploads never overwrite main InterHub frontend.
+# On VPS: mkdir -p /opt/interhub/frontend-dist-miniapp && chown as needed.
+# Frontend CI: set FRONTEND_DIST_PATH (or scp target) to /opt/interhub/frontend-dist-miniapp/
+# Optional: point reverse_proxy to another loopback port if this miniapp uses a separate backend.
+miniapp.interhub.online {
+    encode gzip
+
+    route {
+        handle /api/* {
+            reverse_proxy http://127.0.0.1:18080 {
+                header_up Host {host}
+                header_up X-Forwarded-Proto {scheme}
+                header_up X-Forwarded-For {remote}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+        handle {
+            root * /opt/interhub/frontend-dist-miniapp
             try_files {path} /index.html
             file_server
         }

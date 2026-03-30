@@ -55,7 +55,7 @@
 - `MAIL_FROM_NAME`
 - `MAIL_ENABLED` - `true`/`false`
 - `MAIL_LOG_ONLY` - `true`/`false`
-- `JWT_CORS_ALLOWED_ORIGINS` - e.g. `https://app.example.com`
+- `JWT_CORS_ALLOWED_ORIGINS` - e.g. `https://app.example.com,https://miniapp.example.com`
 
 ## 5. Caddy configuration for second project (no conflict)
 

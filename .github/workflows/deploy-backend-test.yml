@@ -42,7 +42,7 @@ jobs:
           MAIL_FROM_NAME: ${{ vars.MAIL_FROM_NAME }}
           MAIL_ENABLED: ${{ vars.MAIL_ENABLED }}
           MAIL_LOG_ONLY: ${{ vars.MAIL_LOG_ONLY }}
-          JWT_CORS_ALLOWED_ORIGINS: ${{ vars.JWT_CORS_ALLOWED_ORIGINS }}
+          JWT_CORS_ALLOWED_ORIGINS: ${{ vars.JWT_CORS_ALLOWED_ORIGINS || 'https://interhub.online,https://miniapp.interhub.online' }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
