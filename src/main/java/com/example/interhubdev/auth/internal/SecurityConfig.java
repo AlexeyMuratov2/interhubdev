@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -98,6 +99,8 @@ class SecurityConfig {
             
             // Authorization rules
             .authorizeHttpRequests(auth -> auth
+                // CORS preflight must not require auth (actual cross-origin still gated by jwt.cors.allowed-origins)
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Public endpoints - authentication
                 .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 

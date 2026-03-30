@@ -10,8 +10,8 @@
 
 ## 2. GitHub branch
 
-- Deployment is triggered on push to `test_deploy`
-- Branch was created in this repository
+- **Backend** deployment: push to **`test_deploy`** (workflow *Deploy Backend (test_deploy)*) or **`miniapp`** (*Deploy Backend (miniapp)*) — один и тот же compose, разные ветки для удобства рядом с [вторым фронтом](docs/miniapp-frontend.md).
+- Основная линия кода: **`master`** / **`main`** (см. репозиторий на GitHub). Перед релизом miniapp обычно делают `merge master → miniapp` и пушат `miniapp`.
 
 ## 3. Files used for deploy
 
@@ -55,7 +55,10 @@
 - `MAIL_FROM_NAME`
 - `MAIL_ENABLED` - `true`/`false`
 - `MAIL_LOG_ONLY` - `true`/`false`
-- `JWT_CORS_ALLOWED_ORIGINS` - e.g. `https://app.example.com`
+- `JWT_CORS_ALLOWED_ORIGINS` — через **запятую без пробелов**, все origins, откуда фронт ходит к API.  
+  Пример при API на `api.*` и фронте на `miniapp.*`:  
+  `https://interhub.online,https://www.interhub.online,https://miniapp.interhub.online`  
+  Без `https://miniapp.interhub.online` префлайт OPTIONS к `/api/auth/login` даст **403**.
 
 ## 5. Caddy configuration for second project (no conflict)
 
