@@ -21,6 +21,8 @@ miniapp.interhub.online {
         }
         handle {
             root * __MINIAPP_FRONTEND_ROOT__
+            @root path /
+            rewrite @root /index-mobile.html
             try_files {path} /index-mobile.html
             file_server
         }

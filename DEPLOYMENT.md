@@ -59,19 +59,24 @@
 
 ## 5. Caddy configuration for second project (no conflict)
 
+Сводный файл с основным доменом, miniapp и соседним проектом: **`deploy/caddy/Caddyfile.vps.example`** — удобно сверить с тем, что лежит на VPS.
+
 1. Keep existing Caddy site block for your current project unchanged.
 2. Add a separate site block for InterHub on a different domain (example):
 
-```caddyfile
-app.dev.newzer.ru {
-    encode gzip
+Эталон с `api.interhub.online`, `interhub.online` и `miniapp.interhub.online`: **`deploy/caddy/Caddyfile.vps.example`**.
 
+Краткий фрагмент (пути подставьте под свои секреты):
+
+```caddyfile
+interhub.online {
+    encode gzip
     route {
         handle /api/* {
             reverse_proxy http://127.0.0.1:18080
         }
         handle {
-            root * /opt/interhub/frontend-dist
+            root * /opt/interhub/frontend-dist/dist
             try_files {path} /index.html
             file_server
         }
@@ -97,13 +102,16 @@ This avoids conflicts:
 
 ## 6. Frontend delivery contract
 
-Frontend workflow from `interhubfront` uploads `dist` to Caddy static root.
-Recommended path: `/opt/interhub/frontend-dist`.
+Frontend workflow from `interhubfront` uploads `dist/*` to the directory in GitHub secret **`FRONTEND_DIST_PATH`**. It must equal Caddy `root` for the main SPA.
+
+Example (see `deploy/caddy/Caddyfile.vps.example`): **`/opt/interhub/frontend-dist/dist`**.
+
+Miniapp uses a separate secret **`FRONTEND_MINIAPP_DIST_PATH`** (e.g. `/opt/interhub/frontend-dist-miniapp`).
 
 ## 7. Поддомен Mini App (`miniapp.interhub.online`)
 
 - **DNS:** A-запись `miniapp.interhub.online` → IP VPS.
-- **Фронт:** в репозитории `interhubfront` ветка `test_deploy_miniapp`, workflow `deploy-frontend-miniapp.yml`, секрет `FRONTEND_MINIAPP_DIST_PATH` (например `/opt/interhub/miniapp-dist`).
-- **Caddy:** шаблон `deploy/caddy/Caddyfile.miniapp.template` — отдельный блок сайта, `try_files` → `/index-mobile.html`.
+- **Фронт:** в репозитории `interhubfront` ветка `test_deploy_miniapp`, workflow `deploy-frontend-miniapp.yml`, секрет `FRONTEND_MINIAPP_DIST_PATH` = тот же путь, что `root` в Caddy для miniapp (в эталоне: `/opt/interhub/frontend-dist-miniapp`).
+- **Caddy:** полный эталон — `deploy/caddy/Caddyfile.vps.example`; узкий шаблон — `deploy/caddy/Caddyfile.miniapp.template` (`try_files` там — `/index-mobile.html`, при необходимости приведите к своему Caddyfile).
 - **Переменная сборки:** `VITE_MINIAPP_API_BASE_URL` (или общий `VITE_API_BASE_URL`) должна указывать на тот origin, с которого браузер будет звать API (часто `https://miniapp.interhub.online` при прокси `/api` на этом же vhost).
-- **CORS:** добавьте `https://miniapp.interhub.online` в `JWT_CORS_ALLOWED_ORIGINS` на сервере.
+- **CORS:** в `JWT_CORS_ALLOWED_ORIGINS` перечислите origins, с которых идут запросы (например `https://interhub.online`, `https://miniapp.interhub.online`, при использовании отдельного API-домена — `https://api.interhub.online`, если клиенты ходят туда с браузера).

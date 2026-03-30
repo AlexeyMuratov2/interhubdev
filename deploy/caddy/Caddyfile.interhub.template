@@ -14,6 +14,8 @@ __PRIMARY_DOMAIN__ {
         }
         handle {
             root * __FRONTEND_ROOT__
+            @root path /
+            rewrite @root /index.html
             try_files {path} /index.html
             file_server
         }
