@@ -6,6 +6,7 @@
 #   docker compose -f docker-compose.test-deploy.yml up -d --build
 #
 # For local dev without the app container, use compose.yaml (dependencies only).
+name: interhub
 
 services:
   backend:
@@ -102,4 +103,5 @@ volumes:
 
 networks:
   app_net:
+    name: interhub_app_net
     driver: bridge

@@ -106,5 +106,6 @@ jobs:
             CLAMAV_PORT=3310
             EOF
 
-            docker compose -f docker-compose.test-deploy.yml up -d --build
-            docker compose -f docker-compose.test-deploy.yml ps
+            docker rm -f interhub-backend-1 interhub-minio-1 interhub-clamav-1 2>/dev/null || true
+            docker compose -p interhub -f docker-compose.test-deploy.yml up -d --build
+            docker compose -p interhub -f docker-compose.test-deploy.yml ps
