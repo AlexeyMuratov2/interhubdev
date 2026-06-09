@@ -18,6 +18,8 @@ docker compose up -d
 
 Используется `compose.yaml` (только зависимости, без контейнера backend).
 
+PostgreSQL в Docker слушает **порт 5433** на хосте (внутри контейнера — 5432), чтобы не конфликтовать с локально установленным PostgreSQL на 5432.
+
 ## 3) Запустить backend из IDE
 
 - Добавь env-file `.env.local` в Run Configuration.

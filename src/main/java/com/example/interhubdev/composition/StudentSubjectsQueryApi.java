@@ -25,7 +25,8 @@ public interface StudentSubjectsQueryApi {
      *
      * @param offeringId  offering ID (must not be null)
      * @param requesterId current authenticated user ID (must be a student in the group or admin)
-     * @param semesterId  optional semester; if empty, current semester is used for statistics
+     * @param semesterId  optional semester; if empty, the semester containing the offering's lessons is used
+     *                    for statistics, with current semester as a fallback for offerings without lessons
      * @return aggregated DTO with subject, teachers, student stats, materials
      * @throws com.example.interhubdev.error.AppException NOT_FOUND if offering or related data not found, FORBIDDEN if student not in offering's group
      */

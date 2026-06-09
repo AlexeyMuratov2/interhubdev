@@ -87,7 +87,7 @@ All this data is returned in a single request and is sufficient to display full 
 
 **Purpose**: Aggregates all data needed for the student's "Subject detail" screen in a single request. Data is returned only if the requester is a student in the offering's group (or an administrator).
 
-**Query parameters**: Optional `semesterId`; if omitted, the current semester is used for statistics.
+**Query parameters**: Optional `semesterId`; if omitted, the semester containing the offering's lessons is used for statistics, with the current semester as a fallback for offerings without lessons.
 
 **What the endpoint returns**:
 

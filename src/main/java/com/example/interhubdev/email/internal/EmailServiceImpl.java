@@ -54,6 +54,13 @@ class EmailServiceImpl implements EmailApi {
             return EmailResult.success(generateMessageId(), message.to());
         }
 
+        Optional<String> configurationError = smtpConfigurationError();
+        if (configurationError.isPresent()) {
+            String error = configurationError.get();
+            log.error("{} Email to {} was not sent.", error, message.to());
+            return EmailResult.failure(message.to(), error);
+        }
+
         try {
             String messageId = doSend(message);
             log.info("Email sent successfully to: {} [{}]", message.to(), messageId);
@@ -72,8 +79,19 @@ class EmailServiceImpl implements EmailApi {
 
     @Override
     public boolean isOperational() {
-        if (!properties.isEnabled()) {
+        boolean enabled = properties.isEnabled()
+                && !"false".equalsIgnoreCase(environment.getProperty(MAIL_ENABLED, "true"));
+        boolean logOnly = properties.isLogOnly()
+                || "true".equalsIgnoreCase(environment.getProperty(MAIL_LOG_ONLY, "false"));
+
+        if (!enabled || logOnly) {
             return true; // Disabled is still "operational" (just not sending)
+        }
+
+        Optional<String> configurationError = smtpConfigurationError();
+        if (configurationError.isPresent()) {
+            log.warn("Email service is not operational: {}", configurationError.get());
+            return false;
         }
         
         try {
@@ -89,6 +107,27 @@ class EmailServiceImpl implements EmailApi {
     @Override
     public String getDefaultSender() {
         return properties.getFrom();
+    }
+
+    private Optional<String> smtpConfigurationError() {
+        boolean smtpAuth = Boolean.parseBoolean(
+                environment.getProperty("spring.mail.properties.mail.smtp.auth", "true"));
+        if (!smtpAuth) {
+            return Optional.empty();
+        }
+
+        if (isBlank(environment.getProperty("spring.mail.username"))) {
+            return Optional.of("SMTP authentication is enabled, but MAIL_USERNAME is not configured.");
+        }
+        if (isBlank(environment.getProperty("spring.mail.password"))) {
+            return Optional.of("SMTP authentication is enabled, but MAIL_PASSWORD is not configured.");
+        }
+
+        return Optional.empty();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /**

@@ -52,8 +52,14 @@ class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         List<String> origins = authProperties.getCors().getAllowedOrigins();
-        if (!origins.isEmpty()) {
-            config.setAllowedOrigins(origins);
+        List<String> originPatterns = authProperties.getCors().getAllowedOriginPatterns();
+        if (!origins.isEmpty() || !originPatterns.isEmpty()) {
+            if (!originPatterns.isEmpty()) {
+                config.setAllowedOriginPatterns(originPatterns);
+            }
+            if (!origins.isEmpty()) {
+                config.setAllowedOrigins(origins);
+            }
             config.setAllowCredentials(true);
             config.addAllowedMethod("GET");
             config.addAllowedMethod("POST");
@@ -116,7 +122,7 @@ class SecurityConfig {
                 ).permitAll()
                 
                 // Public endpoints - health checks
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                 
                 // All other endpoints require authentication
                 .anyRequest().authenticated()

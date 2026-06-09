@@ -7,7 +7,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -34,5 +39,27 @@ public class SemesterResolver {
         }
         return academicApi.findSemesterByDate(LocalDate.now())
                 .orElseThrow(() -> Errors.notFound("Current semester not found"));
+    }
+
+    /**
+     * Resolve semester for an offering-backed report. If no explicit semester is provided,
+     * prefer the semester that contains the offering's lesson dates; fallback to current semester
+     * for offerings without generated lessons yet.
+     */
+    public SemesterDto resolveForLessonDates(Optional<UUID> semesterId, Collection<LocalDate> lessonDates) {
+        if (semesterId != null && semesterId.isPresent()) {
+            return resolve(semesterId);
+        }
+
+        Set<LocalDate> dates = lessonDates == null ? Set.of() : lessonDates.stream()
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (!dates.isEmpty()) {
+            return academicApi.findSemestersByDates(dates).stream()
+                    .min(Comparator.comparing(SemesterDto::startDate))
+                    .orElseGet(() -> resolve(Optional.empty()));
+        }
+
+        return resolve(Optional.empty());
     }
 }

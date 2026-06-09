@@ -3,7 +3,6 @@ package com.example.interhubdev.composition.internal.student;
 import com.example.interhubdev.academic.SemesterDto;
 import com.example.interhubdev.attendancerecord.AttendanceRecordApi;
 import com.example.interhubdev.attendancerecord.AttendanceStatus;
-import com.example.interhubdev.attendancerecord.StudentAttendanceDto;
 import com.example.interhubdev.composition.StudentSubjectInfoDto;
 import com.example.interhubdev.composition.StudentSubjectStatsDto;
 import com.example.interhubdev.composition.StudentSubjectTeacherItemDto;
@@ -97,9 +96,13 @@ class StudentSubjectInfoService {
 
         List<StudentSubjectTeacherItemDto> teachers = resolveTeachers(offering);
 
-        SemesterDto semester = semesterResolver.resolve(semesterId);
+        List<LessonDto> lessons = scheduleApi.findLessonsByOfferingId(offering.id());
+        SemesterDto semester = semesterResolver.resolveForLessonDates(
+                semesterId,
+                lessons.stream().map(LessonDto::date).toList()
+        );
         StudentSubjectStatsDto stats = computeStats(
-                student, requester, offering, semester);
+                student, requester, offering, semester, lessons);
 
         List<CourseMaterialDto> materials = courseMaterialApi.listByOffering(offering.id(), requesterId);
 
@@ -119,6 +122,14 @@ class StudentSubjectInfoService {
     }
 
     private StudentDto resolveAndAuthorize(UserDto requester, UUID groupId) {
+        Optional<StudentDto> requesterStudent = studentApi.findByUserId(requester.id());
+        if (requesterStudent.isPresent()) {
+            List<UUID> groupIds = studentApi.getGroupIdsByUserId(requester.id());
+            if (groupIds.contains(groupId)) {
+                return requesterStudent.get();
+            }
+        }
+
         boolean isAdmin = requester.hasRole(Role.ADMIN) || requester.hasRole(Role.MODERATOR)
                 || requester.hasRole(Role.SUPER_ADMIN);
 
@@ -126,14 +137,11 @@ class StudentSubjectInfoService {
             return null;
         }
 
-        StudentDto student = studentApi.findByUserId(requester.id())
-                .orElseThrow(() -> Errors.forbidden("Only students in this group can view"));
-
-        List<UUID> groupIds = studentApi.getGroupIdsByUserId(requester.id());
-        if (!groupIds.contains(groupId)) {
-            throw Errors.forbidden("Student is not a member of this offering's group");
+        if (requesterStudent.isEmpty()) {
+            throw Errors.forbidden("Only students in this group can view");
         }
-        return student;
+
+        throw Errors.forbidden("Student is not a member of this offering's group");
     }
 
     private String resolveDepartmentName(UUID departmentId) {
@@ -196,7 +204,8 @@ class StudentSubjectInfoService {
 
     private StudentSubjectStatsDto computeStats(
             StudentDto student, UserDto requester,
-            GroupSubjectOfferingDto offering, SemesterDto semester) {
+            GroupSubjectOfferingDto offering, SemesterDto semester,
+            List<LessonDto> lessons) {
 
         if (student == null) {
             return new StudentSubjectStatsDto(null, 0, 0, BigDecimal.ZERO);
@@ -205,13 +214,11 @@ class StudentSubjectInfoService {
         var from = semester.startDate();
         var to = semester.endDate();
 
-        Double attendancePercent = computeAttendancePercent(student, offering, from, to, requester.id());
-
-        List<LessonDto> lessons = scheduleApi.findLessonsByOfferingId(offering.id());
         List<UUID> lessonIdsInRange = lessons.stream()
                 .filter(l -> !l.date().isBefore(from) && !l.date().isAfter(to))
                 .map(LessonDto::id)
                 .toList();
+        Double attendancePercent = computeAttendancePercent(student, lessonIdsInRange, requester.id());
         List<UUID> homeworkIds = homeworkApi.listHomeworkIdsByLessonIds(lessonIdsInRange, requester.id());
         int totalHomeworkCount = homeworkIds.size();
         int submittedHomeworkCount = submissionApi.countSubmittedByAuthorForHomeworkIds(
@@ -224,23 +231,32 @@ class StudentSubjectInfoService {
     }
 
     private Double computeAttendancePercent(
-            StudentDto student, GroupSubjectOfferingDto offering,
-            java.time.LocalDate from, java.time.LocalDate to, UUID requesterId) {
-        StudentAttendanceDto attendance = recordApi.getStudentAttendance(
-                student.id(),
-                from.atStartOfDay(),
-                to.atTime(23, 59, 59),
-                offering.id(),
-                null,
-                requesterId
-        );
-
-        if (attendance.totalMarked() == null || attendance.totalMarked() == 0) {
+            StudentDto student, List<UUID> lessonIds, UUID requesterId) {
+        if (lessonIds == null || lessonIds.isEmpty()) {
             return null;
         }
 
-        int present = attendance.summary().getOrDefault(AttendanceStatus.PRESENT, 0);
-        int late = attendance.summary().getOrDefault(AttendanceStatus.LATE, 0);
-        return ((double) (present + late) / attendance.totalMarked()) * 100.0;
+        var attendance = recordApi.getStudentAttendanceByLessonIds(student.id(), lessonIds, requesterId);
+        int totalMarked = 0;
+        int present = 0;
+        int late = 0;
+        for (var item : attendance.items()) {
+            if (item.record().isEmpty()) {
+                continue;
+            }
+            totalMarked++;
+            AttendanceStatus status = item.record().get().status();
+            if (status == AttendanceStatus.PRESENT) {
+                present++;
+            } else if (status == AttendanceStatus.LATE) {
+                late++;
+            }
+        }
+
+        if (totalMarked == 0) {
+            return null;
+        }
+
+        return ((double) (present + late) / totalMarked) * 100.0;
     }
 }

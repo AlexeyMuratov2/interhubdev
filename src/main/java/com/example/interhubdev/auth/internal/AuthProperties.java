@@ -148,5 +148,8 @@ class AuthProperties {
     public static class CorsConfig {
         /** Allowed origins for CORS (e.g. https://app.example.com). Empty = no CORS; do not use * with credentials. */
         private List<String> allowedOrigins = new ArrayList<>();
+
+        /** Allowed origin patterns (e.g. http://localhost:*). Useful for local dev when Vite picks another port. */
+        private List<String> allowedOriginPatterns = new ArrayList<>();
     }
 }
